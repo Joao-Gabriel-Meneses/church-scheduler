@@ -25,3 +25,7 @@ pre-commit install          # ativa os hooks: formatação, segredos e arquivos 
 ./mvnw spotless:apply       # formata o código Java e o pom.xml
 pre-commit run --all-files  # roda todos os hooks
 ```
+
+## Deploy
+
+Produção roda em uma VM Oracle Cloud Always Free (ARM64) com Docker Compose (Caddy + app) e Autonomous Database. O passo a passo, incluindo o backup diário, está em [docs/deploy.md](docs/deploy.md).

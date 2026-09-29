@@ -126,7 +126,7 @@ Outras regras:
 
 - **VM:** `VM.Standard.A1.Flex` com 1 OCPU e 6 GB. A cota Always Free total é de 2 OCPUs e 12 GB; nunca proponha ultrapassar.
 - **ARM64:** toda imagem Docker deve ter variante `linux/arm64`. Use a base Eclipse Temurin 21.
-- **VM ociosa:** a Oracle pode recuperar a VM se CPU, rede e memória ficarem abaixo de 20% por 7 dias. A JVM roda com `-Xms2g -Xmx3g` para manter a memória acima do limite.
+- **VM ociosa:** a Oracle pode recuperar a VM se CPU, rede e memória ficarem abaixo de 20% por 7 dias. A JVM roda com `-Xms2g -Xmx3g -XX:+AlwaysPreTouch` para manter a memória acima do limite (sem o pre-touch o heap reservado não conta como uso).
 - **Autonomous DB Always Free:**
   - 20 GB de armazenamento e **30 sessões**. Mantenha o HikariCP em `maximum-pool-size` ≤ 10.
   - Para após 7 dias sem conexão; o pool ativo e o health check que consulta o banco evitam isso.

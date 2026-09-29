@@ -8,7 +8,8 @@ services:
     env_file: .env
     environment:
       # Heap alto de propósito: a Oracle recupera VMs Always Free com uso de memória abaixo de 20%.
-      JAVA_TOOL_OPTIONS: -Xms2g -Xmx3g
+      # AlwaysPreTouch ocupa o heap inicial de fato; sem ele o Linux não conta as páginas não usadas.
+      JAVA_TOOL_OPTIONS: -Xms2g -Xmx3g -XX:+AlwaysPreTouch
     volumes:
       - ./wallet:/wallet:ro
     expose:
