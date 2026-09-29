@@ -51,7 +51,7 @@ br.igreja.escala       # pacote provisório (ver "Em aberto")
 ```
 
 - Módulos se comunicam por serviços públicos ou eventos de aplicação do Spring, nunca acessando repositórios de outro módulo.
-- Controllers devolvem views Thymeleaf; fragmentos htmx ficam em `templates/<modulo>/fragments/`.
+- Controllers devolvem views Thymeleaf; fragmentos htmx ficam em `templates/<modulo>/fragments/`. Componentes visuais ficam em `templates/componentes/` e layouts em `templates/layouts/` (ver "Visual").
 - Toda rota verifica autorização **por perfil e por ministério**.
 
 ## Perfis
@@ -191,6 +191,22 @@ Por isso a garantia final é **rodar as migrações no Autonomous DB 19c real** 
 - Commits pequenos, mensagens em português no imperativo.
 - Código Java formatado pelo Spotless (palantir-java-format). Rode `./mvnw spotless:apply` antes de commitar; o hook do pre-commit faz isso e o `verify` falha com código fora do padrão.
 - **pre-commit obrigatório** (`pre-commit install`). Os hooks bloqueiam segredos (gitleaks, chaves privadas, `.env`, wallet, `*.jks`, `*.pem`, `*.key`) e arquivos acima de 500 KB. Nunca use `--no-verify`; o CI roda os mesmos hooks.
+
+## Visual
+
+O design system "Escala" (feito no Claude Design) está em `docs/design/`. O `docs/design/README.md` é a fonte da verdade para voz, cor, tipografia e layout; leia antes de qualquer tela.
+
+- **Tokens:** `docs/design/tokens.css` é gerado de `tokens.json` por `python3 docs/design/gerar_tokens_css.py`. Nunca edite o `.css` à mão; token novo entra no `tokens.json`.
+- **Tailwind só para layout e ajustes.** O `src/main/frontend/app.css` liga o Tailwind aos tokens (`@theme inline reference`) e apaga o tema padrão: só existem utilitários dos tokens (`bg-brand`, `p-4` = `space-4`, `h-control`, `text-title`, `rounded-pill`...). Uma classe fora deles (`bg-slate-50`, `p-5`, `font-bold`) não gera CSS, sem erro nenhum.
+- **Componentes:** as classes `.rt-*` vêm de `docs/design/components/bundle.css` e dos componentes criados no app (Field e Toast, com README na pasta de cada um). Não reescreva componentes em utilitários do Tailwind.
+- **Telas usam só os fragmentos de `templates/componentes/`** (botao, badge, lista, tabela, alerta, formulario, toast, navegacao, icone) e os layouts de `templates/layouts/`: `simples` (sem navegação), `membro` (celular) e `gerente` (desktop). Cada fragmento documenta as opções no topo do arquivo.
+- **Nenhuma cor ou tamanho fixo fora dos tokens:** nada de `style=`, `<style>`, valor arbitrário do Tailwind (`w-[37px]`) ou cor hexadecimal. O `TemplatesUsamSoTokensTest` falha nesses casos.
+- **Voz:** português, tratando por "você", sentence case, botões com verbo no infinitivo ("Gerar escala", "Salvar"), sem emoji. Títulos no padrão "Ministério — Período". Todo alerta diz o quê, onde e por quê.
+- **Listas de cadastro:** ListRow no celular (`rt-list md:hidden`) e DataTable no desktop (`rt-panel hidden md:block`).
+- **Ícones:** Lucide com traço 1.5, via `componentes/icone`. Um ícone novo entra em `src/main/frontend/icones.json`; o `IconesTest` pega nome fora da lista.
+- **Fonte e ícones hospedados no app** (Urbanist OFL-1.1 e Lucide ISC, do npm com versão fixa). O `copiar-assets.mjs` gera tudo em `target/classes/static` junto com as licenças. Nada de CDN.
+- **Sucesso:** depois de um redirect, `addFlashAttribute("sucesso", "...")` vira toast; numa resposta htmx, use `componentes/toast :: toastOob`.
+- **Conferir o visual:** `/dev/componentes` (só no perfil `dev`) mostra cada fragmento com os textos dos previews de `docs/design/components/*/preview.html`; `/dev/componentes/membro` e `/gerente` mostram os layouts.
 
 ## Política de testes
 
