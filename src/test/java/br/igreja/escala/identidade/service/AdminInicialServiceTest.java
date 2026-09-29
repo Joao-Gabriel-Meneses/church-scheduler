@@ -60,17 +60,30 @@ class AdminInicialServiceTest {
     }
 
     @Test
-    void naoFazNadaQuandoOEmailNaoFoiConfigurado() {
-        assertThat(service("Ana", " ", "senha-forte").criarSeNecessario()).isFalse();
+    void falhaComMensagemClaraQuandoNaoHaAdminNemConfiguracao() {
+        assertThatIllegalStateException()
+                .isThrownBy(() -> service("Ana", " ", "senha-forte").criarSeNecessario())
+                .withMessageContaining("ESCALA_ADMIN_EMAIL");
+        assertThatIllegalStateException()
+                .isThrownBy(() -> service(null, null, null).criarSeNecessario())
+                .withMessageContaining("Nenhum admin cadastrado");
         verify(usuarios, never()).save(any());
     }
 
     @Test
-    void naoSobrescreveUsuarioExistenteComOMesmoEmail() {
+    void naoPrecisaDeConfiguracaoQuandoJaExisteAdmin() {
+        when(usuarios.existsByAdminTrue()).thenReturn(true);
+
+        assertThat(service(null, null, null).criarSeNecessario()).isFalse();
+    }
+
+    @Test
+    void falhaEmVezDeSobrescreverUsuarioExistenteComOMesmoEmail() {
         when(usuarios.existsByEmail("ana@x.com")).thenReturn(true);
 
-        assertThat(service("Ana", "ana@x.com", "senha-forte").criarSeNecessario())
-                .isFalse();
+        assertThatIllegalStateException()
+                .isThrownBy(() -> service("Ana", "ana@x.com", "senha-forte").criarSeNecessario())
+                .withMessageContaining("ana@x.com");
         verify(usuarios, never()).save(any());
     }
 

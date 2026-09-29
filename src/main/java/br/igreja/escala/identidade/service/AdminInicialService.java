@@ -11,7 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Garante um admin na primeira subida, para que alguém consiga entrar e cadastrar o resto. */
+/** Garante um admin na subida, para que alguém consiga entrar e cadastrar o resto. */
 @Service
 @EnableConfigurationProperties(AdminInicialProperties.class)
 public class AdminInicialService implements ApplicationRunner {
@@ -36,20 +36,26 @@ public class AdminInicialService implements ApplicationRunner {
         criarSeNecessario();
     }
 
-    /** @return {@code true} se o admin foi criado agora. */
+    /**
+     * Cria o admin a partir de {@code escala.admin.*} quando o banco ainda não tem nenhum.
+     *
+     * @return {@code true} se o admin foi criado agora
+     * @throws IllegalStateException se não há admin e a configuração não permite criá-lo; sem admin ninguém
+     *     consegue administrar o sistema, então a aplicação não deve subir
+     */
     @Transactional
     public boolean criarSeNecessario() {
         if (usuarios.existsByAdminTrue()) {
             return false;
         }
         if (!properties.configurado()) {
-            log.warn("Nenhum admin cadastrado e ESCALA_ADMIN_EMAIL não definido: ninguém conseguirá entrar.");
-            return false;
+            throw new IllegalStateException(
+                    "Nenhum admin cadastrado. Defina ESCALA_ADMIN_EMAIL e ESCALA_ADMIN_SENHA para criar o primeiro.");
         }
         String email = Usuario.normalizarEmail(properties.email());
         if (usuarios.existsByEmail(email)) {
-            log.warn("Já existe um usuário {} sem perfil de admin; o admin inicial não foi criado.", email);
-            return false;
+            throw new IllegalStateException("Nenhum admin cadastrado e já existe um usuário " + email
+                    + " sem perfil de admin. Use outro ESCALA_ADMIN_EMAIL.");
         }
         String senha = properties.senha();
         if (senha == null || senha.length() < TAMANHO_MINIMO_SENHA) {
