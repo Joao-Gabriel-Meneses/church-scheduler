@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<!--/*
+    Ícone Lucide do sprite /icones/lucide.svg, com traço de 1.5 em currentColor (docs/design/README.md, "Iconografia").
+    Uso: <svg th:replace="~{componentes/icone :: icone('calendar')}"></svg>
+    - O nome precisa estar em src/main/frontend/icones.json (o IconesTest confere).
+    - 20px (size-icon) por padrão; pílulas, badges e o botão pequeno reduzem.
+    - É decorativo (aria-hidden): quem dá sentido é o texto ao lado ou o aria-label do controle.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<svg th:fragment="icone(nome)" class="rt-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><use
+        th:href="@{/icones/lucide.svg} + '#' + ${nome}"></use></svg>
+</body>
+</html>

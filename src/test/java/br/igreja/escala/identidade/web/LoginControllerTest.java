@@ -54,6 +54,14 @@ class LoginControllerTest {
     }
 
     @Test
+    void fonteEIconesSaoPublicosPorqueOLoginUsa() throws Exception {
+        mvc.perform(get("/fontes/urbanist/urbanist-latin-400-normal.woff2")).andExpect(status().isOk());
+        mvc.perform(get("/icones/lucide.svg"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("<symbol id=\"triangle-alert\"")));
+    }
+
+    @Test
     void rotaProtegidaSemLoginRedirecionaParaOLogin() throws Exception {
         mvc.perform(get("/qualquer-pagina")).andExpect(redirectedUrl("/login"));
     }

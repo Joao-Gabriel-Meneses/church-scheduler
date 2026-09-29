@@ -24,13 +24,13 @@ public class SecurityConfig {
             HttpSecurity http,
             UsuarioDetailsService usuarios,
             @Value("${escala.seguranca.chave-lembrar-me}") String chaveLembrarMe) {
-        http.authorizeHttpRequests(
-                        rotas -> rotas.requestMatchers("/login", "/css/**", "/js/**", "/favicon.ico", "/error")
-                                .permitAll()
-                                .requestMatchers("/actuator/health", "/actuator/health/**")
-                                .permitAll()
-                                .anyRequest()
-                                .authenticated())
+        http.authorizeHttpRequests(rotas -> rotas.requestMatchers(
+                                "/login", "/css/**", "/js/**", "/fontes/**", "/icones/**", "/favicon.ico", "/error")
+                        .permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/health/**")
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated())
                 .formLogin(login -> login.loginPage("/login")
                         .usernameParameter("email")
                         .passwordParameter("senha")

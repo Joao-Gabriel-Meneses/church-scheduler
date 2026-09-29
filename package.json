@@ -1,13 +1,15 @@
 {
   "name": "escala-frontend",
   "private": true,
-  "description": "Build do CSS (Tailwind). Executado pelo frontend-maven-plugin; não é preciso Node instalado.",
+  "description": "Build do front-end: CSS do Tailwind, fonte Urbanist e ícones Lucide. Executado pelo frontend-maven-plugin; não é preciso Node instalado.",
   "scripts": {
-    "build": "tailwindcss -i src/main/frontend/app.css -o target/classes/static/css/app.css --minify",
-    "watch": "tailwindcss -i src/main/frontend/app.css -o target/classes/static/css/app.css --watch"
+    "build": "node src/main/frontend/copiar-assets.mjs && tailwindcss -i src/main/frontend/app.css -o target/classes/static/css/app.css --minify",
+    "watch": "node src/main/frontend/copiar-assets.mjs && tailwindcss -i src/main/frontend/app.css -o target/classes/static/css/app.css --watch"
   },
   "devDependencies": {
+    "@fontsource/urbanist": "5.3.0",
     "@tailwindcss/cli": "4.3.3",
+    "lucide-static": "1.49.0",
     "tailwindcss": "4.3.3"
   },
   "allowScripts": {
