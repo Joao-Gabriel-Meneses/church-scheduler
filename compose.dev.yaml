@@ -1,0 +1,22 @@
+# Oracle Free para desenvolvimento local.
+# Sobe sozinho no `./mvnw spring-boot:run` (perfil dev) via spring-boot-docker-compose.
+services:
+  oracle:
+    image: gvenzl/oracle-free:23-slim-faststart
+    environment:
+      ORACLE_PASSWORD: oracle_dev
+      APP_USER: escala
+      APP_USER_PASSWORD: escala_dev
+    ports:
+      - '127.0.0.1:1521:1521'
+    volumes:
+      - oracle-dev-data:/opt/oracle/oradata
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+volumes:
+  oracle-dev-data:

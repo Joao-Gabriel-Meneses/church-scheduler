@@ -1,0 +1,7 @@
+spring:
+  docker:
+    compose:
+      file: compose.dev.yaml
+      lifecycle-management: start-only
+  thymeleaf:
+    cache: false

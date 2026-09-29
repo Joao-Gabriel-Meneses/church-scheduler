@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    # Ex.: jdbc:oracle:thin:@escala_tp?TNS_ADMIN=/wallet (wallet montada como volume)
+    url: ${DB_URL}
+    username: ${DB_USUARIO}
+    password: ${DB_SENHA}
+  devtools:
+    add-properties: false
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true

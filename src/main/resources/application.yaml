@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: escala
+  profiles:
+    default: dev
+  datasource:
+    hikari:
+      # O Autonomous DB Always Free aceita no máximo 30 sessões.
+      maximum-pool-size: 10
+      minimum-idle: 2
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+          fetch_size: 100
+  web:
+    locale: pt_BR
+    locale-resolver: fixed
+
+server:
+  # Atrás do Caddy: respeita X-Forwarded-Proto/Host para gerar URLs https.
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      # O health consulta o banco; o healthcheck periódico mantém o Autonomous DB ativo.
+      show-details: never
