@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: escala
+  datasource:
+    hikari:
+      # O Autonomous DB Always Free aceita no máximo 30 sessões.
+      maximum-pool-size: 10
+      minimum-idle: 2
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      # Produção é Oracle 19c; testes e dev rodam no Oracle Free 23ai. Fixar a versão faz o Hibernate usar os
+      # mesmos tipos (boolean como NUMBER(1), JSON como BLOB) e o mesmo SQL em todos os ambientes.
+      jakarta:
+        persistence:
+          database-major-version: 19
+          database-minor-version: 0
+      hibernate:
+        jdbc:
+          time_zone: UTC
+          fetch_size: 100
+  web:
+    locale: pt_BR
+    locale-resolver: fixed
+    resources:
+      # URLs com hash do conteúdo (/css/app-<hash>.css): cache longo sem servir arquivo velho.
+      chain:
+        strategy:
+          content:
+            enabled: true
+      cache:
+        cachecontrol:
+          max-age: 365d
+
+server:
+  # Atrás do Caddy: respeita X-Forwarded-Proto/Host para gerar URLs https.
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      # O health consulta o banco; o healthcheck periódico mantém o Autonomous DB ativo.
+      show-details: never

@@ -1,0 +1,9 @@
+# Só o necessário para o build entra no contexto do Docker.
+*
+!.mvn/
+!mvnw
+!pom.xml
+!package.json
+!package-lock.json
+!src/
+.mvn/wrapper/maven-wrapper.jar

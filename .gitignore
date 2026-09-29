@@ -1,0 +1,41 @@
+# Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Front-end (Node instalado pelo frontend-maven-plugin)
+node/
+node_modules/
+
+# Segredos: nunca commitar
+.env
+.env.*
+!.env.example
+wallet/
+*.jks
+*.p12
+*.pem
+*.key
+cwallet.sso
+ewallet.p12
+
+# IDEs
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.classpath
+.factorypath
+.project
+.settings/
+.sts4-cache/
+.apt_generated/
+
+# Sistema
+.DS_Store
+*.log
+
+# Claude Code (configurações locais)
+.claude/settings.local.json
