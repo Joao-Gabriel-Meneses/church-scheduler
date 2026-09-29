@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import br.igreja.escala.CredenciaisDeTeste;
 import br.igreja.escala.identidade.config.SecurityConfig;
 import br.igreja.escala.identidade.domain.Usuario;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
@@ -21,7 +22,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(LoginController.class)
+@WebMvcTest(controllers = LoginController.class, properties = CredenciaisDeTeste.PROPRIEDADE_CHAVE_LEMBRAR_ME)
 @Import(SecurityConfig.class)
 class LoginControllerTest {
 

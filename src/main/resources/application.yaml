@@ -1,8 +1,6 @@
 spring:
   application:
     name: escala
-  profiles:
-    default: dev
   datasource:
     hikari:
       # O Autonomous DB Always Free aceita no máximo 30 sessões.

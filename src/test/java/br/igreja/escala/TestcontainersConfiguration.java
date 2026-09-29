@@ -7,10 +7,11 @@ import org.testcontainers.oracle.OracleContainer;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * Oracle Free 23ai para os testes de integração (*IT), a mesma versão do Autonomous DB de produção.
+ * Oracle Free para os testes de integração. Um container novo e vazio por execução (sem reuse).
  *
- * <p>Um único container é compartilhado por todos os contextos de teste: cada Oracle ocupa cerca de 2 GB e
- * dois ao mesmo tempo não cabem na memória da máquina nem do runner do CI.
+ * <p>O container é estático: se algum teste criar um segundo contexto Spring, ele reaproveita o mesmo Oracle em vez
+ * de subir outro (cada um ocupa cerca de 2 GB). Por isso nenhum teste pode depender de dados deixados por outro;
+ * veja {@link TesteDeIntegracao}.
  */
 @TestConfiguration(proxyBeanMethods = false)
 public class TestcontainersConfiguration {

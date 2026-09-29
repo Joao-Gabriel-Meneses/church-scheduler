@@ -25,6 +25,12 @@
         <spotless.version>3.10.3</spotless.version>
         <!-- Cobertura mínima de linhas dos testes unitários (política de testes do CLAUDE.md). -->
         <cobertura.minima>0.70</cobertura.minima>
+        <!--
+            Classes de teste em ordem aleatória: um teste que dependa de outro falha logo.
+            Para reproduzir uma ordem, use a semente do log: -Dfailsafe.runOrder.random.seed=<semente>
+        -->
+        <surefire.runOrder>random</surefire.runOrder>
+        <failsafe.runOrder>random</failsafe.runOrder>
     </properties>
 
     <dependencies>
@@ -143,10 +149,17 @@
 
     <build>
         <plugins>
+            <!-- O perfil dev só é ativado no `./mvnw spring-boot:run`; testes e produção nunca caem nele por padrão. -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <profiles>
+                        <profile>dev</profile>
+                    </profiles>
+                </configuration>
             </plugin>
+
             <!-- Testes de integração (*IT) rodam só no `verify`, com Testcontainers. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

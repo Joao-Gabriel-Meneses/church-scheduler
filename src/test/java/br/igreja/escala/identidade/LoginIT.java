@@ -1,6 +1,5 @@
 package br.igreja.escala.identidade;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
 import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.authenticated;
 import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.unauthenticated;
@@ -9,25 +8,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import br.igreja.escala.TestcontainersConfiguration;
+import br.igreja.escala.TesteDeIntegracao;
+import br.igreja.escala.identidade.domain.Usuario;
 import br.igreja.escala.identidade.repository.UsuarioRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.RequestBuilder;
+import org.springframework.transaction.annotation.Transactional;
 
-/** Login ponta a ponta no Oracle: Flyway, mapeamento JPA, BCrypt e admin inicial. */
-@SpringBootTest(
-        properties = {
-            "escala.admin.nome=Admin do Teste",
-            "escala.admin.email=Admin.Teste@Escala.local",
-            "escala.admin.senha=senha-do-teste"
-        })
-@AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
+/** Login ponta a ponta no Oracle: mapeamento JPA, BCrypt e Spring Security. Cria o próprio usuário. */
+@TesteDeIntegracao
+@Transactional
 class LoginIT {
+
+    private static final String EMAIL = "membro.login@teste.local";
+    private static final String SENHA = "senha-do-membro";
 
     @Autowired
     MockMvc mvc;
@@ -35,33 +33,36 @@ class LoginIT {
     @Autowired
     UsuarioRepository usuarios;
 
-    @Test
-    void criaOAdminInicialComSenhaCriptografada() {
-        var admin = usuarios.findByEmail("admin.teste@escala.local").orElseThrow();
+    @Autowired
+    PasswordEncoder passwordEncoder;
 
-        assertThat(admin.isAdmin()).isTrue();
-        assertThat(admin.getNome()).isEqualTo("Admin do Teste");
-        assertThat(admin.getSenhaHash()).startsWith("{bcrypt}");
+    @BeforeEach
+    void criaMembro() {
+        usuarios.save(Usuario.membro("Membro do Teste", EMAIL, passwordEncoder.encode(SENHA)));
     }
 
     @Test
     void entraComASenhaCorreta() throws Exception {
-        mvc.perform(formLogin("/login")
-                        .userParameter("email")
-                        .passwordParam("senha")
-                        .user("admin.teste@escala.local")
-                        .password("senha-do-teste"))
+        mvc.perform(login(EMAIL, SENHA))
                 .andExpect(redirectedUrl("/"))
-                .andExpect(authenticated().withRoles("MEMBRO", "ADMIN"));
+                .andExpect(authenticated().withRoles("MEMBRO"));
+    }
+
+    @Test
+    void entraComEmailEmMaiusculas() throws Exception {
+        mvc.perform(login("Membro.Login@Teste.LOCAL", SENHA)).andExpect(authenticated());
     }
 
     @Test
     void recusaSenhaErrada() throws Exception {
-        mvc.perform(formLogin("/login")
-                        .userParameter("email")
-                        .passwordParam("senha")
-                        .user("admin.teste@escala.local")
-                        .password("errada"))
+        mvc.perform(login(EMAIL, "errada"))
+                .andExpect(redirectedUrl("/login?erro"))
+                .andExpect(unauthenticated());
+    }
+
+    @Test
+    void recusaUsuarioInexistente() throws Exception {
+        mvc.perform(login("ninguem@teste.local", SENHA))
                 .andExpect(redirectedUrl("/login?erro"))
                 .andExpect(unauthenticated());
     }
@@ -71,5 +72,13 @@ class LoginIT {
         mvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));
+    }
+
+    private static RequestBuilder login(String email, String senha) {
+        return formLogin("/login")
+                .userParameter("email")
+                .passwordParam("senha")
+                .user(email)
+                .password(senha);
     }
 }
