@@ -1,5 +1,7 @@
 # Hooks do repositório. Ative uma vez por clone com `pre-commit install`.
 # O CI roda `pre-commit run --all-files`; não use `git commit --no-verify`.
+# Arquivos minificados de terceiros não passam pelos hooks de formatação de texto.
+exclude: '\.min\.(js|css)$'
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0

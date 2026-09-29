@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<!--/* Layout base. Uso: <html th:replace="~{layout :: pagina(~{::title}, ~{::main})}"> */-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:fragment="pagina(titulo, conteudo)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="_csrf" th:if="${_csrf}" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:if="${_csrf}" th:content="${_csrf.headerName}">
+    <title th:replace="${titulo}">Escala</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script th:src="@{/js/htmx.min.js}" defer></script>
+    <script th:src="@{/js/app.js}" defer></script>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 antialiased">
+<header class="bg-indigo-700 text-white" sec:authorize="isAuthenticated()">
+    <nav class="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3">
+        <a th:href="@{/}" class="text-lg font-semibold">Escala</a>
+        <div class="flex items-center gap-3 text-sm">
+            <span class="hidden sm:inline" sec:authentication="principal.nome">Nome</span>
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="rounded-md bg-indigo-600 px-3 py-1.5 hover:bg-indigo-500">Sair</button>
+            </form>
+        </div>
+    </nav>
+</header>
+<main th:replace="${conteudo}" class="mx-auto max-w-3xl px-4 py-6"></main>
+</body>
+</html>

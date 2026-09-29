@@ -20,6 +20,15 @@ spring:
   web:
     locale: pt_BR
     locale-resolver: fixed
+    resources:
+      # URLs com hash do conteúdo (/css/app-<hash>.css): cache longo sem servir arquivo velho.
+      chain:
+        strategy:
+          content:
+            enabled: true
+      cache:
+        cachecontrol:
+          max-age: 365d
 
 server:
   # Atrás do Caddy: respeita X-Forwarded-Proto/Host para gerar URLs https.

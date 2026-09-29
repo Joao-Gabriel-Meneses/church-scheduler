@@ -1,0 +1,5 @@
+@import "tailwindcss" source(none);
+
+/* Classes usadas nos templates Thymeleaf e no JS. */
+@source "../resources/templates";
+@source "../resources/static/js/app.js";

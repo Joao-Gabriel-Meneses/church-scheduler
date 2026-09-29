@@ -1,0 +1,16 @@
+{
+  "name": "escala-frontend",
+  "private": true,
+  "description": "Build do CSS (Tailwind). Executado pelo frontend-maven-plugin; não é preciso Node instalado.",
+  "scripts": {
+    "build": "tailwindcss -i src/main/frontend/app.css -o target/classes/static/css/app.css --minify",
+    "watch": "tailwindcss -i src/main/frontend/app.css -o target/classes/static/css/app.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.3",
+    "tailwindcss": "4.3.3"
+  },
+  "allowScripts": {
+    "@parcel/watcher": false
+  }
+}
