@@ -1,0 +1,45 @@
+/* GERADO a partir de tokens.json (design system "Escala" no Claude Design). Não edite à mão: altere tokens.json e rode gerar_tokens_css.py. */
+:root{
+  --brand: #1e8bff;
+  --brand-strong: #0b6fdb;
+  --brand-tint: #d6e9ff;
+  --brand-tint-2: #a9d1ff;
+  --canvas: #f4f4f4;
+  --surface: #ffffff;
+  --ink: #333333;
+  --ink-raised: #444444;
+  --alert: #a14a06;
+  --alert-tint: #ffedd5;
+  --ink-muted: #5e5e5e;
+  --ink-subtle: #a3a3a3;
+  --line: #e6e6e6;
+  --on-brand: #ffffff;
+  --on-ink: #ffffff;
+  --tint-rose: #ffdede;
+  --tint-mint: #dcfce5;
+  --tint-lemon: #fdfbd8;
+  --font-sans: "Urbanist", "Lufga", system-ui, sans-serif;
+  --text-display: 56px; --text-display--line-height: 60px; --text-display--font-weight: 400; --text-display--letter-spacing: -0.02em;
+  --text-title: 28px; --text-title--line-height: 34px; --text-title--font-weight: 400; --text-title--letter-spacing: -0.01em;
+  --text-stat: 36px; --text-stat--line-height: 40px; --text-stat--font-weight: 400;
+  --text-heading: 20px; --text-heading--line-height: 26px; --text-heading--font-weight: 500;
+  --text-body-lg: 16px; --text-body-lg--line-height: 24px; --text-body-lg--font-weight: 400;
+  --text-body: 14px; --text-body--line-height: 20px; --text-body--font-weight: 400;
+  --text-label: 12px; --text-label--line-height: 16px; --text-label--font-weight: 400;
+  --text-caption: 10px; --text-caption--line-height: 14px; --text-caption--font-weight: 500;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+  --size-control-sm: 36px;
+  --size-control: 44px;
+  --size-control-lg: 56px;
+  --size-icon: 20px;
+  --shadow-float: 0 8px 24px rgba(0,0,0,0.06);
+}
