@@ -87,6 +87,18 @@ class VerificadorSqlOracle19Test {
     }
 
     @Test
+    void trataExecDoSqlPlusComoPlsqlDeUmaLinha() {
+        var sql = """
+                exec dbms_scheduler.run_job('JOB', use_current_session => false)
+                select 1;
+                """;
+
+        assertThat(VerificadorSqlOracle19.verificar("teste.sql", sql))
+                .singleElement()
+                .satisfies(v -> assertThat(v.linha()).isEqualTo(2));
+    }
+
+    @Test
     void verificaSqlEmbutidoNoPlsql() {
         var sql = """
                 begin

@@ -77,6 +77,9 @@ final class VerificadorSqlOracle19 {
     private static final Pattern INICIO_PLSQL = compilar("(DECLARE|BEGIN)\\b|CREATE\\s+(OR\\s+REPLACE\\s+)?"
             + "((NON)?EDITIONABLE\\s+)?(PROCEDURE|FUNCTION|PACKAGE|TRIGGER|TYPE)\\b");
     private static final Pattern FIM_PLSQL = Pattern.compile("^\\s*/\\s*$", Pattern.MULTILINE);
+    /** {@code EXEC proc(...)} do SQL*Plus: um bloco PL/SQL de uma linha só, sem {@code ;} obrigatório. */
+    private static final Pattern INICIO_EXEC = compilar("EXEC(UTE)?\\b");
+
     private static final Pattern SELECT = compilar("\\bSELECT\\b");
     private static final Pattern GROUP_BY = compilar("\\bGROUP\\s+BY\\b");
     private static final Pattern ALIAS = compilar("([\\w$#\"]+(?:\\.[\\w$#\"]+)*|\\))\\s+AS\\s+(\\w+)\\b");
@@ -254,7 +257,12 @@ final class VerificadorSqlOracle19 {
             int pos = 0;
             while ((pos = proximoNaoEspaco(sql, pos)) < sql.length()) {
                 Matcher inicio = INICIO_PLSQL.matcher(sql).region(pos, sql.length());
-                if (inicio.lookingAt()) {
+                if (INICIO_EXEC.matcher(sql).region(pos, sql.length()).lookingAt()) {
+                    int fimDaLinha = sql.indexOf('\n', pos);
+                    int ate = fimDaLinha < 0 ? sql.length() : fimDaLinha;
+                    instrucoes.add(new Instrucao(pos, ate, true));
+                    pos = ate;
+                } else if (inicio.lookingAt()) {
                     Matcher fim = FIM_PLSQL.matcher(sql);
                     boolean achou = fim.find(pos);
                     instrucoes.add(new Instrucao(pos, achou ? fim.start() : sql.length(), true));
