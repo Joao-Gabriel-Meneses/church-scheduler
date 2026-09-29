@@ -6,6 +6,7 @@ import jakarta.persistence.EntityManagerFactory;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @TesteDeIntegracao
@@ -16,6 +17,15 @@ class EscalaApplicationIT {
 
     @Autowired
     EntityManagerFactory entityManagerFactory;
+
+    @Autowired
+    Environment ambiente;
+
+    /** Nada do perfil dev (seed, credenciais locais) pode aparecer nos testes, nem vindo de SPRING_PROFILES_ACTIVE. */
+    @Test
+    void rodaSoNoPerfilTest() {
+        assertThat(ambiente.getActiveProfiles()).containsExactly("test");
+    }
 
     @Test
     void sobeOContextoConectadoAoOracle() {

@@ -199,6 +199,7 @@ Por isso a garantia final é **rodar as migrações no Autonomous DB 19c real** 
 - Restrições do Timefold: `ConstraintVerifier`, cobrindo o caso que penaliza e o que não penaliza.
 - Integração com banco: classes `*IT` com Testcontainers (Oracle Free), executadas só no `./mvnw verify` (Failsafe). Testes unitários (`*Test`) rodam no `./mvnw test` (Surefire).
 - **Isolamento:**
+  - Todo teste que sobe o Spring roda no perfil `test`, nunca no `dev`, para que o seed e as credenciais de dev não apareçam nos testes. O `@TesteDeIntegracao` já inclui `@ActiveProfiles("test")`; todo `@WebMvcTest` declara a anotação. O `@ActiveProfiles` vence o `SPRING_PROFILES_ACTIVE` do ambiente, e o `EscalaApplicationIT` confere isso.
   - Todo `*IT` usa `@TesteDeIntegracao`, que declara toda a configuração (credenciais em `CredenciaisDeTeste`). Nada vem de `.env`, de variáveis de ambiente ou do perfil `dev`.
   - Cada teste cria os próprios dados e usa `@Transactional` para desfazê-los. Nunca dependa de dados de outra classe nem do admin criado na subida. O banco é um container novo, sem reuse.
   - As classes rodam em ordem aleatória. Para reproduzir uma falha, use a semente do log (`-Dfailsafe.runOrder.random.seed=...`).
