@@ -39,11 +39,30 @@ class LoginControllerTest {
     }
 
     @Test
-    void mostraMensagensDeErroEDeSaidaEmPortugues() throws Exception {
+    void usaOsComponentesDoDesign() throws Exception {
+        mvc.perform(get("/login"))
+                .andExpect(content().string(Matchers.containsString("<body class=\"rt ")))
+                .andExpect(content().string(Matchers.containsString("class=\"rt-input\" id=\"email\"")))
+                .andExpect(content().string(Matchers.containsString("class=\"rt-btn rt-btn--primary w-full")))
+                .andExpect(content().string(Matchers.not(Matchers.containsString("rt-alert"))))
+                .andExpect(content().string(Matchers.not(Matchers.containsString("rt-toast"))));
+    }
+
+    @Test
+    void lembrarMandaOValorPadraoDoCheckboxQueORememberMeAceita() throws Exception {
+        mvc.perform(get("/login"))
+                .andExpect(content()
+                        .string(Matchers.containsString("type=\"checkbox\" id=\"lembrar\" name=\"lembrar\">")));
+    }
+
+    @Test
+    void mostraErroComoAlertaESaidaComoToastEmPortugues() throws Exception {
         mvc.perform(get("/login").param("erro", ""))
+                .andExpect(content().string(Matchers.containsString("class=\"rt-alert\" role=\"alert\"")))
                 .andExpect(content().string(Matchers.containsString("E-mail ou senha inválidos.")));
         mvc.perform(get("/login").param("saiu", ""))
-                .andExpect(content().string(Matchers.containsString("Você saiu da sua conta.")));
+                .andExpect(content().string(Matchers.containsString("class=\"rt-toast\"")))
+                .andExpect(content().string(Matchers.containsString("Você saiu da sua conta")));
     }
 
     @Test

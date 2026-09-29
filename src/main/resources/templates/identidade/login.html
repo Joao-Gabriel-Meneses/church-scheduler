@@ -1,39 +1,31 @@
 <!DOCTYPE html>
-<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: pagina(~{::title}, ~{::main})}">
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/simples :: pagina(~{::title}, ~{::main})}">
 <head>
     <title>Entrar · Escala</title>
 </head>
 <body>
-<main class="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4 py-10">
-    <h1 class="mb-6 text-center text-2xl font-bold text-indigo-800">Escala do Ministério</h1>
+<main id="conteudo" class="flex flex-1 flex-col items-center justify-center p-4">
+    <div class="flex w-full max-w-sm flex-col gap-6">
+        <header class="flex flex-col gap-1 text-center">
+            <h1 class="text-title">Escala</h1>
+            <p class="text-ink-muted">Entre para marcar sua disponibilidade e ver suas escalas.</p>
+        </header>
 
-    <div th:if="${param.erro}" role="alert" class="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
-        E-mail ou senha inválidos.
-    </div>
-    <div th:if="${param.saiu}" role="status" class="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700">
-        Você saiu da sua conta.
-    </div>
+        <th:block th:if="${param.erro}">
+            <div th:replace="~{componentes/alerta :: alerta(titulo='E-mail ou senha inválidos.',
+                    corpo='Confira os dois e tente de novo.')}"></div>
+        </th:block>
 
-    <form th:action="@{/login}" method="post" class="space-y-4 rounded-lg bg-white p-6 shadow">
-        <div>
-            <label for="email" class="block text-sm font-medium">E-mail</label>
-            <input id="email" name="email" type="email" autocomplete="username" required autofocus
-                   class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-base focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
-        </div>
-        <div>
-            <label for="senha" class="block text-sm font-medium">Senha</label>
-            <input id="senha" name="senha" type="password" autocomplete="current-password" required
-                   class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-base focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
-        </div>
-        <label class="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="lembrar" class="h-4 w-4 rounded border-slate-300">
-            Continuar conectado neste aparelho
-        </label>
-        <button type="submit"
-                class="w-full rounded-md bg-indigo-700 px-4 py-2.5 font-semibold text-white hover:bg-indigo-600">
-            Entrar
-        </button>
-    </form>
+        <form th:action="@{/login}" method="post" class="rt-panel flex flex-col gap-4 p-6">
+            <div th:replace="~{componentes/formulario :: campo(rotulo='E-mail', nome='email', tipo='email',
+                    autocomplete='username', obrigatorio=true, autofocus=true)}"></div>
+            <div th:replace="~{componentes/formulario :: campo(rotulo='Senha', nome='senha', tipo='password',
+                    autocomplete='current-password', obrigatorio=true)}"></div>
+            <label th:replace="~{componentes/formulario :: caixaDeSelecao('Continuar conectado neste aparelho',
+                    'lembrar')}"></label>
+            <button th:replace="~{componentes/botao :: botao(texto='Entrar', classe='w-full justify-center')}"></button>
+        </form>
+    </div>
 </main>
 </body>
 </html>

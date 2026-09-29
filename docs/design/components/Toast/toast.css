@@ -1,5 +1,6 @@
-/* Toast — confirmação de sucesso. Não veio do Claude Design: criado no app seguindo tokens.css (ver README.md ao lado). */
-.rt-toast{display:inline-flex;align-items:center;gap:var(--space-2);max-width:100%;min-height:var(--size-control);padding:var(--space-1) var(--space-1) var(--space-1) var(--space-4);border-radius:var(--radius-pill);background:var(--ink);color:var(--on-ink);box-shadow:var(--shadow-float);font-size:var(--text-body);line-height:var(--text-body--line-height);transition:opacity .15s}
+/* Toast — confirmação de sucesso. Não veio do Claude Design: criado no app seguindo tokens.css (ver README.md ao lado).
+   pointer-events: a região dos toasts não bloqueia cliques na página; só o toast recebe. */
+.rt-toast{pointer-events:auto;display:inline-flex;align-items:center;gap:var(--space-2);max-width:100%;min-height:var(--size-control);padding:var(--space-1) var(--space-1) var(--space-1) var(--space-4);border-radius:var(--radius-pill);background:var(--ink);color:var(--on-ink);box-shadow:var(--shadow-float);font-size:var(--text-body);line-height:var(--text-body--line-height);transition:opacity .15s}
 .rt-toast__text{flex:1;min-width:0;padding:var(--space-2) 0}
 .rt-toast .rt-icon-btn{width:var(--size-control-sm);height:var(--size-control-sm);flex:none;background:transparent;color:var(--on-ink)}
 .rt-toast .rt-icon-btn:hover{background:var(--ink-raised)}

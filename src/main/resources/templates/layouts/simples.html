@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<!--/*
+    Layout sem navegação (login, telas de conta). Uso:
+        <html th:replace="~{layouts/simples :: pagina(~{::title}, ~{::main})}">
+    A página traz o próprio <main>, com id="conteudo".
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" th:fragment="pagina(titulo, conteudo)">
+<head th:replace="~{layouts/base :: cabeca(${titulo})}"></head>
+<body class="rt flex min-h-dvh flex-col bg-canvas">
+<main th:replace="${conteudo}"></main>
+<div class="sticky bottom-0 z-10">
+    <div th:replace="~{layouts/base :: toasts}"></div>
+</div>
+</body>
+</html>
