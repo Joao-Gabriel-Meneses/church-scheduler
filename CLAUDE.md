@@ -195,11 +195,11 @@ Por isso a garantia final é **rodar as migrações no Autonomous DB 19c real** 
 ## Política de testes
 
 - **Todo código com lógica nasce com teste unitário no mesmo commit:** services, domínio, validação de parâmetros de regra e utilitários. Use JUnit 5, AssertJ e Mockito, sem subir o Spring.
-- Controllers: `@WebMvcTest` com MockMvc, cobrindo autorização (perfil e ministério), validação e CSRF.
+- Controllers: `@TesteDeController(MeuController.class)` (`@WebMvcTest` com a `SecurityConfig` real, no perfil `test`) e MockMvc, cobrindo autorização (perfil e ministério), validação e CSRF. Não use `@WebMvcTest` direto.
 - Restrições do Timefold: `ConstraintVerifier`, cobrindo o caso que penaliza e o que não penaliza.
 - Integração com banco: classes `*IT` com Testcontainers (Oracle Free), executadas só no `./mvnw verify` (Failsafe). Testes unitários (`*Test`) rodam no `./mvnw test` (Surefire).
 - **Isolamento:**
-  - Todo teste que sobe o Spring roda no perfil `test`, nunca no `dev`, para que o seed e as credenciais de dev não apareçam nos testes. O `@TesteDeIntegracao` já inclui `@ActiveProfiles("test")`; todo `@WebMvcTest` declara a anotação. O `@ActiveProfiles` vence o `SPRING_PROFILES_ACTIVE` do ambiente, e o `EscalaApplicationIT` confere isso.
+  - Todo teste que sobe o Spring roda no perfil `test`, nunca no `dev`, para que o seed e as credenciais de dev não apareçam nos testes. O `@TesteDeIntegracao` e o `@TesteDeController` já incluem `@ActiveProfiles("test")`. O `PerfilDosTestesTest` falha se algum teste subir o Spring sem esse perfil, e o `EscalaApplicationIT` confere que ele vence o `SPRING_PROFILES_ACTIVE` do ambiente.
   - Todo `*IT` usa `@TesteDeIntegracao`, que declara toda a configuração (credenciais em `CredenciaisDeTeste`). Nada vem de `.env`, de variáveis de ambiente ou do perfil `dev`.
   - Cada teste cria os próprios dados e usa `@Transactional` para desfazê-los. Nunca dependa de dados de outra classe nem do admin criado na subida. O banco é um container novo, sem reuse.
   - As classes rodam em ordem aleatória. Para reproduzir uma falha, use a semente do log (`-Dfailsafe.runOrder.random.seed=...`).

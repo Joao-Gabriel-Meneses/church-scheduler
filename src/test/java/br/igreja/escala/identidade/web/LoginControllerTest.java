@@ -9,23 +9,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-import br.igreja.escala.CredenciaisDeTeste;
-import br.igreja.escala.identidade.config.SecurityConfig;
+import br.igreja.escala.TesteDeController;
 import br.igreja.escala.identidade.domain.Usuario;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
 import br.igreja.escala.identidade.service.UsuarioDetailsService;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(controllers = LoginController.class, properties = CredenciaisDeTeste.PROPRIEDADE_CHAVE_LEMBRAR_ME)
-@Import(SecurityConfig.class)
-@ActiveProfiles("test")
+@TesteDeController(LoginController.class)
 class LoginControllerTest {
 
     @Autowired
