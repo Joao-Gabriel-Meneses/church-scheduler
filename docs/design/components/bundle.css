@@ -19,7 +19,7 @@
 /* Button */
 .rt-btn{height:var(--size-control);padding:0 var(--space-6);border-radius:var(--radius-pill);display:inline-flex;align-items:center;gap:var(--space-2);font-size:16px;white-space:nowrap}
 .rt-btn--primary{background:var(--brand-strong);color:var(--on-brand)}
-.rt-btn--primary:hover{background:var(--brand)}
+.rt-btn--primary:hover{background:var(--brand-deep)}
 .rt-btn--secondary{background:var(--surface);color:var(--ink)}
 .rt-btn--dark{background:var(--ink);color:var(--on-ink)}
 .rt-btn--outline{background:transparent;border:1px solid var(--line);color:var(--ink-muted)}
