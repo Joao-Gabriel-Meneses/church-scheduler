@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!--/*
     Vitrine dos fragmentos, só no perfil dev (ComponentesDevController). Cada seção repete o conteúdo de
-    docs/design/components/<Componente>/preview.html dentro de um .rt-canvas, para comparar lado a lado.
+    docs/design/components/<Componente>/preview.html dentro de um .rt-canvas, para comparar lado a lado; no
+    celular o .rt-canvas vai de ponta a ponta, como no preview.
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/simples :: pagina(~{::title}, ~{::main})}">
 <head>
@@ -18,7 +19,7 @@
 
     <section id="button" class="flex flex-col gap-2">
         <h2 class="text-heading">Button</h2>
-        <div class="rt-canvas rounded-lg">
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
             <div class="rt-row">
                 <button th:replace="~{componentes/botao :: botao(texto='Gerar escala', icone='sparkles', tipo='button')}"></button>
                 <button th:replace="~{componentes/botao :: botao(texto='Publicar', variante='dark', icone='send', tipo='button')}"></button>
@@ -32,7 +33,7 @@
 
     <section id="icon-button" class="flex flex-col gap-2">
         <h2 class="text-heading">IconButton</h2>
-        <div class="rt-canvas rounded-lg">
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
             <div class="rt-row">
                 <button th:replace="~{componentes/botao :: botaoIcone(icone='layout-dashboard', rotulo='Escalas', variante='dark')}"></button>
                 <button th:replace="~{componentes/botao :: botaoIcone('calendar', 'Disponibilidade')}"></button>
@@ -50,7 +51,7 @@
 
     <section id="badge" class="flex flex-col gap-2">
         <h2 class="text-heading">Badge</h2>
-        <div class="rt-canvas rounded-lg">
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
             <div class="rt-row">
                 <span th:replace="~{componentes/badge :: badge(texto='Rascunho', variante='draft')}"></span>
                 <span th:replace="~{componentes/badge :: badge(texto='Publicada', variante='published')}"></span>
@@ -64,7 +65,7 @@
 
     <section id="list-row" class="flex flex-col gap-2">
         <h2 class="text-heading">ListRow</h2>
-        <div class="rt-canvas rounded-lg">
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
             <ul class="rt-list max-w-md">
                 <li><a th:replace="~{componentes/lista :: linha(titulo='Projeção', sub='Experiente · 3 escalas em outubro',
                         icone='monitor', href='#list-row', selecionada=true)}"></a></li>
@@ -82,7 +83,7 @@
 
     <section id="data-table" class="flex flex-col gap-2">
         <h2 class="text-heading">DataTable</h2>
-        <div class="rt-canvas rounded-lg">
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
             <div class="rt-panel overflow-auto">
                 <table class="rt-table">
                     <thead>
@@ -130,7 +131,7 @@
 
     <section id="alert-banner" class="flex flex-col gap-2">
         <h2 class="text-heading">AlertBanner</h2>
-        <div class="rt-canvas rounded-lg">
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
             <div class="flex max-w-2xl flex-col gap-2">
                 <div th:replace="~{componentes/alerta :: alerta(titulo='12/10 · Culto de domingo — Transmissão sem ninguém',
                         corpo='Os 3 disponíveis já estão no limite do mês ou são iniciantes com outro iniciante no evento.',
@@ -145,7 +146,7 @@
 
     <section id="field" class="flex flex-col gap-2">
         <h2 class="text-heading">Field</h2>
-        <div class="rt-canvas rounded-lg">
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
             <form class="flex max-w-md flex-col gap-4" novalidate>
                 <div th:replace="~{componentes/formulario :: campo(rotulo='Nome', nome='nome', valor='Ana Souza',
                         autocomplete='name', erro=null, dica=null)}"></div>
@@ -164,7 +165,7 @@
     <section id="toast" class="flex flex-col gap-2">
         <h2 class="text-heading">Toast</h2>
         <p class="text-label text-ink-muted">Aqui sem o fechamento automático; nas páginas, some em 5 s.</p>
-        <div class="rt-canvas rounded-lg">
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
             <div class="flex flex-col items-start gap-2">
                 <div class="rt-toast">
                     <svg th:replace="~{componentes/icone :: icone('circle-check')}"></svg>
@@ -182,21 +183,21 @@
 
     <section id="side-rail" class="flex flex-col gap-2">
         <h2 class="text-heading">SideRail</h2>
-        <div class="rt-canvas rounded-lg">
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
             <nav th:replace="~{componentes/navegacao :: rail(${ministerios})}"></nav>
         </div>
     </section>
 
     <section id="nav-pills" class="flex flex-col gap-2">
         <h2 class="text-heading">NavPills</h2>
-        <div class="rt-canvas rounded-lg">
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
             <nav th:replace="~{componentes/navegacao :: navPills(${abas})}"></nav>
         </div>
     </section>
 
     <section id="toolbar" class="flex flex-col gap-2">
         <h2 class="text-heading">Toolbar</h2>
-        <div class="rt-canvas rounded-lg">
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
             <div class="rt-toolbar">
                 <div th:replace="~{componentes/navegacao :: seletorDePeriodo('Outubro 2026', '#toolbar', '#toolbar')}"></div>
                 <span th:replace="~{componentes/badge :: badge(texto='Disponibilidade travada', variante='locked',

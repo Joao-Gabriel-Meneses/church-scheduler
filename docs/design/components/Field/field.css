@@ -1,6 +1,7 @@
 /* Field — campo de formulário. Não veio do Claude Design: criado no app seguindo tokens.css (ver README.md ao lado). */
 .rt-field{display:flex;flex-direction:column;gap:var(--space-1);min-width:0}
 .rt-field__label{font-size:var(--text-body);line-height:var(--text-body--line-height);color:var(--ink)}
+.rt-field__hint,.rt-field__error{margin:0}
 .rt-field__hint{font-size:var(--text-label);line-height:var(--text-label--line-height);color:var(--ink-muted)}
 .rt-input{width:100%;height:var(--size-control);padding:0 var(--space-4);border:1px solid var(--ink-muted);border-radius:var(--radius-pill);background:var(--surface);color:var(--ink);font-family:inherit;font-size:var(--text-body-lg);line-height:var(--text-body-lg--line-height);transition:border-color .15s,box-shadow .15s}
 .rt-input::placeholder{color:var(--ink-subtle)}
