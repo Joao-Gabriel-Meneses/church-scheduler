@@ -1,0 +1,38 @@
+# Hooks do repositório. Ative uma vez por clone com `pre-commit install`.
+# O CI roda `pre-commit run --all-files`; não use `git commit --no-verify`.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: detect-private-key
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        args: ['--markdown-linebreak-ext=md']
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+        exclude: '\.cmd$'
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: proibir-arquivos-de-segredo
+        name: Proibir arquivos de segredo (.env, wallet, chaves)
+        language: fail
+        entry: 'Arquivo de segredo nao pode ser commitado; use variaveis de ambiente ou arquivos montados:'
+        files: '(^|/)(\.env(\..+)?|cwallet\.sso|ewallet\.(p12|pem)|Wallet_.*\.zip|.*\.(jks|p12|pem|key|keystore))$'
+        exclude: '(^|/)\.env\.example$'
+
+      - id: spotless
+        name: Formatar Java e pom.xml (Spotless)
+        language: system
+        entry: ./mvnw -q -B spotless:apply
+        files: '(\.java|(^|/)pom\.xml)$'
+        pass_filenames: false
