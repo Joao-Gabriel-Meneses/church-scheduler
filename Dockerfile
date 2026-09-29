@@ -7,6 +7,7 @@ WORKDIR /build
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml package.json package-lock.json ./
 COPY src/ src/
+COPY docs/design/ docs/design/
 
 # Testes, Spotless e JaCoCo já rodam no CI; aqui só empacota.
 RUN --mount=type=cache,target=/root/.m2 \
