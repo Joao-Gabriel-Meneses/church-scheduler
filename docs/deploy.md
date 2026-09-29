@@ -21,7 +21,8 @@ Visão geral: a VM ARM64 roda `docker compose` com **Caddy** (HTTPS) e o **app**
    ```sql
    -- Senha do ADB: 12 a 30 caracteres, com maiúscula, minúscula e número, sem aspas.
    create user escala_app identified by "<senha-forte>";
-   grant db_developer_role to escala_app;
+   grant create session, create table, create sequence, create view,
+         create procedure, create trigger to escala_app;
    alter user escala_app quota unlimited on data;
    ```
 
