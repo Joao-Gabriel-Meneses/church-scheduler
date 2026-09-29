@@ -6,13 +6,14 @@
             corpo='Os 3 disponíveis já estão no limite do mês.', regra='Regra: LIMITE_POR_PERIODO',
             acaoTexto='Preencher', acaoHref=@{/escalas/vagas/{id}(id=${vaga.id})})}"></div>
       Opções, por nome: corpo | regra | acaoTexto + acaoHref (botão escuro pequeno, verbo no infinitivo)
+        | icone (padrão triangle-alert; ex.: arrow-left-right para desistência e troca)
     Empilhe no topo da tela, o mais próximo primeiro.
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <body>
 
 <div th:fragment="alerta(titulo)" class="rt-alert" role="alert">
-    <svg th:replace="~{componentes/icone :: icone('triangle-alert')}"></svg>
+    <svg th:replace="~{componentes/icone :: icone(${icone ?: 'triangle-alert'})}"></svg>
     <div>
         <p class="rt-alert__title" th:text="${titulo}">12/10 · Culto de domingo — Transmissão sem ninguém</p>
         <p th:if="${corpo != null}" class="rt-alert__body" th:text="${corpo}">Explicação.</p>

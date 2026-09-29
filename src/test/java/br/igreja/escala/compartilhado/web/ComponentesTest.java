@@ -255,7 +255,7 @@ class ComponentesTest {
                     "ministerios",
                     List.of(
                             new ItemDeNavegacao("Mídia", "Mídia", "monitor", "/ministerios/1", true),
-                            new ItemDeNavegacao("Louvor", "Louvor", "music", "/ministerios/2", false)));
+                            new ItemDeNavegacao("Louvor", "Louvor", "users", "/ministerios/2", false)));
             return "teste/fragmentos";
         }
     }
