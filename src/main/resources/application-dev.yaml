@@ -5,3 +5,12 @@ spring:
       lifecycle-management: start-only
   thymeleaf:
     cache: false
+
+escala:
+  # Só para desenvolvimento local. Em produção, use variáveis de ambiente.
+  admin:
+    nome: Administrador
+    email: admin@escala.local
+    senha: admin1234
+  seguranca:
+    chave-lembrar-me: chave-somente-para-dev
