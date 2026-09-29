@@ -18,7 +18,7 @@ env:
 jobs:
   qualidade:
     name: Hooks e segredos
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -27,7 +27,14 @@ jobs:
         with:
           python-version: '3.13'
       # Mesmos hooks do commit local. Spotless roda no job de testes (verify); gitleaks roda abaixo sobre o histórico.
-      - uses: pre-commit/action@v3.0.1
+      # Passos explícitos em vez de pre-commit/action, que usa actions/cache@v4 (Node 20).
+      - run: pip install pre-commit==4.6.2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Hooks do pre-commit
+        run: pre-commit run --all-files --show-diff-on-failure --color=always
         env:
           SKIP: spotless,gitleaks
       - name: Varrer segredos em todo o histórico (gitleaks)
@@ -35,7 +42,7 @@ jobs:
 
   testes:
     name: Testes (unitários, integração no Oracle, Spotless, JaCoCo)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -58,7 +65,7 @@ jobs:
   imagem:
     name: Imagem Docker (amd64 + arm64)
     needs: [qualidade, testes]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
