@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<!--/*
+    Navegação (docs/design/components/NavPills, SideRail e Toolbar). Os itens são List<ItemDeNavegacao>; o layout
+    recebe a navegação principal do NavegacaoAdvice (${navegacao}) e os ministérios em ${ministerios}.
+
+    navPills(itens): pílulas no topo; a atual fica escura (aria-current="page").
+    barraInferior(itens): no celular a navegação vira barra inferior, com ícone + rótulo curto.
+    rail(ministerios): SideRail de ministérios no desktop; escondida com menos de dois.
+    seletorDeMinisterio(ministerios): no celular, a rail vira um seletor no topo (sem JS).
+    seletorDePeriodo(rotulo, anteriorHref, proximoHref): seletor escuro da Toolbar ("Outubro 2026").
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<nav th:fragment="navPills(itens)" class="rt-nav flex-wrap" aria-label="Principal">
+    <a th:each="item : ${itens}" class="rt-nav__item" th:href="@{${item.url}}"
+       th:aria-current="${item.atual} ? 'page' : null"><svg
+            th:replace="~{componentes/icone :: icone(${item.icone})}"></svg><th:block
+            th:text="${item.rotulo}">Escalas</th:block></a>
+</nav>
+
+<nav th:fragment="barraInferior(itens)" class="rt-nav border-t-2 border-surface bg-canvas p-2" aria-label="Principal">
+    <a th:each="item : ${itens}" class="rt-nav__item h-auto flex-1 flex-col justify-center gap-1 px-1 py-2 text-label"
+       th:href="@{${item.url}}" th:aria-current="${item.atual} ? 'page' : null"><svg
+            th:replace="~{componentes/icone :: icone(${item.icone})}"></svg><th:block
+            th:text="${item.rotuloCurto}">Escalas</th:block></a>
+</nav>
+
+<nav th:fragment="rail(ministerios)" th:if="${ministerios != null and ministerios.size() > 1}" class="rt-rail"
+     aria-label="Ministérios">
+    <a th:each="ministerio : ${ministerios}" class="rt-icon-btn" th:href="@{${ministerio.url}}"
+       th:aria-label="${ministerio.rotulo}" th:title="${ministerio.rotulo}"
+       th:aria-current="${ministerio.atual} ? 'page' : null"><svg
+            th:replace="~{componentes/icone :: icone(${ministerio.icone})}"></svg></a>
+</nav>
+
+<details th:fragment="seletorDeMinisterio(ministerios)" th:if="${ministerios != null and ministerios.size() > 1}"
+         class="relative" th:with="_atuais=${ministerios.?[atual]}">
+    <summary class="rt-nav__item cursor-pointer" aria-label="Trocar de ministério"><th:block
+            th:text="${_atuais.isEmpty() ? 'Ministério' : _atuais[0].rotulo}">Mídia</th:block><svg
+            th:replace="~{componentes/icone :: icone('chevron-down')}"></svg></summary>
+    <ul class="rt-list absolute left-0 z-10 mt-2 w-max rounded-lg border-2 border-surface bg-canvas p-2 shadow-float">
+        <li th:each="ministerio : ${ministerios}"><a th:replace="~{componentes/lista :: linha(
+                titulo=${ministerio.rotulo}, icone=${ministerio.icone}, href=@{${ministerio.url}},
+                selecionada=${ministerio.atual}, sub=null)}"></a></li>
+    </ul>
+</details>
+
+<div th:fragment="seletorDePeriodo(rotulo, anteriorHref, proximoHref)" class="rt-seg">
+    <a class="rt-icon-btn" th:href="${anteriorHref}" aria-label="Mês anterior" title="Mês anterior"><svg
+            th:replace="~{componentes/icone :: icone('chevron-left')}"></svg></a>
+    <span class="px-2 text-body-lg" th:text="${rotulo}">Outubro 2026</span>
+    <a class="rt-icon-btn" th:href="${proximoHref}" aria-label="Próximo mês" title="Próximo mês"><svg
+            th:replace="~{componentes/icone :: icone('chevron-right')}"></svg></a>
+</div>
+
+</body>
+</html>

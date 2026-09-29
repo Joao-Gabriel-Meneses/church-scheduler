@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!--/*
+    DataTable (docs/design/components/DataTable): tabela de cadastro no desktop. No celular, a mesma lista usa ListRow.
+    A estrutura fica na página; aqui estão as células que se repetem.
+
+        <ul class="rt-list md:hidden">…ListRow…</ul>
+        <div class="rt-panel hidden overflow-x-auto md:block">
+            <table class="rt-table">
+                <thead><tr><th scope="col">Membro</th><th scope="col">Habilitações</th>…</tr></thead>
+                <tbody><tr th:each="membro : ${membros}">
+                    <td><div th:replace="~{componentes/tabela :: pessoa(${membro.nome}, ${membro.iniciais})}"></div></td>
+                    <td><div th:replace="~{componentes/tabela :: duasLinhas('Projeção · Experiente', 'Transmissão · Iniciante')}"></div></td>
+                    <td><th:block th:replace="~{componentes/tabela :: estado(texto='Sem resposta', variante='alerta')}"></th:block></td>
+                </tr></tbody>
+            </table>
+        </div>
+
+    pessoa(nome, iniciais): avatar com iniciais (decorativo) e nome.
+    duasLinhas(valor, complemento): valor em body e complemento em caption; complemento pode ser null.
+    estado(texto): ponto + texto. Opção variante: ok (padrão, ponto azul) | vazio (ponto vazado) | alerta (Badge
+    --alert com ícone, para o que precisa de ação).
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="pessoa(nome, iniciais)" class="rt-route">
+    <span class="rt-avatar" aria-hidden="true" th:text="${iniciais}">AS</span>
+    <span th:text="${nome}">Ana Souza</span>
+</div>
+
+<div th:fragment="duasLinhas(valor, complemento)" class="rt-cell-2">
+    <span th:text="${valor}">Projeção · Experiente</span>
+    <span class="rt-caption" th:text="${complemento}">Transmissão · Experiente</span>
+</div>
+
+<th:block th:fragment="estado(texto)">
+    <th:block th:if="${variante == 'alerta'}"><span th:replace="~{componentes/badge :: badge(texto=${texto},
+            variante='alert', icone=null, tint=null, classe=null)}"></span></th:block>
+    <th:block th:unless="${variante == 'alerta'}"><span class="rt-dot"
+            th:classappend="${variante == 'vazio'} ? 'rt-dot--empty'"></span><th:block
+            th:text="${texto}">Respondeu</th:block></th:block>
+</th:block>
+
+</body>
+</html>

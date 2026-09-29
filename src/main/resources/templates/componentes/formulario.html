@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<!--/*
+    Field (docs/design/components/Field): rótulo, controle em pílula de 44px e, quando houver, dica ou erro.
+    Rótulo em sentence case e sem dois-pontos; campo opcional diz "Opcional" na dica.
+
+    campo(rotulo, nome): input com valor e erro explícitos (ex.: login, que não tem objeto de formulário).
+        <div th:replace="~{componentes/formulario :: campo(rotulo='E-mail', nome='email', tipo='email',
+            autocomplete='username', obrigatorio=true)}"></div>
+    campoDoObjeto(rotulo, nome): o mesmo, lendo valor e erros do th:object do <form> (Bean Validation).
+        <form th:object="${form}"> <div th:replace="~{componentes/formulario :: campoDoObjeto('Nome', 'nome')}"></div>
+      Opções, por nome: tipo (text) | valor | erro (texto que diz o que corrigir) | dica | obrigatorio | autofocus
+        | autocomplete | placeholder | inputmode | min | max | maxlength | campoId (padrão: o nome)
+
+    selecao(rotulo, nome, opcoes) / selecaoDoObjeto(rotulo, nome, opcoes): select com opcoes = List<Opcao>.
+      Opções: valor (o selecionado) | vazio (texto da opção vazia, ex.: 'Escolha a função') | erro | dica
+        | obrigatorio | campoId
+
+    caixaDeSelecao(rotulo, nome) / caixaDeSelecaoDoObjeto(rotulo, nome): checkbox com alvo de 44px.
+      Opções: marcada | valor | campoId. A versão do objeto manda "_nome" para o Spring gravar false quando desmarcada.
+
+    Opção omitida herda a variável de mesmo nome do contexto: não use esses nomes em variáveis de página.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="campo(rotulo, nome)" class="rt-field"
+     th:with="_id=${campoId ?: nome},
+              _descricao=${#strings.trim((dica != null ? _id + '-dica ' : '') + (erro != null ? _id + '-erro' : ''))}">
+    <label class="rt-field__label" th:for="${_id}" th:text="${rotulo}">Nome</label>
+    <input class="rt-input" th:id="${_id}" th:name="${nome}" th:type="${tipo ?: 'text'}" th:attr="value=${valor}"
+           th:required="${obrigatorio == true}" th:autofocus="${autofocus == true}" th:autocomplete="${autocomplete}"
+           th:placeholder="${placeholder}" th:inputmode="${inputmode}" th:min="${min}" th:max="${max}"
+           th:maxlength="${maxlength}" th:aria-invalid="${erro != null} ? 'true' : null"
+           th:aria-describedby="${_descricao.isEmpty()} ? null : ${_descricao}">
+    <th:block th:replace="~{componentes/formulario :: mensagensDoCampo}"></th:block>
+</div>
+
+<th:block th:fragment="campoDoObjeto(rotulo, nome)"
+          th:with="_valor=*{{__${nome}__}},
+                   _erro=${#fields.hasErrors(nome)} ? ${#strings.listJoin(#fields.errors(nome), ' ')} : null">
+    <div th:replace="~{componentes/formulario :: campo(rotulo=${rotulo}, nome=${nome}, valor=${_valor},
+            erro=${_erro})}"></div>
+</th:block>
+
+<div th:fragment="selecao(rotulo, nome, opcoes)" class="rt-field"
+     th:with="_id=${campoId ?: nome}, _selecionado=${valor == null ? null : valor.toString()},
+              _descricao=${#strings.trim((dica != null ? _id + '-dica ' : '') + (erro != null ? _id + '-erro' : ''))}">
+    <label class="rt-field__label" th:for="${_id}" th:text="${rotulo}">Função</label>
+    <span class="rt-select">
+        <select class="rt-input" th:id="${_id}" th:name="${nome}" th:required="${obrigatorio == true}"
+                th:aria-invalid="${erro != null} ? 'true' : null"
+                th:aria-describedby="${_descricao.isEmpty()} ? null : ${_descricao}">
+            <option th:if="${vazio != null}" value="" th:text="${vazio}">Escolha</option>
+            <option th:each="opcao : ${opcoes}" th:value="${opcao.valor}" th:text="${opcao.rotulo}"
+                    th:selected="${opcao.valor == _selecionado}">Projeção</option>
+        </select>
+        <svg th:replace="~{componentes/icone :: icone('chevron-down')}"></svg>
+    </span>
+    <th:block th:replace="~{componentes/formulario :: mensagensDoCampo}"></th:block>
+</div>
+
+<th:block th:fragment="selecaoDoObjeto(rotulo, nome, opcoes)"
+          th:with="_valor=*{__${nome}__},
+                   _erro=${#fields.hasErrors(nome)} ? ${#strings.listJoin(#fields.errors(nome), ' ')} : null">
+    <div th:replace="~{componentes/formulario :: selecao(rotulo=${rotulo}, nome=${nome}, opcoes=${opcoes},
+            valor=${_valor}, erro=${_erro})}"></div>
+</th:block>
+
+<th:block th:fragment="mensagensDoCampo">
+    <p th:if="${dica != null}" class="rt-field__hint" th:id="${_id + '-dica'}" th:text="${dica}">Opcional.</p>
+    <p th:if="${erro != null}" class="rt-field__error" th:id="${_id + '-erro'}"><svg
+            th:replace="~{componentes/icone :: icone('triangle-alert')}"></svg><span th:text="${erro}">Informe o
+        nome.</span></p>
+</th:block>
+
+<label th:fragment="caixaDeSelecao(rotulo, nome)" class="rt-check">
+    <input type="checkbox" th:id="${campoId ?: nome}" th:name="${nome}" th:attr="value=${valor}"
+           th:checked="${marcada == true}"><th:block th:text="${rotulo}">Continuar conectado neste aparelho</th:block>
+</label>
+
+<th:block th:fragment="caixaDeSelecaoDoObjeto(rotulo, nome)">
+    <label th:replace="~{componentes/formulario :: caixaDeSelecao(rotulo=${rotulo}, nome=${nome}, valor='true',
+            marcada=*{__${nome}__})}"></label>
+    <input type="hidden" th:name="${'_' + nome}" value="on">
+</th:block>
+
+</body>
+</html>

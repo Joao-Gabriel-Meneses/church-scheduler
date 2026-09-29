@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<!--/*
+    Badge (docs/design/components/Badge): etiqueta de estado ou atributo, em pílula de 28px.
+        <span th:replace="~{componentes/badge :: badge('Experiente')}"></span>
+        <span th:replace="~{componentes/badge :: badge(texto='Publicada', variante='published')}"></span>
+      Opções, por nome:
+        variante   draft (Rascunho) | published (Publicada) | locked (travada; ícone de cadeado)
+                   | alert (precisa de ação; ícone de triângulo). Sem variante: neutra (nível).
+        icone      troca o ícone padrão da variante
+        tint       mint | rose | lemon: cor do ministério (Mídia, Louvor, Recepção)
+        classe     ajustes de layout do Tailwind
+    Estado nunca só por cor: locked e alert já vêm com ícone.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<span th:fragment="badge(texto)"
+      th:with="_icone=${icone ?: (variante == 'locked' ? 'lock' : (variante == 'alert' ? 'triangle-alert' : null))},
+               _tint=${tint == 'mint' ? ' bg-tint-mint' : (tint == 'rose' ? ' bg-tint-rose' : (tint == 'lemon' ? ' bg-tint-lemon' : ''))}"
+      th:class="|rt-badge${variante != null ? ' rt-badge--' + variante : ''}${_tint}${classe != null ? ' ' + classe : ''}|"><th:block th:if="${_icone != null}"><svg
+        th:replace="~{componentes/icone :: icone(${_icone})}"></svg></th:block><th:block
+        th:text="${texto}">Rascunho</th:block></span>
+
+</body>
+</html>

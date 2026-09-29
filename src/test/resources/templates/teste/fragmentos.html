@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!--/* Casos dos fragmentos de templates/componentes, conferidos pelo ComponentesTest. */-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<section id="botao-padrao"><button th:replace="~{componentes/botao :: botao('Salvar')}"></button></section>
+<section id="botao-link"><a th:replace="~{componentes/botao :: botao(texto='Gerar escala', icone='sparkles',
+        href=@{/escalas}, classe='w-full justify-center')}"></a></section>
+<section id="botao-pequeno"><button th:replace="~{componentes/botao :: botao(texto='Preencher vaga', variante='dark',
+        tamanho='sm', iconeFinal='chevron-right', tipo='button')}"></button></section>
+<section id="botao-icone"><button th:replace="~{componentes/botao :: botaoIcone('lock', 'Travar disponibilidade')}"></button></section>
+<section id="botao-icone-link"><a th:replace="~{componentes/botao :: botaoIcone(icone='calendar', rotulo='Escalas',
+        variante='dark', tamanho='lg', href=@{/})}"></a></section>
+
+<section id="badge-neutra"><span th:replace="~{componentes/badge :: badge('Experiente')}"></span></section>
+<section id="badge-travada"><span th:replace="~{componentes/badge :: badge(texto='Travada', variante='locked')}"></span></section>
+<section id="badge-ministerio"><span th:replace="~{componentes/badge :: badge(texto='Mídia', tint='mint')}"></span></section>
+
+<section id="linha-link"><a th:replace="~{componentes/lista :: linha(titulo='Projeção', sub='Experiente · 3 escalas em outubro',
+        icone='monitor', href=@{/funcoes/1}, selecionada=true)}"></a></section>
+<section id="linha-simples"><div th:replace="~{componentes/lista :: linha(titulo='Culto de quinta', sub=null, icone=null,
+        href=null, selecionada=null)}"></div></section>
+
+<section id="tabela"><table><tr>
+    <td><div th:replace="~{componentes/tabela :: pessoa('Ana Souza', 'AS')}"></div></td>
+    <td><div th:replace="~{componentes/tabela :: duasLinhas('Projeção · Experiente', null)}"></div></td>
+    <td id="estado-ok"><th:block th:replace="~{componentes/tabela :: estado(texto='Respondeu', variante=null)}"></th:block></td>
+    <td id="estado-alerta"><th:block th:replace="~{componentes/tabela :: estado(texto='Sem resposta', variante='alerta')}"></th:block></td>
+</tr></table></section>
+
+<section id="alerta"><div th:replace="~{componentes/alerta :: alerta(titulo='12/10 · Culto de domingo — Transmissão sem ninguém',
+        corpo='Os 3 disponíveis já estão no limite do mês.', regra='Regra: LIMITE_POR_PERIODO', acaoTexto='Preencher',
+        acaoHref=@{/vagas/7})}"></div></section>
+<section id="alerta-simples"><div th:replace="~{componentes/alerta :: alerta('E-mail ou senha inválidos.')}"></div></section>
+
+<section id="campo"><div th:replace="~{componentes/formulario :: campo(rotulo='E-mail', nome='email', tipo='email',
+        autocomplete='username', obrigatorio=true, autofocus=true)}"></div></section>
+<section id="campo-com-erro"><div th:replace="~{componentes/formulario :: campo(rotulo='Telefone', nome='telefone',
+        tipo='tel', valor='11', dica='Opcional. Só o gerente vê.', erro='Informe o DDD e o número.')}"></div></section>
+
+<form th:object="${form}">
+    <section id="objeto-nome"><div th:replace="~{componentes/formulario :: campoDoObjeto('Nome', 'nome')}"></div></section>
+    <section id="objeto-email"><div th:replace="~{componentes/formulario :: campoDoObjeto('E-mail', 'email')}"></div></section>
+    <section id="objeto-funcao"><div th:replace="~{componentes/formulario :: selecaoDoObjeto(rotulo='Função', nome='funcao',
+            opcoes=${opcoes}, vazio='Escolha a função')}"></div></section>
+    <section id="objeto-gerente"><th:block th:replace="~{componentes/formulario :: caixaDeSelecaoDoObjeto('Gerente do ministério',
+            'gerente')}"></th:block></section>
+</form>
+<section id="caixa"><label th:replace="~{componentes/formulario :: caixaDeSelecao('Continuar conectado neste aparelho',
+        'lembrar')}"></label></section>
+
+<section id="toast"><div th:replace="~{componentes/toast :: toast('Função Projeção criada')}"></div></section>
+<section id="toast-oob"><div th:replace="~{componentes/toast :: toastOob('Disponibilidade salva')}"></div></section>
+
+<section id="nav"><nav th:replace="~{componentes/navegacao :: navPills(${itens})}"></nav></section>
+<section id="barra"><nav th:replace="~{componentes/navegacao :: barraInferior(${itens})}"></nav></section>
+<section id="rail"><nav th:replace="~{componentes/navegacao :: rail(${ministerios})}"></nav></section>
+<section id="rail-unica"><nav th:replace="~{componentes/navegacao :: rail(${ministerios.subList(0, 1)})}"></nav></section>
+<section id="seletor"><details th:replace="~{componentes/navegacao :: seletorDeMinisterio(${ministerios})}"></details></section>
+<section id="periodo"><div th:replace="~{componentes/navegacao :: seletorDePeriodo('Outubro 2026', @{/escalas/2026-09},
+        @{/escalas/2026-11})}"></div></section>
+
+</body>
+</html>

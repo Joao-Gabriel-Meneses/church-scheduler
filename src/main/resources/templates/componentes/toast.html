@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<!--/*
+    Toast (docs/design/components/Toast): confirmação de sucesso, no passado e sem ponto final
+    ("Função Projeção criada"). Some sozinho em 5 s (static/js/app.js).
+    - Depois de um redirect: redirectAttributes.addFlashAttribute("sucesso", "…"); o layout mostra o toast.
+    - Numa resposta htmx: inclua toastOob(mensagem), que entra na região #toasts do layout.
+    Para erro, use o campo (componentes/formulario); para o que precisa de ação, AlertBanner (componentes/alerta).
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="toast(mensagem)" class="rt-toast" data-toast>
+    <svg th:replace="~{componentes/icone :: icone('circle-check')}"></svg>
+    <span class="rt-toast__text" th:text="${mensagem}">Função Projeção criada</span>
+    <button type="button" class="rt-icon-btn" aria-label="Fechar aviso" title="Fechar aviso" data-fechar-toast><svg
+            th:replace="~{componentes/icone :: icone('x')}"></svg></button>
+</div>
+
+<div th:fragment="toastOob(mensagem)" hx-swap-oob="beforeend:#toasts"><div
+        th:replace="~{componentes/toast :: toast(${mensagem})}"></div></div>
+
+</body>
+</html>
