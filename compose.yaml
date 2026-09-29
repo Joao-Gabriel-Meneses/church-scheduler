@@ -1,0 +1,42 @@
+# Produção na VM Oracle Cloud (ARM64): Caddy (HTTPS) na frente do app.
+# Na VM, ao lado deste arquivo: Caddyfile, .env (a partir do .env.example) e wallet/ do Autonomous DB.
+# Uso: docker compose pull && docker compose up -d
+services:
+  app:
+    image: ${ESCALA_IMAGEM:-ghcr.io/joao-gabriel-meneses/escala:latest}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Heap alto de propósito: a Oracle recupera VMs Always Free com uso de memória abaixo de 20%.
+      JAVA_TOOL_OPTIONS: -Xms2g -Xmx3g
+    volumes:
+      - ./wallet:/wallet:ro
+    expose:
+      - '8080'
+    logging: &logs
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMINIO: ${DOMINIO:?defina DOMINIO no .env}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    logging: *logs
+
+volumes:
+  caddy-data:
+  caddy-config:
