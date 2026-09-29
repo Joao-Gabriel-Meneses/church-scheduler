@@ -11,6 +11,12 @@ spring:
     hibernate:
       ddl-auto: validate
     properties:
+      # Produção é Oracle 19c; testes e dev rodam no Oracle Free 23ai. Fixar a versão faz o Hibernate usar os
+      # mesmos tipos (boolean como NUMBER(1), JSON como BLOB) e o mesmo SQL em todos os ambientes.
+      jakarta:
+        persistence:
+          database-major-version: 19
+          database-minor-version: 0
       hibernate:
         jdbc:
           time_zone: UTC
