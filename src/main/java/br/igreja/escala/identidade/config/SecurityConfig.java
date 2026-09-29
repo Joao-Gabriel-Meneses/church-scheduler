@@ -3,15 +3,16 @@ package br.igreja.escala.identidade.config;
 import br.igreja.escala.identidade.service.UsuarioDetailsService;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.crypto.factory.PasswordEncoderFactories;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+/** Só em aplicação web: sem servidor (ex.: validação de migrações) não há rotas para proteger. */
 @Configuration(proxyBeanMethods = false)
+@ConditionalOnWebApplication
 @EnableMethodSecurity
 public class SecurityConfig {
 
@@ -41,11 +42,5 @@ public class SecurityConfig {
                         .userDetailsService(usuarios))
                 .logout(logout -> logout.logoutSuccessUrl("/login?saiu"));
         return http.build();
-    }
-
-    /** BCrypt, com prefixo {bcrypt} para permitir trocar o algoritmo no futuro sem invalidar senhas. */
-    @Bean
-    PasswordEncoder passwordEncoder() {
-        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 }
