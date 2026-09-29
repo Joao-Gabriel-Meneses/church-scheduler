@@ -2,7 +2,7 @@
 
 Sistema web que gera automaticamente as escalas dos ministérios de uma igreja: cada membro marca sua disponibilidade, o sistema monta a escala respeitando as regras do ministério e o líder revisa e publica.
 
-Stack: Java 21, Spring Boot 4.1, Thymeleaf + htmx + Tailwind, Oracle Autonomous Database 23ai, Flyway e Timefold. Os detalhes de arquitetura e as regras de negócio estão no [CLAUDE.md](CLAUDE.md).
+Stack: Java 21, Spring Boot 4.1, Thymeleaf + htmx + Tailwind, Oracle Autonomous Database 19c (testes no Oracle Free 23ai com dialeto 19), Flyway e Timefold. Os detalhes de arquitetura e as regras de negócio estão no [CLAUDE.md](CLAUDE.md).
 
 ## Pré-requisitos
 

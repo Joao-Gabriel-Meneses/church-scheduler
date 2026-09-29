@@ -24,9 +24,9 @@ Objetivos do autor: servir o ministério, compor portfólio e aprender Java/Spri
 | Framework | Spring Boot 4.1 (Web, Security, Data JPA, Validation, Mail) |
 | Solver | Timefold Solver Community (`timefold-solver-spring-boot-starter`, só suporta Spring Boot 4.x) |
 | Front-end | Thymeleaf + htmx + Tailwind CSS, renderizado no servidor, mobile-first |
-| Banco | Oracle Autonomous Database Always Free (23ai) |
+| Banco | Oracle Autonomous Database Always Free **19c** (produção). Em São Paulo o Always Free só oferece 19c |
 | Migrações | Flyway |
-| Testes | JUnit 5, AssertJ, Mockito, `ConstraintVerifier` (Timefold), Testcontainers com `gvenzl/oracle-free:23-slim-faststart`, JaCoCo |
+| Testes | JUnit 5, AssertJ, Mockito, `ConstraintVerifier` (Timefold), Testcontainers com `gvenzl/oracle-free:23-slim-faststart` (23ai, com o Hibernate fixado em 19), JaCoCo |
 | Qualidade | pre-commit (gitleaks, arquivos grandes, segredos), Spotless com palantir-java-format |
 | E-mail | Spring Mail via SMTP do Gmail (`smtp.gmail.com:587`, senha de app) |
 | Build | Maven (`./mvnw`) |
@@ -79,7 +79,11 @@ Gerente e admin também servem e aparecem na escala. Um usuário pode estar em v
 - `SolicitacaoTroca`
 - `Auditoria`
 
-Tudo que varia por ministério (funções, níveis, regras, eventos) pertence ao ministério. **Oracle 23ai tem tipos `JSON` e `BOOLEAN` nativos:** `parametros` é uma coluna `JSON` e flags (`gerente`, `fixada`, `ativa`...) são `BOOLEAN`. Cada tipo de regra tem uma classe Java de parâmetros (ex.: `MaxPorNivelParams`) que valida esse JSON.
+Tudo que varia por ministério (funções, níveis, regras, eventos) pertence ao ministério. **Oracle 19c não tem tipos JSON nem BOOLEAN nativos:**
+- `parametros` é `CLOB` com `CHECK (parametros IS JSON)`. Na entidade, mapeie como `String` com `@Lob` e converta com Jackson na classe de parâmetros. Não use `@JdbcTypeCode(SqlTypes.JSON)`: com o dialeto 19 o Hibernate espera **BLOB**.
+- Flags (`gerente`, `fixada`, `ativa`...) são `NUMBER(1)` com `CHECK (col IN (0, 1))`, mapeadas como `boolean` no Java.
+
+Cada tipo de regra tem uma classe Java de parâmetros (ex.: `MaxPorNivelParams`) que valida esse JSON.
 
 ## Regras de negócio — o ponto central
 
@@ -135,6 +139,40 @@ Outras regras:
 - **Gmail:** exige verificação em duas etapas e senha de app. O limite é de 500 destinatários por dia. Falhas de envio devem ser registradas e notificadas ao admin.
 - **Segredos** (senha do banco, wallet, senha de app do Gmail) só via variáveis de ambiente ou arquivos montados. **Nunca commitar.**
 
+## Oracle 19c em produção, 23ai nos testes
+
+**Produção é Oracle 19c.** Testes e dev rodam no Oracle Free 23ai (não existe imagem 19c gratuita), que aceita sintaxe que o 19c recusa. Todo SQL escrito à mão (migrações, `@Query(nativeQuery = true)`, `JdbcTemplate`, scripts em `infra/`, blocos ```sql da documentação) tem que ser **19c**.
+
+**Proibido** (só existe a partir do 21c/23ai) e a alternativa no 19c:
+
+| Proibido | Use |
+| --- | --- |
+| Coluna `BOOLEAN`, literais `TRUE`/`FALSE` em SQL | `NUMBER(1)` com `CHECK (col IN (0, 1))`, e `1`/`0`. Em PL/SQL, `BOOLEAN` e `TRUE` são válidos |
+| Tipo `JSON`, `JSON(...)`, `RETURNING JSON`, `JSON_TRANSFORM`, `JSON_SCALAR` | `CLOB` com `CHECK (col IS JSON)`, `JSON_VALUE`/`JSON_QUERY`/`JSON_TABLE` |
+| `CREATE ... IF NOT EXISTS`, `DROP ... IF EXISTS` | Migração que roda uma vez só (Flyway), ou bloco PL/SQL que trata o erro |
+| `SELECT` sem `FROM` (`select 1`, `select sysdate`) | `FROM dual` |
+| `INSERT ... VALUES (...), (...)` e `FROM (VALUES ...)` | Um `INSERT` por linha, ou `INSERT ALL`, ou `SELECT ... FROM dual UNION ALL ...` |
+| `GROUP BY` por alias ou posição (`GROUP BY 1` agrupa pela constante 1 no 19c, sem erro) | Repetir a expressão no `GROUP BY` |
+| SQL domains, `ANNOTATIONS`, `VECTOR`, property graph, `RESERVABLE`, `PRECHECK`, MLE | Não usar |
+| `DEFAULT ON NULL FOR INSERT ONLY / AND UPDATE` | `DEFAULT ON NULL` (12c), trigger se precisar em update |
+| Alias de tabela com `AS` (`FROM t AS x`) | `FROM t x` |
+| `UPDATE ... SET ... FROM` / `DELETE ... FROM t2` (join direto) e `RETURNING OLD/NEW` | Subconsulta correlacionada ou `MERGE` |
+| `GRANT ... ON SCHEMA`, `DB_DEVELOPER_ROLE` | Privilégios de sistema explícitos |
+| Funções do 21c+ (`ANY_VALUE`, `CHECKSUM`, `BIT_*_AGG`, `KURTOSIS_*`, `SKEWNESS_*`) | Equivalentes do 19c |
+
+**Proteções automáticas (CI):**
+- **Dialeto fixado:** `jakarta.persistence.database-major-version=19` em `application.yaml` (vale para todos os perfis), para que o Hibernate gere tipos e SQL de 19c. `EscalaApplicationIT` garante isso.
+- **Verificador de texto:** `SqlCompativelComOracle19Test` roda o `VerificadorSqlOracle19` (regex) sobre as migrações, `infra/**/*.sql` e os blocos ```sql de `docs/`, e aponta arquivo:linha:regra. Para liberar um falso positivo, comente `oracle19:permitido` na linha.
+- **Verificador do schema:** `SchemaCompativelComOracle19IT` confere, no schema migrado, que não há colunas `BOOLEAN`/`JSON`/`VECTOR`, domains nem annotations. Isso é necessário porque o `ddl-auto=validate` **não** diferencia `BOOLEAN` de `NUMBER(1)`.
+
+**Limitações do verificador** (é heurística, não parser):
+- Não enxerga SQL em strings Java (`@Query` nativa, `JdbcTemplate`) nem SQL dinâmico dentro de literais (`EXECUTE IMMEDIATE '...'`).
+- Tem falsos negativos: alias sem `AS` no `GROUP BY`, subconsulta com alias `AS` e construções que ele não conhece.
+- Detecta PL/SQL pelo início da instrução (`BEGIN`, `DECLARE`, `CREATE PROCEDURE`...) e pelo `/` final; fora desse formato, `BOOLEAN` e `TRUE` em PL/SQL podem virar falso positivo.
+- Não pega diferenças de comportamento, de otimizador ou de privilégios.
+
+Por isso a garantia final é **rodar as migrações no Autonomous DB 19c real** (schema `ESCALA_VALIDACAO`, passo 5 do `docs/deploy.md`) antes do primeiro deploy e de todo deploy com migração nova.
+
 ## Requisitos não funcionais que afetam o código
 
 - Mobile-first: marcar a disponibilidade do mês em menos de 1 minuto pelo celular.
@@ -147,7 +185,7 @@ Outras regras:
 
 - Domínio, entidades, tabelas e mensagens ao usuário em **português**. Termos técnicos do framework ficam em inglês (`Controller`, `Service`, `Repository`).
 - Tabelas e colunas em `snake_case`; classes em `PascalCase`.
-- Migrações Flyway: `V<n>__descricao.sql`, para Oracle 23ai (mesma versão em testes e produção). Nunca editar uma migração já aplicada.
+- Migrações Flyway: `V<n>__descricao.sql`, **compatíveis com Oracle 19c** (ver a seção acima). Nunca editar uma migração já aplicada.
 - Use records para DTOs e parâmetros de regra.
 - Toda ação do gerente que altera escala (forçar, publicar, trocar) registra `Auditoria`.
 - Commits pequenos, mensagens em português no imperativo.
