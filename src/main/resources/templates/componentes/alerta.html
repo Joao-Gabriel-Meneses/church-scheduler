@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<!--/*
+    AlertBanner (docs/design/components/AlertBanner): o que precisa do gerente. Diz o quê, onde (data · evento ·
+    função) e por quê, com o nome da regra, e tem uma ação.
+        <div th:replace="~{componentes/alerta :: alerta(titulo='12/10 · Culto de domingo — Transmissão sem ninguém',
+            corpo='Os 3 disponíveis já estão no limite do mês.', regra='Regra: LIMITE_POR_PERIODO',
+            acaoTexto='Preencher', acaoHref=@{/escalas/vagas/{id}(id=${vaga.id})})}"></div>
+      Opções, por nome: corpo | regra | acaoTexto + acaoHref (botão escuro pequeno, verbo no infinitivo)
+        | icone (padrão triangle-alert; ex.: arrow-left-right para desistência e troca)
+    Empilhe no topo da tela, o mais próximo primeiro.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="alerta(titulo)" class="rt-alert" role="alert">
+    <svg th:replace="~{componentes/icone :: icone(${icone ?: 'triangle-alert'})}"></svg>
+    <div>
+        <p class="rt-alert__title" th:text="${titulo}">12/10 · Culto de domingo — Transmissão sem ninguém</p>
+        <p th:if="${corpo != null}" class="rt-alert__body" th:text="${corpo}">Explicação.</p>
+        <p th:if="${regra != null}" class="rt-alert__rule" th:text="${regra}">Regra: LIMITE_POR_PERIODO</p>
+    </div>
+    <th:block th:if="${acaoTexto != null}"><a th:replace="~{componentes/botao :: botao(texto=${acaoTexto},
+            variante='dark', tamanho='sm', href=${acaoHref}, icone=null, iconeFinal=null, classe=null)}"></a></th:block>
+</div>
+
+</body>
+</html>

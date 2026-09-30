@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<!--/*
+    Exemplo do layout do gerente (desktop) na página de membros, só no perfil dev. Dados de demonstração.
+    A Toolbar é contextual: aqui só período e trava; "Gerar escala" é da página de escalas. O primário da tela é
+    "Convidar membro".
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{::#barra}, ~{::main})}">
+<head>
+    <title>Membros · Layout do gerente · Escala</title>
+</head>
+<body>
+<div id="barra" th:replace="~{componentes/toolbar :: toolbar(periodo='Outubro 2026', periodoCurto='Out 2026',
+        anteriorHref='#', proximoHref='#', travada=true, regrasHref=null, acaoTexto=null)}"></div>
+
+<main class="flex flex-col gap-6">
+    <header class="flex flex-wrap items-center justify-between gap-3">
+        <h1 class="text-title">Mídia — Membros</h1>
+        <a th:replace="~{componentes/botao :: botao(texto='Convidar membro', icone='plus', href='#', variante=null)}"></a>
+    </header>
+
+    <div th:replace="~{componentes/alerta :: alerta(titulo='Carla Dias ainda não marcou a disponibilidade de outubro',
+            corpo='Sem resposta, ela fica fora da geração da escala.', acaoTexto='Enviar lembrete', acaoHref='#',
+            regra=null, icone=null)}"></div>
+
+    <!--/* Cadastro: ListRow no celular, DataTable no desktop. */-->
+    <ul class="rt-list md:hidden">
+        <li><a th:replace="~{componentes/lista :: linha(titulo='Ana Souza', sub='Projeção e Transmissão · Experiente',
+                icone='user', href='#', selecionada=false)}"></a></li>
+        <li><a th:replace="~{componentes/lista :: linha(titulo='Lucas Lima', sub='Projeção · Iniciante', icone='user',
+                href='#', selecionada=false)}"></a></li>
+        <li><a th:replace="~{componentes/lista :: linha(titulo='Carla Dias', sub='Sem resposta em outubro', icone='user',
+                href='#', selecionada=false)}"></a></li>
+    </ul>
+    <div class="rt-panel hidden overflow-x-auto md:block">
+        <table class="rt-table">
+            <thead>
+            <tr>
+                <th scope="col">Membro</th>
+                <th scope="col">Habilitações</th>
+                <th scope="col">Escalas em out.</th>
+                <th scope="col">Disponibilidade</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td><div th:replace="~{componentes/tabela :: pessoa('Ana Souza', 'AS')}"></div></td>
+                <td><div th:replace="~{componentes/tabela :: duasLinhas('Projeção · Experiente', 'Transmissão · Experiente')}"></div></td>
+                <td>3</td>
+                <td><th:block th:replace="~{componentes/tabela :: estado(texto='Respondeu', variante=null)}"></th:block></td>
+            </tr>
+            <tr>
+                <td><div th:replace="~{componentes/tabela :: pessoa('Lucas Lima', 'LL')}"></div></td>
+                <td><div th:replace="~{componentes/tabela :: duasLinhas('Projeção · Iniciante', null)}"></div></td>
+                <td>2</td>
+                <td><th:block th:replace="~{componentes/tabela :: estado(texto='Respondeu', variante=null)}"></th:block></td>
+            </tr>
+            <tr>
+                <td><div th:replace="~{componentes/tabela :: pessoa('Carla Dias', 'CD')}"></div></td>
+                <td><div th:replace="~{componentes/tabela :: duasLinhas('Projeção · Iniciante', 'Transmissão · Experiente')}"></div></td>
+                <td>1</td>
+                <td><th:block th:replace="~{componentes/tabela :: estado(texto='Sem resposta', variante='alerta')}"></th:block></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!--/*
+    Toolbar do gerente (docs/design/components/Toolbar): seletor de período, estado da trava, atalho para as regras e a
+    ação da página. É contextual: cada página passa só o que faz sentido nela, e "Gerar escala" só é primário na página
+    de escalas (um primário por tela). No layout do gerente, entra como a barra da página:
+        <div id="barra" th:replace="~{componentes/toolbar :: toolbar(periodo='Outubro 2026', periodoCurto='Out 2026',
+            anteriorHref=@{/escalas/2026-09}, proximoHref=@{/escalas/2026-11}, travada=true, regrasHref=@{/regras},
+            acaoTexto='Gerar escala', acaoIcone='sparkles')}"></div>
+      Opções, por nome:
+        travada      true: Badge "Disponibilidade travada" (no celular, o sheet mostra também "Disponibilidade aberta")
+        regrasHref   atalho para as regras (IconButton no desktop, botão com rótulo no sheet)
+        acaoTexto    ação da página, com acaoIcone, acaoHref (sem href é um botão) e acaoVariante (padrão primary)
+    No celular (< 560px) fica numa linha: seletor compacto (periodoCurto) e "Mais ações", que abre um Sheet com a
+    trava e as ações. As ações existem uma vez só no HTML (docs/design/components/Toolbar/toolbar-celular.css).
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="toolbar(periodo, periodoCurto, anteriorHref, proximoHref)" id="barra" class="rt-toolbar">
+    <div class="rt-seg">
+        <a class="rt-icon-btn" th:href="${anteriorHref}" aria-label="Mês anterior" title="Mês anterior"><svg
+                th:replace="~{componentes/icone :: icone('chevron-left')}"></svg></a>
+        <span class="px-2 text-body-lg"><span class="rt-toolbar__longo" th:text="${periodo}">Outubro 2026</span><span
+                class="rt-toolbar__curto" th:text="${periodoCurto}">Out 2026</span></span>
+        <a class="rt-icon-btn" th:href="${proximoHref}" aria-label="Próximo mês" title="Próximo mês"><svg
+                th:replace="~{componentes/icone :: icone('chevron-right')}"></svg></a>
+    </div>
+
+    <button type="button" class="rt-icon-btn rt-toolbar__mais" popovertarget="acoes-da-barra" aria-label="Mais ações"
+            title="Mais ações"><svg th:replace="~{componentes/icone :: icone('ellipsis')}"></svg></button>
+
+    <div id="acoes-da-barra" popover class="rt-sheet rt-toolbar__acoes" role="dialog"
+         th:aria-label="|Ações de ${periodo}|">
+        <div class="rt-sheet__cabeca">
+            <p class="rt-sheet__titulo" th:text="${periodo}">Outubro 2026</p>
+            <button type="button" class="rt-icon-btn" popovertarget="acoes-da-barra" popovertargetaction="hide"
+                    aria-label="Fechar" title="Fechar"><svg th:replace="~{componentes/icone :: icone('x')}"></svg></button>
+        </div>
+        <th:block th:if="${travada == true}"><span th:replace="~{componentes/badge :: badge(
+                texto='Disponibilidade travada', variante='locked', icone=null, tint=null, classe=null)}"></span></th:block>
+        <th:block th:unless="${travada == true}"><span th:replace="~{componentes/badge :: badge(
+                texto='Disponibilidade aberta', variante=null, icone=null, tint=null,
+                classe='rt-toolbar__so-sheet')}"></span></th:block>
+        <a th:if="${regrasHref != null}" class="rt-icon-btn rt-toolbar__regras" th:href="${regrasHref}"
+           aria-label="Regras" title="Regras"><svg th:replace="~{componentes/icone :: icone('settings-2')}"></svg><span
+                class="rt-toolbar__rotulo">Regras</span></a>
+        <th:block th:if="${acaoTexto != null}"><button th:replace="~{componentes/botao :: botao(texto=${acaoTexto},
+                variante=${acaoVariante ?: 'primary'}, icone=${acaoIcone}, href=${acaoHref}, tipo='button',
+                tamanho=null, iconeFinal=null, classe=null)}"></button></th:block>
+    </div>
+</div>
+
+</body>
+</html>

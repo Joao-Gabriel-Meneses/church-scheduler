@@ -1,6 +1,7 @@
 package br.igreja.escala.identidade.config;
 
 import br.igreja.escala.identidade.service.UsuarioDetailsService;
+import br.igreja.escala.identidade.web.FalhaDeLoginHandler;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -24,17 +25,17 @@ public class SecurityConfig {
             HttpSecurity http,
             UsuarioDetailsService usuarios,
             @Value("${escala.seguranca.chave-lembrar-me}") String chaveLembrarMe) {
-        http.authorizeHttpRequests(
-                        rotas -> rotas.requestMatchers("/login", "/css/**", "/js/**", "/favicon.ico", "/error")
-                                .permitAll()
-                                .requestMatchers("/actuator/health", "/actuator/health/**")
-                                .permitAll()
-                                .anyRequest()
-                                .authenticated())
+        http.authorizeHttpRequests(rotas -> rotas.requestMatchers(
+                                "/login", "/css/**", "/js/**", "/fontes/**", "/icones/**", "/favicon.ico", "/error")
+                        .permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/health/**")
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated())
                 .formLogin(login -> login.loginPage("/login")
                         .usernameParameter("email")
                         .passwordParameter("senha")
-                        .failureUrl("/login?erro")
+                        .failureHandler(new FalhaDeLoginHandler())
                         .permitAll())
                 .rememberMe(lembrar -> lembrar.key(chaveLembrarMe)
                         .rememberMeParameter("lembrar")

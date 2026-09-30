@@ -6,4 +6,7 @@
 !package.json
 !package-lock.json
 !src/
+# CSS do design system, importado pelo src/main/frontend/app.css.
+!docs/design/tokens.css
+!docs/design/components/**/*.css
 .mvn/wrapper/maven-wrapper.jar

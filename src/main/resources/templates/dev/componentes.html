@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<!--/*
+    Vitrine dos fragmentos, só no perfil dev (ComponentesDevController). Cada seção repete o conteúdo de
+    docs/design/components/<Componente>/preview.html dentro de um .rt-canvas, para comparar lado a lado; no
+    celular o .rt-canvas vai de ponta a ponta, como no preview.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/simples :: pagina(~{::title}, ~{::main})}">
+<head>
+    <title>Componentes · Escala</title>
+</head>
+<body>
+<main id="conteudo" class="mx-auto flex w-full max-w-5xl flex-col gap-8 p-4 md:p-8">
+    <header class="flex flex-col gap-1">
+        <h1 class="text-title">Componentes</h1>
+        <p class="text-ink-muted">Fragmentos de templates/componentes com os textos dos previews de docs/design/components.
+            Layouts: <a class="underline" th:href="@{/dev/componentes/membro}">membro</a> e
+            gerente (<a class="underline" th:href="@{/dev/componentes/gerente}">escalas</a> e
+            <a class="underline" th:href="@{/dev/componentes/gerente/membros}">membros</a>).</p>
+    </header>
+
+    <section id="button" class="flex flex-col gap-2">
+        <h2 class="text-heading">Button</h2>
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
+            <div class="rt-row">
+                <button th:replace="~{componentes/botao :: botao(texto='Gerar escala', icone='sparkles', tipo='button')}"></button>
+                <button th:replace="~{componentes/botao :: botao(texto='Publicar', variante='dark', icone='send', tipo='button')}"></button>
+                <button th:replace="~{componentes/botao :: botao(texto='Salvar rascunho', variante='secondary', tipo='button')}"></button>
+                <button th:replace="~{componentes/botao :: botao(texto='Ver regras', variante='outline', tipo='button')}"></button>
+                <button th:replace="~{componentes/botao :: botao(texto='Preencher vaga', tamanho='sm',
+                        iconeFinal='chevron-right', tipo='button')}"></button>
+            </div>
+        </div>
+    </section>
+
+    <section id="icon-button" class="flex flex-col gap-2">
+        <h2 class="text-heading">IconButton</h2>
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
+            <div class="rt-row">
+                <button th:replace="~{componentes/botao :: botaoIcone(icone='layout-dashboard', rotulo='Escalas', variante='dark')}"></button>
+                <button th:replace="~{componentes/botao :: botaoIcone('calendar', 'Disponibilidade')}"></button>
+                <button th:replace="~{componentes/botao :: botaoIcone('users', 'Membros')}"></button>
+                <button th:replace="~{componentes/botao :: botaoIcone(icone='search', rotulo='Buscar', variante='dark')}"></button>
+                <button th:replace="~{componentes/botao :: botaoIcone('settings-2', 'Regras')}"></button>
+                <button th:replace="~{componentes/botao :: botaoIcone(icone='lock', rotulo='Travar disponibilidade', variante='dark')}"></button>
+                <button th:replace="~{componentes/botao :: botaoIcone('arrow-left-right', 'Pedir troca')}"></button>
+                <button th:replace="~{componentes/botao :: botaoIcone('send', 'Publicar')}"></button>
+                <button th:replace="~{componentes/botao :: botaoIcone(icone='arrow-up-right', rotulo='Abrir', tamanho='sm')}"></button>
+                <button th:replace="~{componentes/botao :: botaoIcone(icone='sparkles', rotulo='Gerar escala', tamanho='lg')}"></button>
+            </div>
+        </div>
+    </section>
+
+    <section id="badge" class="flex flex-col gap-2">
+        <h2 class="text-heading">Badge</h2>
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
+            <div class="rt-row">
+                <span th:replace="~{componentes/badge :: badge(texto='Rascunho', variante='draft')}"></span>
+                <span th:replace="~{componentes/badge :: badge(texto='Publicada', variante='published')}"></span>
+                <span th:replace="~{componentes/badge :: badge(texto='Travada', variante='locked')}"></span>
+                <span th:replace="~{componentes/badge :: badge(texto='2 vagas vazias', variante='alert')}"></span>
+                <span th:replace="~{componentes/badge :: badge('Experiente')}"></span>
+                <span th:replace="~{componentes/badge :: badge(texto='Mídia', tint='mint')}"></span>
+            </div>
+        </div>
+    </section>
+
+    <section id="list-row" class="flex flex-col gap-2">
+        <h2 class="text-heading">ListRow</h2>
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
+            <ul class="rt-list max-w-md">
+                <li><a th:replace="~{componentes/lista :: linha(titulo='Projeção', sub='Experiente · 3 escalas em outubro',
+                        icone='monitor', href='#list-row', selecionada=true)}"></a></li>
+                <li><a th:replace="~{componentes/lista :: linha(titulo='Transmissão', sub='Iniciante · 1 escala em outubro',
+                        icone='video', href='#list-row', selecionada=false)}"></a></li>
+                <li><a th:replace="~{componentes/lista :: linha(titulo='Culto de domingo', sub='Modelo · todo domingo, 18h00',
+                        icone='calendar', href='#list-row', selecionada=false)}"></a></li>
+                <li><a th:replace="~{componentes/lista :: linha(titulo='Culto de quinta', sub='Modelo · toda quinta, 19h30',
+                        icone='calendar', href='#list-row', selecionada=false)}"></a></li>
+                <li><a th:replace="~{componentes/lista :: linha(titulo='Membros sem resposta', sub='5 pessoas · enviar lembrete',
+                        icone='users', href='#list-row', selecionada=false)}"></a></li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="data-table" class="flex flex-col gap-2">
+        <h2 class="text-heading">DataTable</h2>
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
+            <div class="rt-panel overflow-auto">
+                <table class="rt-table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Membro</th>
+                        <th scope="col" class="hidden md:table-cell">Habilitações</th>
+                        <th scope="col" class="hidden md:table-cell">Escalas em out.</th>
+                        <th scope="col">Disponibilidade</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><div th:replace="~{componentes/tabela :: pessoa('Ana Souza', 'AS')}"></div></td>
+                        <td class="hidden md:table-cell"><div th:replace="~{componentes/tabela :: duasLinhas('Projeção · Experiente',
+                                'Transmissão · Experiente')}"></div></td>
+                        <td class="hidden md:table-cell">3</td>
+                        <td><th:block th:replace="~{componentes/tabela :: estado(texto='Respondeu', variante=null)}"></th:block></td>
+                    </tr>
+                    <tr>
+                        <td><div th:replace="~{componentes/tabela :: pessoa('Lucas Lima', 'LL')}"></div></td>
+                        <td class="hidden md:table-cell"><div th:replace="~{componentes/tabela :: duasLinhas('Projeção · Iniciante',
+                                null)}"></div></td>
+                        <td class="hidden md:table-cell">2</td>
+                        <td><th:block th:replace="~{componentes/tabela :: estado(texto='Respondeu', variante=null)}"></th:block></td>
+                    </tr>
+                    <tr>
+                        <td><div th:replace="~{componentes/tabela :: pessoa('Carla Dias', 'CD')}"></div></td>
+                        <td class="hidden md:table-cell"><div th:replace="~{componentes/tabela :: duasLinhas('Projeção · Iniciante',
+                                'Transmissão · Experiente')}"></div></td>
+                        <td class="hidden md:table-cell">1</td>
+                        <td><th:block th:replace="~{componentes/tabela :: estado(texto='Sem resposta', variante='alerta')}"></th:block></td>
+                    </tr>
+                    <tr>
+                        <td><div th:replace="~{componentes/tabela :: pessoa('Pedro Alves', 'PA')}"></div></td>
+                        <td class="hidden md:table-cell"><div th:replace="~{componentes/tabela :: duasLinhas('Transmissão · Experiente',
+                                null)}"></div></td>
+                        <td class="hidden md:table-cell">2</td>
+                        <td><th:block th:replace="~{componentes/tabela :: estado(texto='Respondeu', variante=null)}"></th:block></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section id="alert-banner" class="flex flex-col gap-2">
+        <h2 class="text-heading">AlertBanner</h2>
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
+            <div class="flex max-w-2xl flex-col gap-2">
+                <div th:replace="~{componentes/alerta :: alerta(titulo='12/10 · Culto de domingo — Transmissão sem ninguém',
+                        corpo='Os 3 disponíveis já estão no limite do mês ou são iniciantes com outro iniciante no evento.',
+                        regra='Regras: LIMITE_POR_PERIODO · MAX_POR_NIVEL_NO_EVENTO', acaoTexto='Preencher',
+                        acaoHref='#alert-banner', icone=null)}"></div>
+                <div th:replace="~{componentes/alerta :: alerta(titulo='Lucas Lima desistiu de 18/10 · Projeção',
+                        corpo='Indicou Bia Rocha como substituta (habilitada, sem violar regras rígidas).', regra=null,
+                        acaoTexto='Revisar', acaoHref='#alert-banner', icone='arrow-left-right')}"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="field" class="flex flex-col gap-2">
+        <h2 class="text-heading">Field</h2>
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
+            <form class="flex max-w-md flex-col gap-4" novalidate>
+                <div th:replace="~{componentes/formulario :: campo(rotulo='Nome', nome='nome', valor='Ana Souza',
+                        autocomplete='name', erro=null, dica=null)}"></div>
+                <div th:replace="~{componentes/formulario :: campo(rotulo='E-mail', nome='email', tipo='email',
+                        valor='ana@exemplo', erro='Informe um e-mail válido, como ana@exemplo.com.', dica=null)}"></div>
+                <div th:replace="~{componentes/formulario :: campo(rotulo='Telefone', nome='telefone', tipo='tel',
+                        placeholder='(11) 91234-5678', dica='Opcional. Só o gerente vê.', erro=null, valor=null)}"></div>
+                <div th:replace="~{componentes/formulario :: selecao(rotulo='Nível em Projeção', nome='nivel',
+                        opcoes=${niveis}, valor='EXPERIENTE', erro=null, dica=null)}"></div>
+                <label th:replace="~{componentes/formulario :: caixaDeSelecao(rotulo='Continuar conectado neste aparelho',
+                        nome='lembrar', marcada=true, valor=null)}"></label>
+            </form>
+        </div>
+    </section>
+
+    <section id="toast" class="flex flex-col gap-2">
+        <h2 class="text-heading">Toast</h2>
+        <p class="text-label text-ink-muted">Aqui sem o fechamento automático; nas páginas, some em 5 s.</p>
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
+            <div class="flex flex-col items-start gap-2">
+                <div class="rt-toast">
+                    <svg th:replace="~{componentes/icone :: icone('circle-check')}"></svg>
+                    <span class="rt-toast__text">Função Projeção criada</span>
+                    <button th:replace="~{componentes/botao :: botaoIcone('x', 'Fechar aviso')}"></button>
+                </div>
+                <div class="rt-toast">
+                    <svg th:replace="~{componentes/icone :: icone('circle-check')}"></svg>
+                    <span class="rt-toast__text">Disponibilidade de outubro salva</span>
+                    <button th:replace="~{componentes/botao :: botaoIcone('x', 'Fechar aviso')}"></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="side-rail" class="flex flex-col gap-2">
+        <h2 class="text-heading">SideRail</h2>
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
+            <nav th:replace="~{componentes/navegacao :: rail(${ministerios})}"></nav>
+        </div>
+    </section>
+
+    <section id="nav-pills" class="flex flex-col gap-2">
+        <h2 class="text-heading">NavPills</h2>
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
+            <nav th:replace="~{componentes/navegacao :: navPills(${abas})}"></nav>
+        </div>
+    </section>
+
+    <section id="toolbar" class="flex flex-col gap-2">
+        <h2 class="text-heading">Toolbar</h2>
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
+            <div th:replace="~{componentes/toolbar :: toolbar(periodo='Outubro 2026', periodoCurto='Out 2026',
+                    anteriorHref='#toolbar', proximoHref='#toolbar', travada=true, regrasHref='#toolbar',
+                    acaoTexto='Gerar escala', acaoIcone='sparkles', acaoHref=null)}"></div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!--/*
+    Partes comuns aos layouts (simples, membro e gerente).
+    cabeca(titulo): <head> com CSRF para o htmx, CSS, fonte pré-carregada, htmx e app.js.
+    pularParaConteudo: link "Pular para o conteúdo", visível só no foco do teclado.
+    toasts: região aria-live dos toasts; mostra o flash attribute ${sucesso} e recebe toasts OOB do htmx.
+            Fica colada acima do que vier depois dela (barra inferior no celular) e à direita no desktop.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+
+<head th:fragment="cabeca(titulo)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="_csrf" th:if="${_csrf}" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:if="${_csrf}" th:content="${_csrf.headerName}">
+    <title th:replace="${titulo}">Escala</title>
+    <link rel="preload" th:href="@{/fontes/urbanist/urbanist-latin-400-normal.woff2}" as="font" type="font/woff2"
+          crossorigin>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script th:src="@{/js/htmx.min.js}" defer></script>
+    <script th:src="@{/js/app.js}" defer></script>
+</head>
+
+<body>
+
+<a th:fragment="pularParaConteudo" href="#conteudo"
+   class="rt-btn rt-btn--secondary sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-20">Pular
+    para o conteúdo</a>
+
+<div th:fragment="toasts" id="toasts" aria-live="polite"
+     class="pointer-events-none absolute inset-x-0 bottom-full flex flex-col items-center gap-2 p-4 md:items-end md:px-8">
+    <th:block th:if="${sucesso != null}"><div th:replace="~{componentes/toast :: toast(${sucesso})}"></div></th:block>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--/*
+    ListRow (docs/design/components/ListRow): linha com tile de ícone, título, subtítulo e chevron. Nas listas de
+    cadastro, é o formato do celular; no desktop a mesma lista vira DataTable (componentes/tabela).
+        <ul class="rt-list">
+            <li th:each="funcao : ${funcoes}"><a th:replace="~{componentes/lista :: linha(titulo=${funcao.nome},
+                sub=${funcao.resumo}, icone='monitor', href=@{/funcoes/{id}(id=${funcao.id})})}"></a></li>
+        </ul>
+      Opções, por nome:
+        sub          o dado que importa, em label/ink-muted ("Experiente · 3 escalas em outubro")
+        icone        ícone do tile de 48px
+        href         linha clicável (<a> com chevron); sem href é só informação (<div>)
+        selecionada  true: fundo brand-tint e aria-current
+    Opção omitida herda a variável de mesmo nome do contexto: passe null quando precisar.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<th:block th:fragment="linha(titulo)"
+          th:with="_classes=|rt-list-row${selecionada == true ? ' rt-list-row--tint' : ''}|">
+    <a th:if="${href != null}" th:href="${href}" th:class="${_classes}"
+       th:aria-current="${selecionada == true} ? 'true' : null"><th:block
+            th:replace="~{componentes/lista :: conteudoDaLinha}"></th:block><svg
+            th:replace="~{componentes/icone :: icone('chevron-right')}"></svg></a>
+    <div th:unless="${href != null}" th:class="${_classes}"><th:block
+            th:replace="~{componentes/lista :: conteudoDaLinha}"></th:block></div>
+</th:block>
+
+<th:block th:fragment="conteudoDaLinha">
+    <span th:if="${icone != null}" class="rt-list-row__icon"><svg
+            th:replace="~{componentes/icone :: icone(${icone})}"></svg></span>
+    <span class="rt-list-row__text">
+        <span class="rt-list-row__title" th:text="${titulo}">Projeção</span>
+        <span th:if="${sub != null}" class="rt-list-row__sub" th:text="${sub}">Experiente · 3 escalas em outubro</span>
+    </span>
+</th:block>
+
+</body>
+</html>

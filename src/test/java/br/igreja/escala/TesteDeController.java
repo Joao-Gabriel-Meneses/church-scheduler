@@ -16,12 +16,14 @@ import org.springframework.test.context.ActiveProfiles;
  * {@link SecurityConfig}. Todo teste de controller usa esta anotação em vez de {@code @WebMvcTest} direto.
  *
  * <p>A {@code SecurityConfig} depende do {@code UsuarioDetailsService}: declare-o com {@code @MockitoBean} na classe.
+ *
+ * <p>Toda página renderizada passa pelas {@link GuardasDeTela} (ex.: um botão primário por tela).
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @WebMvcTest(properties = CredenciaisDeTeste.PROPRIEDADE_CHAVE_LEMBRAR_ME)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, GuardasDeTela.class})
 @ActiveProfiles("test")
 public @interface TesteDeController {
 

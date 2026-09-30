@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
-      th:replace="~{layout :: pagina(~{::title}, ~{::main})}">
+      th:replace="~{layouts/membro :: pagina(~{::title}, ~{::main})}">
 <head>
     <title>Início · Escala</title>
 </head>
 <body>
-<main class="mx-auto max-w-3xl px-4 py-6">
-    <h1 class="text-xl font-semibold">Olá, <span sec:authentication="principal.nome">Nome</span>!</h1>
-    <p class="mt-2 text-slate-600">Suas próximas escalas vão aparecer aqui.</p>
-    <p sec:authorize="hasRole('ADMIN')" class="mt-4 inline-block rounded-full bg-indigo-100 px-3 py-1 text-sm text-indigo-800">
-        Administrador
+<main class="flex flex-col gap-4">
+    <h1 class="text-title">Olá, <span sec:authentication="principal.nome">Nome</span>!</h1>
+    <p class="text-ink-muted">Suas próximas escalas vão aparecer aqui.</p>
+    <p sec:authorize="hasRole('ADMIN')">
+        <span th:replace="~{componentes/badge :: badge('Administrador')}"></span>
     </p>
 </main>
 </body>

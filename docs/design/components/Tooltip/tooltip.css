@@ -1,0 +1,9 @@
+/* Tooltip — nome de um controle que só tem ícone. Não veio do Claude Design: criado no app seguindo tokens.css
+   (ver README.md ao lado). Aparece no hover e no foco do teclado, continua com o ponteiro em cima e o Esc esconde
+   (WCAG 1.4.13; o Esc fica em static/js/app.js). */
+.rt-com-tooltip{position:relative}
+.rt-tooltip{position:absolute;top:50%;left:calc(100% + var(--space-2));z-index:20;transform:translateY(-50%);padding:var(--space-1) var(--space-3);border-radius:var(--radius-pill);background:var(--ink);color:var(--on-ink);box-shadow:var(--shadow-float);font-size:var(--text-label);line-height:var(--text-label--line-height);font-weight:var(--text-label--font-weight);white-space:nowrap;visibility:hidden;opacity:0;transition:opacity .15s}
+.rt-tooltip::before{content:"";position:absolute;top:0;right:100%;bottom:0;width:var(--space-2)}
+.rt-com-tooltip:hover>.rt-tooltip,.rt-com-tooltip:focus-visible>.rt-tooltip{visibility:visible;opacity:1}
+.rt-sem-tooltip .rt-com-tooltip>.rt-tooltip{visibility:hidden;opacity:0}
+@media (prefers-reduced-motion:reduce){.rt-tooltip{transition:none}}

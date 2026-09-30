@@ -1,0 +1,7 @@
+/* Sheet — folha inferior. Não veio do Claude Design: criado no app seguindo tokens.css (ver README.md ao lado).
+   É um popover nativo (atributo popover): abre com popovertarget, fecha com Esc ou toque fora, sem JS. */
+.rt-sheet{position:fixed;inset:auto 0 0 0;width:100%;max-width:100%;max-height:85dvh;margin:0;overflow:auto;padding:var(--space-4) var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom,0px));border:0;border-radius:var(--radius-lg) var(--radius-lg) 0 0;background:var(--canvas);color:var(--ink);box-shadow:var(--shadow-float)}
+.rt-sheet:popover-open{display:flex;flex-direction:column;gap:var(--space-3)}
+.rt-sheet::backdrop{background:color-mix(in srgb,var(--ink) 24%,transparent)}
+.rt-sheet__cabeca{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)}
+.rt-sheet__titulo{margin:0;font-size:var(--text-heading);line-height:var(--text-heading--line-height);font-weight:var(--text-heading--font-weight)}

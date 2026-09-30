@@ -1,0 +1,20 @@
+/* Toolbar no celular (< 560px). Complementa o bundle.css; criado no app seguindo tokens.css (ver README.md ao lado).
+   Uma linha: seletor de período compacto + "Mais ações", que abre um Sheet com a trava (Badge) e as ações.
+   O contêiner das ações é o próprio Sheet; no desktop ele vira display:contents e as ações voltam para a linha,
+   então cada ação existe uma vez só no HTML. */
+@media (min-width:560px){
+  .rt-toolbar__mais,.rt-toolbar__curto,.rt-toolbar__so-sheet,.rt-toolbar__rotulo,.rt-toolbar__acoes .rt-sheet__cabeca{display:none}
+  .rt-toolbar__acoes{display:contents}
+  .rt-toolbar__acoes>.rt-badge{height:var(--size-control-lg);padding:0 var(--space-6)}
+}
+@media (max-width:559.98px){
+  .rt-toolbar{flex-wrap:nowrap;justify-content:space-between}
+  .rt-toolbar__longo{display:none}
+  .rt-toolbar .rt-seg{height:var(--size-control)}
+  .rt-toolbar .rt-seg .rt-icon-btn{width:var(--size-control-sm);height:var(--size-control-sm)}
+  .rt-toolbar .rt-toolbar__mais{width:var(--size-control);height:var(--size-control)}
+  .rt-toolbar .rt-sheet>.rt-badge{align-self:flex-start}
+  .rt-toolbar .rt-sheet .rt-btn,.rt-toolbar .rt-sheet .rt-toolbar__regras{width:100%;height:var(--size-control);justify-content:center}
+  .rt-toolbar .rt-sheet .rt-toolbar__regras{display:inline-flex;align-items:center;gap:var(--space-2);padding:0 var(--space-6);font-size:var(--text-body-lg);line-height:var(--text-body-lg--line-height)}
+  .rt-toolbar .rt-sheet__cabeca .rt-icon-btn{width:var(--size-control);height:var(--size-control)}
+}

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!--/* Exemplo do layout do membro (celular primeiro), só no perfil dev. Dados de demonstração. */-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/membro :: pagina(~{::title}, ~{::main})}">
+<head>
+    <title>Layout do membro · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-1">
+        <h1 class="text-title">Mídia — Outubro</h1>
+        <p class="text-ink-muted">Marque os dias em que você pode servir até 25/09.</p>
+    </header>
+
+    <div class="flex flex-col gap-3">
+        <h2 class="text-heading">Minhas escalas</h2>
+        <ul class="rt-list">
+            <li><a th:replace="~{componentes/lista :: linha(titulo='Culto de domingo', sub='12/10 · Dom · 18h00 · Projeção',
+                    icone='monitor', href='#', selecionada=false)}"></a></li>
+            <li><a th:replace="~{componentes/lista :: linha(titulo='Culto de quinta', sub='16/10 · Qui · 19h30 · Transmissão',
+                    icone='video', href='#', selecionada=false)}"></a></li>
+            <li><a th:replace="~{componentes/lista :: linha(titulo='Culto de domingo', sub='26/10 · Dom · 18h00 · Projeção',
+                    icone='monitor', href='#', selecionada=false)}"></a></li>
+        </ul>
+    </div>
+
+    <button th:replace="~{componentes/botao :: botao(texto='Marcar disponibilidade', icone='calendar',
+            classe='w-full justify-center', tipo='button')}"></button>
+</main>
+</body>
+</html>

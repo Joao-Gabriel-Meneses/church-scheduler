@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<!--/*
+    Layout do membro, celular primeiro (docs/design/README.md, "Forma, espaço e layout"): coluna estreita, seletor
+    de ministério no topo e navegação na barra inferior; a partir de md, a navegação vira NavPills no topo. Uso:
+        <html th:replace="~{layouts/membro :: pagina(~{::title}, ~{::main})}">
+    A navegação vem de ${navegacao} (NavegacaoAdvice) e só aparece com dois itens ou mais.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:fragment="pagina(titulo, conteudo)">
+<head th:replace="~{layouts/base :: cabeca(${titulo})}"></head>
+<body class="rt flex min-h-dvh flex-col bg-canvas"
+      th:with="_comNavegacao=${navegacao != null and navegacao.size() > 1}">
+<a th:replace="~{layouts/base :: pularParaConteudo}"></a>
+
+<header class="mx-auto flex w-full max-w-md items-center justify-between gap-2 p-4 md:max-w-3xl">
+    <th:block th:if="${ministerios != null and ministerios.size() > 1}">
+        <details th:replace="~{componentes/navegacao :: seletorDeMinisterio(${ministerios})}"></details>
+    </th:block>
+    <p th:unless="${ministerios != null and ministerios.size() > 1}" class="text-heading">Escala</p>
+    <div th:if="${_comNavegacao}" class="hidden md:block">
+        <nav th:replace="~{componentes/navegacao :: navPills(${navegacao})}"></nav>
+    </div>
+    <form th:action="@{/logout}" method="post" sec:authorize="isAuthenticated()">
+        <button th:replace="~{componentes/botao :: botaoIcone(icone='log-out', rotulo='Sair', tipo='submit',
+                variante=null, tamanho=null, href=null, classe=null)}"></button>
+    </form>
+</header>
+
+<div id="conteudo" tabindex="-1" class="mx-auto w-full max-w-md flex-1 px-4 pb-8 md:max-w-3xl">
+    <main th:replace="${conteudo}"></main>
+</div>
+
+<div class="sticky bottom-0 z-10">
+    <div th:replace="~{layouts/base :: toasts}"></div>
+    <div th:if="${_comNavegacao}" class="md:hidden">
+        <nav th:replace="~{componentes/navegacao :: barraInferior(${navegacao})}"></nav>
+    </div>
+</div>
+</body>
+</html>
