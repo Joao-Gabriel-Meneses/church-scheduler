@@ -10,11 +10,8 @@
     <title>Membros · Layout do gerente · Escala</title>
 </head>
 <body>
-<div id="barra" class="rt-toolbar">
-    <div th:replace="~{componentes/navegacao :: seletorDePeriodo('Outubro 2026', '#', '#')}"></div>
-    <span th:replace="~{componentes/badge :: badge(texto='Disponibilidade travada', variante='locked',
-            classe='h-control-lg px-6')}"></span>
-</div>
+<div id="barra" th:replace="~{componentes/toolbar :: toolbar(periodo='Outubro 2026', periodoCurto='Out 2026',
+        anteriorHref='#', proximoHref='#', travada=true, regrasHref=null, acaoTexto=null)}"></div>
 
 <main class="flex flex-col gap-6">
     <header class="flex flex-wrap items-center justify-between gap-3">

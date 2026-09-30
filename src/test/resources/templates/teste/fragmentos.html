@@ -57,8 +57,11 @@
 <section id="rail"><nav th:replace="~{componentes/navegacao :: rail(${ministerios})}"></nav></section>
 <section id="rail-unica"><nav th:replace="~{componentes/navegacao :: rail(${ministerios.subList(0, 1)})}"></nav></section>
 <section id="seletor"><details th:replace="~{componentes/navegacao :: seletorDeMinisterio(${ministerios})}"></details></section>
-<section id="periodo"><div th:replace="~{componentes/navegacao :: seletorDePeriodo('Outubro 2026', @{/escalas/2026-09},
-        @{/escalas/2026-11})}"></div></section>
+<section id="toolbar"><div th:replace="~{componentes/toolbar :: toolbar(periodo='Outubro 2026', periodoCurto='Out 2026',
+        anteriorHref=@{/escalas/2026-09}, proximoHref=@{/escalas/2026-11}, travada=true, regrasHref=@{/regras},
+        acaoTexto='Gerar escala', acaoIcone='sparkles', acaoHref=null)}"></div></section>
+<section id="toolbar-minima"><div th:replace="~{componentes/toolbar :: toolbar(periodo='Outubro 2026',
+        periodoCurto='Out 2026', anteriorHref='#', proximoHref='#', travada=null, regrasHref=null, acaoTexto=null)}"></div></section>
 
 </body>
 </html>

@@ -214,11 +214,43 @@ class ComponentesTest {
     }
 
     @Test
-    void seletorDePeriodoTemSetasComRotulo() {
-        assertThat(secao("periodo"))
-                .contains("<div class=\"rt-seg\">", "Outubro 2026")
+    void toolbarTemSeletorDePeriodoComRotuloLongoECurto() {
+        assertThat(secao("toolbar"))
+                .contains("<div id=\"barra\" class=\"rt-toolbar\">", "<div class=\"rt-seg\">")
                 .contains("href=\"/escalas/2026-09\" aria-label=\"Mês anterior\"")
-                .contains("href=\"/escalas/2026-11\" aria-label=\"Próximo mês\"");
+                .contains("href=\"/escalas/2026-11\" aria-label=\"Próximo mês\"")
+                .contains("<span class=\"rt-toolbar__longo\">Outubro 2026</span>")
+                .contains("<span class=\"rt-toolbar__curto\">Out 2026</span>");
+    }
+
+    @Test
+    void toolbarAbreAsDemaisAcoesNumSheetNoCelular() {
+        assertThat(secao("toolbar"))
+                .contains("class=\"rt-icon-btn rt-toolbar__mais\" popovertarget=\"acoes-da-barra\"")
+                .contains("aria-label=\"Mais ações\"", "#ellipsis\"")
+                .contains("<div id=\"acoes-da-barra\" popover class=\"rt-sheet rt-toolbar__acoes\" role=\"dialog\"")
+                .contains("aria-label=\"Ações de Outubro 2026\"")
+                .contains("popovertargetaction=\"hide\" aria-label=\"Fechar\"");
+    }
+
+    @Test
+    void toolbarCompletaTemTravaRegrasEAAcaoUmaVezSo() {
+        String toolbar = secao("toolbar");
+
+        assertThat(toolbar)
+                .contains("class=\"rt-badge rt-badge--locked\"", "Disponibilidade travada")
+                .contains("<a class=\"rt-icon-btn rt-toolbar__regras\" href=\"/regras\" aria-label=\"Regras\"")
+                .contains("<span class=\"rt-toolbar__rotulo\">Regras</span>")
+                .contains("<button type=\"button\" class=\"rt-btn rt-btn--primary\">", "#sparkles\"")
+                .doesNotContain("Disponibilidade aberta");
+        assertThat(toolbar.split("Gerar escala", -1)).hasSize(2);
+    }
+
+    @Test
+    void toolbarMinimaSoTemPeriodoETravaAbertaNoSheet() {
+        assertThat(secao("toolbar-minima"))
+                .contains("class=\"rt-badge rt-toolbar__so-sheet\"", "Disponibilidade aberta")
+                .doesNotContain("rt-toolbar__regras", "rt-btn", "rt-badge--locked");
     }
 
     private String secao(String id) {

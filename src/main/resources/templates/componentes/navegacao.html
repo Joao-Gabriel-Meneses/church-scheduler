@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!--/*
-    Navegação (docs/design/components/NavPills, SideRail e Toolbar). Os itens são List<ItemDeNavegacao>; o layout
-    recebe a navegação principal do NavegacaoAdvice (${navegacao}) e os ministérios em ${ministerios}.
+    Navegação (docs/design/components/NavPills e SideRail; a Toolbar fica em componentes/toolbar). Os itens são
+    List<ItemDeNavegacao>; o layout recebe a navegação principal do NavegacaoAdvice (${navegacao}) e os ministérios
+    em ${ministerios}.
 
     navPills(itens): pílulas no topo; a atual fica escura (aria-current="page").
     barraInferior(itens): no celular a navegação vira barra inferior, com ícone + rótulo curto.
     rail(ministerios): SideRail de ministérios no desktop; escondida com menos de dois.
     seletorDeMinisterio(ministerios): no celular, a rail vira um seletor no topo (sem JS).
-    seletorDePeriodo(rotulo, anteriorHref, proximoHref): seletor escuro da Toolbar ("Outubro 2026").
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <body>
@@ -45,14 +45,6 @@
                 selecionada=${ministerio.atual}, sub=null)}"></a></li>
     </ul>
 </details>
-
-<div th:fragment="seletorDePeriodo(rotulo, anteriorHref, proximoHref)" class="rt-seg">
-    <a class="rt-icon-btn" th:href="${anteriorHref}" aria-label="Mês anterior" title="Mês anterior"><svg
-            th:replace="~{componentes/icone :: icone('chevron-left')}"></svg></a>
-    <span class="px-2 text-body-lg" th:text="${rotulo}">Outubro 2026</span>
-    <a class="rt-icon-btn" th:href="${proximoHref}" aria-label="Próximo mês" title="Próximo mês"><svg
-            th:replace="~{componentes/icone :: icone('chevron-right')}"></svg></a>
-</div>
 
 </body>
 </html>

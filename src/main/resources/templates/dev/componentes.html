@@ -199,13 +199,9 @@
     <section id="toolbar" class="flex flex-col gap-2">
         <h2 class="text-heading">Toolbar</h2>
         <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
-            <div class="rt-toolbar">
-                <div th:replace="~{componentes/navegacao :: seletorDePeriodo('Outubro 2026', '#toolbar', '#toolbar')}"></div>
-                <span th:replace="~{componentes/badge :: badge(texto='Disponibilidade travada', variante='locked',
-                        classe='h-control-lg px-6')}"></span>
-                <button th:replace="~{componentes/botao :: botaoIcone('settings-2', 'Regras')}"></button>
-                <button th:replace="~{componentes/botao :: botao(texto='Gerar escala', icone='sparkles', tipo='button')}"></button>
-            </div>
+            <div th:replace="~{componentes/toolbar :: toolbar(periodo='Outubro 2026', periodoCurto='Out 2026',
+                    anteriorHref='#toolbar', proximoHref='#toolbar', travada=true, regrasHref='#toolbar',
+                    acaoTexto='Gerar escala', acaoIcone='sparkles', acaoHref=null)}"></div>
         </div>
     </section>
 </main>

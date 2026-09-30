@@ -9,13 +9,9 @@
     <title>Escalas · Layout do gerente · Escala</title>
 </head>
 <body>
-<div id="barra" class="rt-toolbar">
-    <div th:replace="~{componentes/navegacao :: seletorDePeriodo('Outubro 2026', '#', '#')}"></div>
-    <span th:replace="~{componentes/badge :: badge(texto='Disponibilidade travada', variante='locked',
-            classe='h-control-lg px-6')}"></span>
-    <button th:replace="~{componentes/botao :: botaoIcone('settings-2', 'Regras')}"></button>
-    <button th:replace="~{componentes/botao :: botao(texto='Gerar escala', icone='sparkles', tipo='button')}"></button>
-</div>
+<div id="barra" th:replace="~{componentes/toolbar :: toolbar(periodo='Outubro 2026', periodoCurto='Out 2026',
+        anteriorHref='#', proximoHref='#', travada=true, regrasHref='#', acaoTexto='Gerar escala', acaoIcone='sparkles',
+        acaoHref=null)}"></div>
 
 <main class="flex flex-col gap-6">
     <header class="flex flex-wrap items-center gap-3">
