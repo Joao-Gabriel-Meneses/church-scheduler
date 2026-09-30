@@ -1,17 +1,19 @@
 <!DOCTYPE html>
-<!--/* Exemplo do layout do gerente (desktop), só no perfil dev. Dados de demonstração. */-->
+<!--/*
+    Exemplo do layout do gerente (desktop) na página de membros, só no perfil dev. Dados de demonstração.
+    A Toolbar é contextual: aqui só período e trava; "Gerar escala" é da página de escalas. O primário da tela é
+    "Convidar membro".
+*/-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layouts/gerente :: pagina(~{::title}, ~{::#barra}, ~{::main})}">
 <head>
-    <title>Layout do gerente · Escala</title>
+    <title>Membros · Layout do gerente · Escala</title>
 </head>
 <body>
 <div id="barra" class="rt-toolbar">
     <div th:replace="~{componentes/navegacao :: seletorDePeriodo('Outubro 2026', '#', '#')}"></div>
     <span th:replace="~{componentes/badge :: badge(texto='Disponibilidade travada', variante='locked',
             classe='h-control-lg px-6')}"></span>
-    <button th:replace="~{componentes/botao :: botaoIcone('settings-2', 'Regras')}"></button>
-    <button th:replace="~{componentes/botao :: botao(texto='Gerar escala', icone='sparkles', tipo='button')}"></button>
 </div>
 
 <main class="flex flex-col gap-6">

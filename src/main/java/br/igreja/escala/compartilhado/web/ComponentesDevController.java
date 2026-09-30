@@ -39,11 +39,20 @@ class ComponentesDevController {
         return "dev/layout-membro";
     }
 
+    /** Página de escalas: a única com "Gerar escala" como primário na Toolbar. */
     @GetMapping("/gerente")
-    String gerente(Model model) {
+    String gerenteEscalas(Model model) {
+        model.addAttribute("navegacao", abasDoGerente("Escalas"));
+        model.addAttribute("ministerios", ministerios());
+        return "dev/gerente-escalas";
+    }
+
+    /** Página de membros: a Toolbar só tem período e trava; o primário é "Convidar membro". */
+    @GetMapping("/gerente/membros")
+    String gerenteMembros(Model model) {
         model.addAttribute("navegacao", abasDoGerente("Membros"));
         model.addAttribute("ministerios", ministerios());
-        return "dev/layout-gerente";
+        return "dev/gerente-membros";
     }
 
     private static List<ItemDeNavegacao> ministerios() {
@@ -60,14 +69,15 @@ class ComponentesDevController {
     private static List<ItemDeNavegacao> abasDoGerente(String atual) {
         return List.of(
                 new ItemDeNavegacao(
-                        "Escalas", "Escalas", "layout-dashboard", "/dev/componentes/gerente#", "Escalas".equals(atual)),
+                        "Escalas", "Escalas", "layout-dashboard", "/dev/componentes/gerente", "Escalas".equals(atual)),
                 new ItemDeNavegacao(
                         "Disponibilidade",
                         "Disponibilidade",
                         "calendar",
                         "/dev/componentes/gerente#",
                         "Disponibilidade".equals(atual)),
-                new ItemDeNavegacao("Membros", "Membros", "users", "/dev/componentes/gerente", "Membros".equals(atual)),
+                new ItemDeNavegacao(
+                        "Membros", "Membros", "users", "/dev/componentes/gerente/membros", "Membros".equals(atual)),
                 new ItemDeNavegacao(
                         "Regras", "Regras", "settings-2", "/dev/componentes/gerente#", "Regras".equals(atual)));
     }

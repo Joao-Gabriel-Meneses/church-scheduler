@@ -70,13 +70,23 @@ class ComponentesDevControllerTest {
     }
 
     @Test
-    void exemploDoGerenteTemRailNavPillsEToolbar() throws Exception {
+    void exemploDoGerenteNasEscalasTemGerarEscalaComoPrimarioNaToolbar() throws Exception {
         mvc.perform(get("/teste/vitrine/gerente").with(user(ANA)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(Matchers.containsString("class=\"rt-rail\"")))
                 .andExpect(content().string(Matchers.containsString("class=\"rt-nav flex-wrap\"")))
                 .andExpect(content().string(Matchers.containsString("id=\"barra\" class=\"rt-toolbar\"")))
-                .andExpect(content().string(Matchers.containsString("class=\"rt-table\"")));
+                .andExpect(content().string(Matchers.containsString("Gerar escala")));
+    }
+
+    @Test
+    void exemploDoGerenteNosMembrosNaoTemGerarEscala() throws Exception {
+        mvc.perform(get("/teste/vitrine/gerente/membros").with(user(ANA)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("id=\"barra\" class=\"rt-toolbar\"")))
+                .andExpect(content().string(Matchers.containsString("Convidar membro")))
+                .andExpect(content().string(Matchers.containsString("class=\"rt-table\"")))
+                .andExpect(content().string(Matchers.not(Matchers.containsString("Gerar escala"))));
     }
 
     @Controller
@@ -95,8 +105,13 @@ class ComponentesDevControllerTest {
         }
 
         @GetMapping("/teste/vitrine/gerente")
-        String gerente(Model model) {
-            return dev.gerente(model);
+        String gerenteEscalas(Model model) {
+            return dev.gerenteEscalas(model);
+        }
+
+        @GetMapping("/teste/vitrine/gerente/membros")
+        String gerenteMembros(Model model) {
+            return dev.gerenteMembros(model);
         }
     }
 }

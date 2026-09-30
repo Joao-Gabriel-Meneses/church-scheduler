@@ -203,6 +203,7 @@ O design system "Escala" (feito no Claude Design) está em `docs/design/`. O `do
 - **Nenhuma cor ou tamanho fixo fora dos tokens:** nada de `style=`, `<style>`, valor arbitrário do Tailwind (`w-[37px]`) ou cor hexadecimal. O `TemplatesUsamSoTokensTest` falha nesses casos.
 - **Voz:** português, tratando por "você", sentence case, botões com verbo no infinitivo ("Gerar escala", "Salvar"), sem emoji. Títulos no padrão "Ministério — Período". Todo alerta diz o quê, onde e por quê.
 - **Listas de cadastro:** ListRow no celular (`rt-list md:hidden`) e DataTable no desktop (`rt-panel hidden md:block`).
+- **Um botão primário por tela.** A Toolbar do gerente é contextual: "Gerar escala" só é primário na página de escalas. O `UmPrimarioPorTela` confere toda página renderizada nos testes de controller e de integração.
 - **Ícones:** Lucide com traço 1.5, via `componentes/icone`. Um ícone novo entra em `src/main/frontend/icones.json`; o `IconesTest` pega nome fora da lista.
 - **Fonte e ícones hospedados no app** (Urbanist OFL-1.1 e Lucide ISC, do npm com versão fixa). O `copiar-assets.mjs` gera tudo em `target/classes/static` junto com as licenças. Nada de CDN.
 - **Sucesso:** depois de um redirect, `addFlashAttribute("sucesso", "...")` vira toast; numa resposta htmx, use `componentes/toast :: toastOob`.

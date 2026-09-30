@@ -23,6 +23,7 @@ import org.springframework.test.context.TestPropertySource;
  *   <li>Cada teste cria os dados de que precisa e não depende de dados de outra classe nem do admin criado na
  *       subida. Use {@code @Transactional} na classe de teste para desfazer tudo ao final.
  *   <li>As classes rodam em ordem aleatória (Failsafe {@code runOrder=random}).
+ *   <li>Toda página renderizada passa pelas {@link GuardasDeTela} (ex.: um botão primário por tela).
  * </ul>
  */
 @Target(ElementType.TYPE)
@@ -30,7 +31,7 @@ import org.springframework.test.context.TestPropertySource;
 @Documented
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, GuardasDeTela.class})
 @ActiveProfiles("test")
 @TestPropertySource(
         properties = {
