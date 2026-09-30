@@ -17,10 +17,11 @@
         </th:block>
 
         <form th:action="@{/login}" method="post" class="rt-panel flex flex-col gap-4 p-6">
+            <!--/* Depois de um erro, o e-mail digitado volta (FalhaDeLoginHandler) e o foco vai para a senha. */-->
             <div th:replace="~{componentes/formulario :: campo(rotulo='E-mail', nome='email', tipo='email',
-                    autocomplete='username', obrigatorio=true, autofocus=true)}"></div>
+                    valor=${email}, autocomplete='username', obrigatorio=true, autofocus=${email == null})}"></div>
             <div th:replace="~{componentes/formulario :: campo(rotulo='Senha', nome='senha', tipo='password',
-                    autocomplete='current-password', obrigatorio=true)}"></div>
+                    valor=null, autocomplete='current-password', obrigatorio=true, autofocus=${email != null})}"></div>
             <label th:replace="~{componentes/formulario :: caixaDeSelecao('Continuar conectado neste aparelho',
                     'lembrar')}"></label>
             <button th:replace="~{componentes/botao :: botao(texto='Entrar', classe='w-full justify-center')}"></button>

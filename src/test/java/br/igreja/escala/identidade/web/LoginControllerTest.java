@@ -1,5 +1,7 @@
 package br.igreja.escala.identidade.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -13,9 +15,12 @@ import br.igreja.escala.TesteDeController;
 import br.igreja.escala.identidade.domain.Usuario;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
 import br.igreja.escala.identidade.service.UsuarioDetailsService;
+import java.util.regex.Pattern;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -66,6 +71,40 @@ class LoginControllerTest {
     }
 
     @Test
+    void depoisDoErroMantemOEmailDigitadoESenhaVazia() throws Exception {
+        when(usuarios.loadUserByUsername("ana.souza@exemplo.com"))
+                .thenThrow(new UsernameNotFoundException("não existe"));
+        var tentativa = mvc.perform(post("/login")
+                        .param("email", "ana.souza@exemplo.com")
+                        .param("senha", "errada")
+                        .with(csrf()))
+                .andExpect(redirectedUrl("/login?erro"))
+                .andReturn();
+        var sessao = (MockHttpSession) tentativa.getRequest().getSession(false);
+
+        String html = mvc.perform(get("/login").param("erro", "").session(sessao))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString()
+                .replaceAll("\\s+", " ");
+
+        assertThat(html).contains("E-mail ou senha inválidos.").doesNotContain("errada");
+        assertThat(campo(html, "email"))
+                .contains("value=\"ana.souza@exemplo.com\"")
+                .doesNotContain("autofocus");
+        assertThat(campo(html, "senha")).contains("autofocus=\"autofocus\"").doesNotContain("value=");
+    }
+
+    @Test
+    void semErroOFocoComecaNoEmail() throws Exception {
+        String html = mvc.perform(get("/login")).andReturn().getResponse().getContentAsString();
+
+        assertThat(campo(html, "email")).contains("autofocus=\"autofocus\"").doesNotContain("value=");
+        assertThat(campo(html, "senha")).doesNotContain("autofocus", "value=");
+    }
+
+    @Test
     void usuarioJaLogadoVaiParaOInicio() throws Exception {
         var ana = new UsuarioAutenticado(Usuario.membro("Ana", "ana@x.com", "hash"));
 
@@ -96,5 +135,12 @@ class LoginControllerTest {
         var ana = new UsuarioAutenticado(Usuario.membro("Ana", "ana@x.com", "hash"));
 
         mvc.perform(post("/logout").with(user(ana)).with(csrf())).andExpect(redirectedUrl("/login?saiu"));
+    }
+
+    /** A tag {@code <input>} do campo, com os espaços reduzidos a um. */
+    private static String campo(String html, String id) {
+        var tag = Pattern.compile("<input[^>]*\\sid=\"" + id + "\"[^>]*>").matcher(html.replaceAll("\\s+", " "));
+        assertThat(tag.find()).as("campo %s", id).isTrue();
+        return tag.group();
     }
 }

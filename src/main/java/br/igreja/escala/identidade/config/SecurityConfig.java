@@ -1,6 +1,7 @@
 package br.igreja.escala.identidade.config;
 
 import br.igreja.escala.identidade.service.UsuarioDetailsService;
+import br.igreja.escala.identidade.web.FalhaDeLoginHandler;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -34,7 +35,7 @@ public class SecurityConfig {
                 .formLogin(login -> login.loginPage("/login")
                         .usernameParameter("email")
                         .passwordParameter("senha")
-                        .failureUrl("/login?erro")
+                        .failureHandler(new FalhaDeLoginHandler())
                         .permitAll())
                 .rememberMe(lembrar -> lembrar.key(chaveLembrarMe)
                         .rememberMeParameter("lembrar")
