@@ -6,7 +6,8 @@
 
     navPills(itens): pílulas no topo; a atual fica escura (aria-current="page").
     barraInferior(itens): no celular a navegação vira barra inferior, com ícone + rótulo curto.
-    rail(ministerios): SideRail de ministérios no desktop; escondida com menos de dois.
+    rail(ministerios): SideRail de ministérios no desktop, com aria-label e Tooltip com o nome em cada item;
+        escondida com menos de dois.
     seletorDeMinisterio(ministerios): no celular, a rail vira um seletor no topo (sem JS).
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
@@ -28,10 +29,10 @@
 
 <nav th:fragment="rail(ministerios)" th:if="${ministerios != null and ministerios.size() > 1}" class="rt-rail"
      aria-label="Ministérios">
-    <a th:each="ministerio : ${ministerios}" class="rt-icon-btn" th:href="@{${ministerio.url}}"
-       th:aria-label="${ministerio.rotulo}" th:title="${ministerio.rotulo}"
-       th:aria-current="${ministerio.atual} ? 'page' : null"><svg
-            th:replace="~{componentes/icone :: icone(${ministerio.icone})}"></svg></a>
+    <a th:each="ministerio : ${ministerios}" class="rt-icon-btn rt-com-tooltip" th:href="@{${ministerio.url}}"
+       th:aria-label="${ministerio.rotulo}" th:aria-current="${ministerio.atual} ? 'page' : null"><svg
+            th:replace="~{componentes/icone :: icone(${ministerio.icone})}"></svg><span class="rt-tooltip"
+            aria-hidden="true" th:text="${ministerio.rotulo}">Mídia</span></a>
 </nav>
 
 <details th:fragment="seletorDeMinisterio(ministerios)" th:if="${ministerios != null and ministerios.size() > 1}"

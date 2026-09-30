@@ -38,3 +38,22 @@ htmx.onLoad((conteudo) => {
   const toasts = conteudo.matches("[data-toast]") ? [conteudo] : conteudo.querySelectorAll("[data-toast]");
   toasts.forEach(agendarFechamento);
 });
+
+// Tooltip (docs/design/components/Tooltip): o Esc esconde sem tirar o foco nem mover o ponteiro (WCAG 1.4.13).
+// Volta a aparecer quando o foco ou o ponteiro saem do controle em que o Esc foi apertado.
+let tooltipEscondidoEm = null;
+
+document.addEventListener("keydown", (evento) => {
+  if (evento.key === "Escape") {
+    tooltipEscondidoEm = document.querySelector(".rt-com-tooltip:hover, .rt-com-tooltip:focus-visible");
+    document.documentElement.classList.toggle("rt-sem-tooltip", tooltipEscondidoEm !== null);
+  }
+});
+for (const tipo of ["focusin", "mouseover"]) {
+  document.addEventListener(tipo, (evento) => {
+    if (tooltipEscondidoEm && !tooltipEscondidoEm.contains(evento.target)) {
+      tooltipEscondidoEm = null;
+      document.documentElement.classList.remove("rt-sem-tooltip");
+    }
+  });
+}

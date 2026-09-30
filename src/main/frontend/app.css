@@ -4,7 +4,7 @@
  * Design system "Escala" (docs/design/README.md é a fonte da verdade).
  * - tokens.css: variáveis geradas de tokens.json por gerar_tokens_css.py. Não edite à mão.
  * - bundle.css: componentes .rt-* em @layer components, então os utilitários do Tailwind vencem nos ajustes.
- * - Field, Toast, Sheet e a Toolbar no celular: criados no app, fora do bundle.css (ver o README.md de cada um).
+ * - Field, Toast, Sheet, Tooltip e a Toolbar no celular: criados no app, fora do bundle.css (ver o README.md de cada um).
  */
 @import "../../../docs/design/tokens.css" layer(theme);
 @import "../../../docs/design/components/bundle.css" layer(components);
@@ -12,6 +12,7 @@
 @import "../../../docs/design/components/Toast/toast.css" layer(components);
 @import "../../../docs/design/components/Sheet/sheet.css" layer(components);
 @import "../../../docs/design/components/Toolbar/toolbar-celular.css" layer(components);
+@import "../../../docs/design/components/Tooltip/tooltip.css" layer(components);
 
 /* Classes usadas nos templates Thymeleaf e no JS. */
 @source "../resources/templates";

@@ -199,11 +199,18 @@ class ComponentesTest {
 
     @Test
     void railSoApareceComMaisDeUmMinisterio() {
-        assertThat(secao("rail"))
-                .contains("<nav class=\"rt-rail\" aria-label=\"Ministérios\">")
-                .contains("aria-label=\"Mídia\" title=\"Mídia\" aria-current=\"page\"")
-                .contains("aria-label=\"Louvor\"");
+        assertThat(secao("rail")).contains("<nav class=\"rt-rail\" aria-label=\"Ministérios\">");
         assertThat(secao("rail-unica")).doesNotContain("<nav");
+    }
+
+    @Test
+    void cadaItemDaRailTemNomeAcessivelETooltipSemTitle() {
+        assertThat(secao("rail"))
+                .contains("class=\"rt-icon-btn rt-com-tooltip\" href=\"/ministerios/1\" aria-label=\"Mídia\""
+                        + " aria-current=\"page\"")
+                .contains("<span class=\"rt-tooltip\" aria-hidden=\"true\">Mídia</span>")
+                .contains("aria-label=\"Louvor\"", "<span class=\"rt-tooltip\" aria-hidden=\"true\">Louvor</span>")
+                .doesNotContain("title=");
     }
 
     @Test
