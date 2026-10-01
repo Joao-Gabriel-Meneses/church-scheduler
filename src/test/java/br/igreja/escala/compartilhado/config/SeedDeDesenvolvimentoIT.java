@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import br.igreja.escala.TesteDeIntegracao;
+import br.igreja.escala.disponibilidade.service.ConsultaDaDisponibilidade;
+import br.igreja.escala.disponibilidade.service.DisponibilidadeService;
+import br.igreja.escala.disponibilidade.service.GrupoDeDisponibilidade;
+import br.igreja.escala.disponibilidade.service.LinhaDeDisponibilidade;
 import br.igreja.escala.evento.domain.Evento;
 import br.igreja.escala.evento.repository.EventoRepository;
 import br.igreja.escala.evento.repository.PeriodoRepository;
@@ -12,6 +16,7 @@ import br.igreja.escala.evento.service.ModeloEventoService;
 import br.igreja.escala.identidade.domain.Usuario;
 import br.igreja.escala.identidade.repository.UsuarioRepository;
 import br.igreja.escala.identidade.service.UsuarioDetailsService;
+import br.igreja.escala.identidade.service.UsuarioResumo;
 import br.igreja.escala.identidade.service.UsuarioService;
 import br.igreja.escala.ministerio.domain.Ministerio;
 import br.igreja.escala.ministerio.repository.MinisterioRepository;
@@ -70,6 +75,12 @@ class SeedDeDesenvolvimentoIT {
     UsuarioDetailsService autenticacao;
 
     @Autowired
+    DisponibilidadeService disponibilidades;
+
+    @Autowired
+    ConsultaDaDisponibilidade consulta;
+
+    @Autowired
     UsuarioRepository usuarioRepository;
 
     @Autowired
@@ -97,6 +108,7 @@ class SeedDeDesenvolvimentoIT {
                 eventos,
                 usuarios,
                 autenticacao,
+                disponibilidades,
                 "admin.seed@teste.local",
                 "senha-dos-membros");
 
@@ -131,6 +143,48 @@ class SeedDeDesenvolvimentoIT {
                 .singleElement()
                 .extracting(Evento::getNome, Evento::getDuracao)
                 .containsExactly("Conferência de jovens", Duration.ofHours(4));
+    }
+
+    @Test
+    void chegaComDisponibilidadeParaVerNasTelas() {
+        usuarioRepository.save(Usuario.admin("Admin do Seed", "admin.seed@teste.local", "{noop}x"));
+        new SeedDeDesenvolvimento(
+                        ministerios,
+                        funcoes,
+                        niveis,
+                        membros,
+                        habilitacoes,
+                        modelos,
+                        eventos,
+                        usuarios,
+                        autenticacao,
+                        disponibilidades,
+                        "admin.seed@teste.local",
+                        "senha-dos-membros")
+                .run(new DefaultApplicationArguments());
+
+        var midia = ministerio("Mídia");
+        var louvor = ministerio("Louvor");
+        var proximo = eventos.proximoMes();
+        assertThat(membros.queServem(louvor.getId()))
+                .extracting(UsuarioResumo::nome)
+                .containsExactly("Ana Souza", "Paula Ribeiro", "Priscila Cardoso");
+        assertThat(periodos.findByMinisterioIdAndAnoAndMes(
+                                midia.getId(),
+                                proximo.minusMonths(1).getYear(),
+                                proximo.minusMonths(1).getMonthValue())
+                        .orElseThrow()
+                        .isDisponibilidadeTravada())
+                .isTrue();
+        var painel = consulta.painel(midia.getId(), proximo);
+        assertThat(painel.responderam()).hasSize(11);
+        assertThat(painel.faltamResponder()).isNotEmpty();
+        var ana = usuarioRepository.findByEmail("ana.souza@escala.local").orElseThrow();
+        var tela = consulta.doMembro(ana.getId(), proximo);
+        assertThat(tela.grupos()).extracting(GrupoDeDisponibilidade::ministerio).containsExactly("Louvor", "Mídia");
+        assertThat(tela.grupo(midia.getId()).orElseThrow().linhas())
+                .extracting(LinhaDeDisponibilidade::marcadoPor, linha -> linha.aviso() != null)
+                .startsWith(tuple(null, false), tuple("Paula Ribeiro", false), tuple(null, true));
     }
 
     private Ministerio ministerio(String nome) {
