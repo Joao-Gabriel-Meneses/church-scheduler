@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<!--/* Página ou registro que não existe (ou que é de outro ministério; ver NaoEncontradoException). */-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/simples :: pagina(~{::title}, ~{::main})}">
+<head>
+    <title>Não encontrado · Escala</title>
+</head>
+<body>
+<main id="conteudo" class="flex flex-1 flex-col items-center justify-center p-4">
+    <div class="flex w-full max-w-sm flex-col gap-6 text-center">
+        <header class="flex flex-col gap-1">
+            <h1 class="text-title">Não encontramos esta página</h1>
+            <p class="text-ink-muted">O endereço pode estar errado, ou o que estava aqui foi removido.</p>
+        </header>
+        <a th:replace="~{componentes/botao :: botao(texto='Voltar ao início', href=@{/}, icone=null,
+                classe='justify-center')}"></a>
+    </div>
+</main>
+</body>
+</html>
