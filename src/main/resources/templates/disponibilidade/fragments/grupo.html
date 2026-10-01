@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<!--/*
+    Os eventos de um ministério no mês (GrupoDeDisponibilidade) no AvailabilityPicker. Cada toque troca o grupo
+    inteiro (#grupo-{ministério}) pela resposta do servidor: assim o período travado no meio do caminho já aparece
+    travado, com o motivo.
+    grupo(grupo, pessoaId, mostrarMinisterio, recusa):
+        pessoaId          nulo na tela do membro (grava para quem está logado); o id do membro na página do gerente
+        mostrarMinisterio etiqueta com a cor do ministério e a contagem do grupo, quando a tela tem mais de um ou na
+                          página do gerente
+        recusa            mensagem da regra que recusou o último toque (AlertBanner), ou nulo
+    respostaDoMembro: a resposta htmx da tela do membro: o grupo e o total "X de Y respondidos" fora da área trocada.
+    respostaDoGerente: a resposta htmx da página em que o gerente marca em nome de ${daPessoa.pessoa}.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<section th:fragment="grupo(grupo, pessoaId, mostrarMinisterio, recusa)" th:id="|grupo-${grupo.ministerioId}|"
+         class="flex max-w-md flex-col gap-3" th:aria-label="|Eventos de ${grupo.ministerio}|">
+    <div class="flex flex-wrap items-center gap-2">
+        <th:block th:if="${mostrarMinisterio}"><span th:replace="~{componentes/badge :: badge(texto=${grupo.ministerio},
+                tint=${grupo.tint}, variante=null, icone=null, classe=null)}"></span></th:block>
+        <th:block th:if="${grupo.travado}"><span th:replace="~{componentes/badge :: badge(
+                texto='Disponibilidade travada', variante='locked', icone=null, tint=null, classe=null)}"></span></th:block>
+        <span th:if="${mostrarMinisterio}" class="rt-label ml-auto" th:text="${grupo.contagem()}">4 de 5
+            respondidos</span>
+    </div>
+    <p th:if="${grupo.travado and !grupo.editavel}" class="text-label text-ink-muted">O gerente travou a
+        disponibilidade deste mês. Para mudar uma resposta, fale com ele.</p>
+    <th:block th:if="${recusa != null}"><div th:replace="~{componentes/alerta :: alerta(titulo=${recusa}, corpo=null,
+            regra=null, acaoTexto=null, icone=null)}"></div></th:block>
+    <p th:if="${grupo.linhas.isEmpty()}" class="rt-panel p-4 text-ink-muted" th:text="${grupo.semEventos()}">Nenhum
+        evento por vir em novembro.</p>
+    <div th:unless="${grupo.linhas.isEmpty()}" class="rt-avail max-w-none"
+         th:classappend="${grupo.editavel} ? '' : 'rt-avail--locked'">
+        <th:block th:each="linha : ${grupo.linhas}"><div th:replace="~{componentes/disponibilidade :: linha(
+                linha=${linha},
+                acao=${pessoaId == null}
+                    ? @{/disponibilidade/ministerios/{m}/eventos/{e}(m=${grupo.ministerioId}, e=${linha.eventoId}, mes=${grupo.mes})}
+                    : @{/ministerios/{m}/disponibilidade/membros/{u}/eventos/{e}(m=${grupo.ministerioId}, u=${pessoaId}, e=${linha.eventoId}, mes=${grupo.mes})},
+                alvo=|#grupo-${grupo.ministerioId}|, editavel=${grupo.editavel})}"></div></th:block>
+    </div>
+</section>
+
+<p th:fragment="total(tela, oob)" id="respondidos" class="rt-label" aria-live="polite"
+   th:hx-swap-oob="${oob} ? 'true' : null" th:text="${tela.contagem()}">7 de 13 respondidos</p>
+
+<th:block th:fragment="respostaDoMembro">
+    <section th:replace="~{disponibilidade/fragments/grupo :: grupo(${grupo}, null, ${tela.grupos.size() > 1},
+            ${recusa})}"></section>
+    <p th:replace="~{disponibilidade/fragments/grupo :: total(${tela}, true)}"></p>
+</th:block>
+
+<th:block th:fragment="respostaDoGerente">
+    <section th:replace="~{disponibilidade/fragments/grupo :: grupo(${daPessoa.grupo}, ${daPessoa.pessoa.id}, true,
+            ${recusa})}"></section>
+</th:block>
+
+</body>
+</html>

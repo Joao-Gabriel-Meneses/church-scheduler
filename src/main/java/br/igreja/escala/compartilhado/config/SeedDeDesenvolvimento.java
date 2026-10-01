@@ -1,10 +1,14 @@
 package br.igreja.escala.compartilhado.config;
 
+import br.igreja.escala.disponibilidade.domain.Resposta;
+import br.igreja.escala.disponibilidade.service.DisponibilidadeService;
 import br.igreja.escala.evento.service.DadosDoEvento;
 import br.igreja.escala.evento.service.DadosDoModelo;
 import br.igreja.escala.evento.service.EventoService;
 import br.igreja.escala.evento.service.ModeloEventoService;
+import br.igreja.escala.identidade.domain.UsuarioAutenticado;
 import br.igreja.escala.identidade.service.UsuarioDetailsService;
+import br.igreja.escala.identidade.service.UsuarioResumo;
 import br.igreja.escala.identidade.service.UsuarioService;
 import br.igreja.escala.ministerio.domain.CorDoMinisterio;
 import br.igreja.escala.ministerio.domain.Funcao;
@@ -40,9 +44,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Dados de exemplo só no perfil dev: Mídia (com 20 membros, funções, níveis, habilitações, modelos e os eventos deste
- * mês e do próximo, com dois cultos em cada domingo) e Louvor, para a SideRail aparecer. Roda depois do admin inicial
- * e só se a Mídia ainda não existe. Usa só os serviços públicos dos módulos, como uma pessoa faria pelas telas. O
- * SeedDeDesenvolvimentoIT roda o seed no banco dos testes.
+ * mês e do próximo, com dois cultos em cada domingo) e Louvor (Vocal para a Ana, a Paula e a Priscila, com um ensaio
+ * aos sábados), para a SideRail e a disponibilidade por ministério aparecerem. A Mídia já chega com respostas no
+ * próximo mês e com a disponibilidade deste mês travada. Roda depois do admin inicial e só se a Mídia ainda não
+ * existe. Usa só os serviços públicos dos módulos, como uma pessoa faria pelas telas. O SeedDeDesenvolvimentoIT roda o
+ * seed no banco dos testes.
  */
 @Component
 @Profile("dev")
@@ -88,6 +94,7 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
     private final EventoService eventos;
     private final UsuarioService usuarios;
     private final UsuarioDetailsService autenticacao;
+    private final DisponibilidadeService disponibilidades;
     private final String emailDoAdmin;
     private final String senhaDosMembros;
 
@@ -101,6 +108,7 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
             EventoService eventos,
             UsuarioService usuarios,
             UsuarioDetailsService autenticacao,
+            DisponibilidadeService disponibilidades,
             @Value("${escala.admin.email}") String emailDoAdmin,
             @Value("${escala.dev.senha-dos-membros}") String senhaDosMembros) {
         this.ministerios = ministerios;
@@ -112,6 +120,7 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
         this.eventos = eventos;
         this.usuarios = usuarios;
         this.autenticacao = autenticacao;
+        this.disponibilidades = disponibilidades;
         this.emailDoAdmin = emailDoAdmin;
         this.senhaDosMembros = senhaDosMembros;
     }
@@ -135,7 +144,8 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
         Map<String, Nivel> doMinisterio = Map.of(
                 "Iniciante", niveis.criar(midia, new DadosDoNivel("Iniciante", 1)),
                 "Experiente", niveis.criar(midia, new DadosDoNivel("Experiente", 2)));
-        funcoes.criar(louvor, new DadosDaFuncao("Vocal", Icone.MIC, 1, 3));
+        var vocal = funcoes.criar(louvor, new DadosDaFuncao("Vocal", Icone.MIC, 1, 3));
+        var vozExperiente = niveis.criar(louvor, new DadosDoNivel("Experiente", 1));
 
         for (Pessoa pessoa : PESSOAS) {
             var id = membros.cadastrar(midia, new DadosDoMembro(pessoa.nome(), pessoa.email(), null, SENHA_PROVISORIA))
@@ -147,6 +157,7 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
             habilitacoes.definir(midia, id, niveisDe(pessoa, projecao, transmissao, doMinisterio));
             if (pessoa.nome().startsWith("A") || pessoa.nome().startsWith("P")) {
                 membros.cadastrar(louvor, new DadosDoMembro(pessoa.nome(), pessoa.email(), null, SENHA_PROVISORIA));
+                habilitacoes.definir(louvor, id, Map.of(vocal.getId(), vozExperiente.getId()));
             }
         }
         var paula = usuarios.buscarPorEmail("paula.ribeiro@escala.local").orElseThrow();
@@ -162,9 +173,47 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
         eventos.gerarDoMes(midia, proximo);
         eventos.criarAvulso(
                 midia, new DadosDoEvento("Conferência de jovens", terceiroSabado(proximo), LocalTime.of(15, 0), 240));
+        modelos.criar(louvor, new DadosDoModelo("Ensaio do louvor", DayOfWeek.SATURDAY, LocalTime.of(16, 0), 90, true));
+        eventos.gerarDoMes(louvor, proximo.minusMonths(1));
+        eventos.gerarDoMes(louvor, proximo);
+
+        responder(midia, proximo, autenticacao.loadUserByUsername(paula.email()));
+        disponibilidades.travar(midia, proximo.minusMonths(1), admin);
         log.info(
                 "Seed de desenvolvimento criado: Mídia e Louvor, {} membros. Gerente: paula.ribeiro@escala.local",
                 PESSOAS.size());
+    }
+
+    /**
+     * Respostas de exemplo da Mídia no mês: doze pessoas respondem tudo, três respondem metade e o resto não responde.
+     * A Ana responde só os três primeiros eventos, o segundo marcado pela Paula em nome dela, e o horário do terceiro
+     * muda depois da resposta, para a tela dela mostrar o "Marcado por" e o aviso.
+     */
+    private void responder(Long midia, YearMonth mes, UsuarioAutenticado paula) {
+        var doMes = eventos.porVirDoMes(midia, mes);
+        var queServem = membros.queServem(midia);
+        for (int i = 0; i < queServem.size(); i++) {
+            UsuarioResumo pessoa = queServem.get(i);
+            int quantos = i < 12 ? doMes.size() : (i < 15 ? doMes.size() / 2 : 0);
+            for (int j = 0; j < quantos && !pessoa.nome().equals("Ana Souza"); j++) {
+                var resposta = (i + j) % 3 == 0 ? Resposta.NAO_PODE : Resposta.PODE;
+                disponibilidades.marcar(pessoa.id(), midia, doMes.get(j).getId(), resposta);
+            }
+        }
+        if (doMes.size() < 3) {
+            return;
+        }
+        var ana = usuarios.buscarPorEmail("ana.souza@escala.local").orElseThrow();
+        disponibilidades.marcar(ana.id(), midia, doMes.get(0).getId(), Resposta.PODE);
+        disponibilidades.marcarPeloGerente(midia, ana.id(), doMes.get(1).getId(), Resposta.NAO_PODE, paula);
+        disponibilidades.marcar(ana.id(), midia, doMes.get(2).getId(), Resposta.PODE);
+        var mudou = doMes.get(2);
+        eventos.alterar(
+                midia,
+                mudou.getId(),
+                new DadosDoEvento(
+                        mudou.getNome(), mudou.getData(), mudou.getHorario().plusMinutes(30), (int)
+                                mudou.getDuracao().toMinutes()));
     }
 
     private static Map<Long, Long> niveisDe(

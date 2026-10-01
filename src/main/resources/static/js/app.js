@@ -34,6 +34,30 @@ document.addEventListener("click", (evento) => {
   }
 });
 
+// Botão "copiar" (componentes/botao, opção copiar): copia o texto do elemento indicado. Se a página tiver um
+// <template id="<id>-copiado"> com um Toast, mostra o toast e fecha o Sheet em volta do botão. Sem acesso à área de
+// transferência (navegador antigo ou página sem HTTPS), seleciona o texto para a pessoa copiar à mão.
+document.addEventListener("click", async (evento) => {
+  const botao = evento.target.closest("[data-copiar]");
+  const alvo = botao && document.getElementById(botao.dataset.copiar);
+  if (!alvo) {
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(alvo.innerText);
+  } catch {
+    window.getSelection().selectAllChildren(alvo);
+    return;
+  }
+  const aviso = document.getElementById(`${botao.dataset.copiar}-copiado`);
+  if (aviso) {
+    const toast = aviso.content.firstElementChild.cloneNode(true);
+    document.getElementById("toasts").append(toast);
+    agendarFechamento(toast);
+  }
+  botao.closest("[popover]")?.hidePopover();
+});
+
 htmx.onLoad((conteudo) => {
   const toasts = conteudo.matches("[data-toast]") ? [conteudo] : conteudo.querySelectorAll("[data-toast]");
   toasts.forEach(agendarFechamento);

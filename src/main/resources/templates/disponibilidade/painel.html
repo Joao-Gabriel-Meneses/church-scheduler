@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<!--/*
+    Disponibilidade do mês para o gerente. A Toolbar troca o mês e traz a trava como ação (escura para travar,
+    contorno para destravar; sem primário na tela). StatCards com quem respondeu e quem falta, "Copiar lembrete" (Sheet
+    com o texto para o WhatsApp, só com a disponibilidade aberta); no celular, duas listas (ListRow), e no desktop a
+    visão membro × evento (DataTable), com a linha "Podem" por evento.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{::#barra}, ~{::main})}">
+<head>
+    <title th:text="|${ministerio.nome} — ${nomeDoMes} · Escala|">Mídia — Novembro · Escala</title>
+</head>
+<body>
+<div id="barra" th:replace="~{componentes/toolbar :: toolbar(periodo=${mesPorExtenso}, periodoCurto=${mesCurto},
+        anteriorHref=@{/ministerios/{m}/disponibilidade(m=${ministerio.id}, mes=${mesAnterior})},
+        proximoHref=@{/ministerios/{m}/disponibilidade(m=${ministerio.id}, mes=${proximoMes})},
+        travada=${painel.travado}, regrasHref=null,
+        acaoTexto=${!painel.temPeriodo ? null : (painel.travado ? 'Destravar disponibilidade' : 'Travar disponibilidade')},
+        acaoIcone=${painel.travado ? 'lock-open' : 'lock'}, acaoVariante=${painel.travado ? 'outline' : 'dark'},
+        acaoFormulario=${painel.travado ? 'destravar-disponibilidade' : 'travar-disponibilidade'}, acaoHref=null)}"></div>
+
+<main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-1">
+        <h1 class="text-title" th:text="|${ministerio.nome} — ${nomeDoMes}|">Mídia — Novembro</h1>
+        <p th:unless="${painel.travado}" class="text-ink-muted">Quem serve no ministério marca Pode ou Não pode em cada
+            evento por vir. Sem resposta conta como não pode na escala.</p>
+        <p th:if="${painel.travado}" class="text-ink-muted">Disponibilidade travada: os membros não mudam mais as
+            respostas. Você ainda pode marcar em nome de alguém, e cada mudança fica na auditoria.</p>
+    </header>
+
+    <form th:if="${painel.temPeriodo}" id="travar-disponibilidade"
+          th:action="@{/ministerios/{m}/disponibilidade/travar(m=${ministerio.id})}" method="post" hidden>
+        <input type="hidden" name="mes" th:value="${painel.mes}">
+    </form>
+    <form th:if="${painel.temPeriodo}" id="destravar-disponibilidade"
+          th:action="@{/ministerios/{m}/disponibilidade/destravar(m=${ministerio.id})}" method="post" hidden>
+        <input type="hidden" name="mes" th:value="${painel.mes}">
+    </form>
+
+    <th:block th:if="${recusa != null}"><div th:replace="~{componentes/alerta :: alerta(titulo=${recusa}, corpo=null,
+            regra=null, acaoTexto=null, icone=null)}"></div></th:block>
+
+    <p th:if="${painel.eventos.isEmpty()}" class="rt-panel p-6 text-ink-muted"
+       th:text="|Nenhum evento por vir em ${painel.nomeDoMes()}.|">Nenhum evento por vir em novembro.</p>
+    <th:block th:if="${!painel.eventos.isEmpty() and painel.membros.isEmpty()}"><div th:replace="~{componentes/alerta ::
+            alerta(titulo='Nenhum membro marca disponibilidade ainda',
+            corpo='Só marca quem tem habilitação em alguma função do ministério. Habilite os membros na página de cada um.',
+            regra=null, acaoTexto='Ver membros', acaoHref=@{/ministerios/{m}/membros(m=${ministerio.id})},
+            icone=null)}"></div></th:block>
+
+    <th:block th:unless="${painel.eventos.isEmpty() or painel.membros.isEmpty()}">
+        <div class="rt-stats">
+            <div th:replace="~{componentes/estatistica :: cartao(rotulo='Responderam',
+                    valor=${painel.responderam().size()}, sub=|de ${painel.membros.size()} membros|, href=null)}"></div>
+            <div th:replace="~{componentes/estatistica :: cartao(rotulo='Faltam responder',
+                    valor=${painel.faltamResponder().size()},
+                    sub=|${painel.semNenhumaResposta()} sem nenhuma resposta|, href='#respostas')}"></div>
+            <div th:replace="~{componentes/estatistica :: cartao(rotulo='Eventos por vir',
+                    valor=${painel.eventos.size()}, sub=|em ${painel.nomeDoMes()}|, href=null)}"></div>
+        </div>
+
+        <th:block th:if="${lembrete != null}">
+            <div><button th:replace="~{componentes/sheet :: abrir(alvo='lembrete', texto='Copiar lembrete',
+                    icone='copy')}"></button></div>
+            <div th:replace="~{componentes/sheet :: folha('lembrete', 'Lembrete para o WhatsApp',
+                    ~{::#conteudo-do-lembrete})}">
+                <div id="conteudo-do-lembrete" class="flex flex-col gap-4">
+                    <p class="text-ink-muted">Cole no grupo do ministério. Dá para editar antes de enviar.</p>
+                    <p id="texto-do-lembrete" class="rt-panel whitespace-pre-line p-4 select-all"
+                       th:text="${lembrete}">*Mídia — Novembro*</p>
+                    <template id="texto-do-lembrete-copiado"><div th:replace="~{componentes/toast ::
+                            toast('Lembrete copiado')}"></div></template>
+                    <div class="flex flex-col gap-2">
+                        <button th:replace="~{componentes/sheet :: fechar('lembrete')}"></button>
+                        <button th:replace="~{componentes/botao :: botao(texto='Copiar texto', variante='dark',
+                                icone='copy', tipo='button', copiar='texto-do-lembrete',
+                                classe='w-full justify-center')}"></button>
+                    </div>
+                </div>
+            </div>
+        </th:block>
+
+        <section id="respostas" class="flex flex-col gap-6" aria-label="Respostas">
+            <div class="flex flex-col gap-3 md:hidden">
+                <h2 class="text-heading" th:text="|Faltam responder (${painel.faltamResponder().size()})|">Faltam
+                    responder (3)</h2>
+                <ul th:unless="${painel.faltamResponder().isEmpty()}" class="rt-list">
+                    <li th:each="membro : ${painel.faltamResponder()}"><a th:replace="~{componentes/lista :: linha(
+                            titulo=${membro.pessoa.nome}, sub=${membro.resumo()}, icone='user',
+                            href=@{/ministerios/{m}/disponibilidade/membros/{u}(m=${ministerio.id},
+                                u=${membro.pessoa.id}, mes=${painel.mes})},
+                            selecionada=false)}"></a></li>
+                </ul>
+                <h2 class="text-heading" th:text="|Responderam (${painel.responderam().size()})|">Responderam (17)</h2>
+                <ul th:unless="${painel.responderam().isEmpty()}" class="rt-list">
+                    <li th:each="membro : ${painel.responderam()}"><a th:replace="~{componentes/lista :: linha(
+                            titulo=${membro.pessoa.nome}, sub=${membro.resumo()}, icone='user',
+                            href=@{/ministerios/{m}/disponibilidade/membros/{u}(m=${ministerio.id},
+                                u=${membro.pessoa.id}, mes=${painel.mes})},
+                            selecionada=false)}"></a></li>
+                </ul>
+            </div>
+
+            <!--/* relative: os textos sr-only (position absolute) ficam presos à rolagem e não alargam a página. */-->
+            <div class="rt-panel relative hidden overflow-x-auto md:block">
+                <table class="rt-table rt-sched">
+                    <caption class="sr-only" th:text="|Respostas de cada membro aos eventos por vir de ${painel.nomeDoMes()}|">
+                        Respostas de cada membro aos eventos por vir de novembro</caption>
+                    <thead>
+                    <tr>
+                        <th scope="col">Membro</th>
+                        <th scope="col">Estado</th>
+                        <th th:each="evento : ${painel.eventos}" scope="col" class="whitespace-nowrap"
+                            th:title="${evento.nome}"><div
+                                th:replace="~{componentes/tabela :: duasLinhas(${evento.dia}, ${evento.horario})}"></div><span
+                                class="sr-only" th:text="${evento.nome}">Culto de domingo</span></th>
+                        <th scope="col"><span class="sr-only">Ações</span></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="membro : ${painel.membros}" th:classappend="${membro.respondeuTudo()} ? '' : 'is-alert'">
+                        <td class="whitespace-nowrap"><div th:replace="~{componentes/tabela :: pessoa(${membro.pessoa.nome},
+                                ${membro.pessoa.iniciais()})}"></div></td>
+                        <td class="whitespace-nowrap"><th:block th:replace="~{componentes/tabela :: estado(texto=${membro.estado()},
+                                variante=${membro.varianteDoEstado()})}"></th:block></td>
+                        <td th:each="resposta : ${membro.respostas}">
+                            <th:block th:switch="${resposta?.name()}">
+                                <span th:case="'PODE'" class="text-ink"><svg
+                                        th:replace="~{componentes/icone :: icone('check')}"></svg><span
+                                        class="sr-only">Pode</span></span>
+                                <span th:case="'NAO_PODE'" class="text-ink-muted"><svg
+                                        th:replace="~{componentes/icone :: icone('x')}"></svg><span class="sr-only">Não
+                                    pode</span></span>
+                                <span th:case="*" class="text-alert"><span aria-hidden="true">—</span><span
+                                        class="sr-only">Sem resposta</span></span>
+                            </th:block>
+                        </td>
+                        <td class="text-right"><a th:replace="~{componentes/botao :: botaoIcone(icone='pencil',
+                                rotulo=|Marcar por ${membro.pessoa.nome}|,
+                                href=@{/ministerios/{m}/disponibilidade/membros/{u}(m=${ministerio.id},
+                                    u=${membro.pessoa.id}, mes=${painel.mes})},
+                                tamanho='sm', variante=null, classe=null)}"></a></td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <th scope="row" colspan="2">Podem</th>
+                        <td th:each="evento : ${painel.eventos}" th:text="${evento.podem}">3</td>
+                        <td></td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+    </th:block>
+</main>
+</body>
+</html>

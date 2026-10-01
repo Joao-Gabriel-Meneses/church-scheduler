@@ -57,6 +57,18 @@ class ModeloEPeriodoTest {
     }
 
     @Test
+    void periodoTravaEDestravaADisponibilidadeUmaVez() {
+        var outubro = new Periodo(1L, YearMonth.of(2026, 10));
+
+        assertThat(outubro.travarDisponibilidade()).isTrue();
+        assertThat(outubro.isDisponibilidadeTravada()).isTrue();
+        assertThat(outubro.travarDisponibilidade()).isFalse();
+        assertThat(outubro.destravarDisponibilidade()).isTrue();
+        assertThat(outubro.isDisponibilidadeTravada()).isFalse();
+        assertThat(outubro.destravarDisponibilidade()).isFalse();
+    }
+
+    @Test
     void diaDaSemanaGravaONumeroIso() {
         var conversor = new DiaDaSemanaConverter();
 

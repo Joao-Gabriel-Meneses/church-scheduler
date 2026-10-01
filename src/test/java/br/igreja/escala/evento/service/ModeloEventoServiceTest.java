@@ -15,12 +15,10 @@ import br.igreja.escala.compartilhado.NaoEncontradoException;
 import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.evento.domain.ModeloEvento;
 import br.igreja.escala.evento.repository.ModeloEventoRepository;
-import br.igreja.escala.evento.repository.PeriodoRepository;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalTime;
-import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -135,17 +133,5 @@ class ModeloEventoServiceTest {
         when(modelos.findByMinisterioIdAndAtivoTrue(1L)).thenReturn(List.of(cultoDeDomingo(1L)));
 
         assertThat(servico.ativos(1L)).extracting(ModeloEvento::getNome).containsExactly("Culto de domingo");
-    }
-
-    @Test
-    void periodoEObtidoOuCriado() {
-        var periodos = mock(PeriodoRepository.class);
-        var periodoService = new PeriodoService(periodos);
-        var outubro = YearMonth.of(2026, 10);
-        when(periodos.findByMinisterioIdAndAnoAndMes(1L, 2026, 10)).thenReturn(Optional.empty());
-        when(periodos.save(any())).thenAnswer(chamada -> chamada.getArgument(0));
-
-        assertThat(periodoService.obterOuCriar(1L, outubro).getMes()).isEqualTo(outubro);
-        assertThat(periodoService.doMes(1L, outubro)).isEmpty();
     }
 }

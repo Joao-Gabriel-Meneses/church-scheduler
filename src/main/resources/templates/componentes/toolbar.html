@@ -10,21 +10,19 @@
         travada      true: Badge "Disponibilidade travada" (no celular, o sheet mostra também "Disponibilidade aberta")
         regrasHref   atalho para as regras (IconButton no desktop, botão com rótulo no sheet)
         acaoTexto    ação da página, com acaoIcone, acaoHref (sem href é um botão) e acaoVariante (padrão primary)
+        acaoFormulario  id de um <form method="post"> da página que a ação envia (ex.: travar a disponibilidade)
     No celular (< 560px) fica numa linha: seletor compacto (periodoCurto) e "Mais ações", que abre um Sheet com a
     trava e as ações. As ações existem uma vez só no HTML (docs/design/components/Toolbar/toolbar-celular.css).
+
+    seletorDePeriodo(periodo, periodoCurto, anteriorHref, proximoHref): só o seletor escuro de mês, que a Toolbar usa e
+    que a tela do membro põe sozinho dentro de um <div class="rt-toolbar"> (para ficar compacto no celular).
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <body>
 
 <div th:fragment="toolbar(periodo, periodoCurto, anteriorHref, proximoHref)" id="barra" class="rt-toolbar">
-    <div class="rt-seg">
-        <a class="rt-icon-btn" th:href="${anteriorHref}" aria-label="Mês anterior" title="Mês anterior"><svg
-                th:replace="~{componentes/icone :: icone('chevron-left')}"></svg></a>
-        <span class="px-2 text-body-lg"><span class="rt-toolbar__longo" th:text="${periodo}">Outubro 2026</span><span
-                class="rt-toolbar__curto" th:text="${periodoCurto}">Out 2026</span></span>
-        <a class="rt-icon-btn" th:href="${proximoHref}" aria-label="Próximo mês" title="Próximo mês"><svg
-                th:replace="~{componentes/icone :: icone('chevron-right')}"></svg></a>
-    </div>
+    <div th:replace="~{componentes/toolbar :: seletorDePeriodo(${periodo}, ${periodoCurto}, ${anteriorHref},
+            ${proximoHref})}"></div>
 
     <button type="button" class="rt-icon-btn rt-toolbar__mais" popovertarget="acoes-da-barra" aria-label="Mais ações"
             title="Mais ações"><svg th:replace="~{componentes/icone :: icone('ellipsis')}"></svg></button>
@@ -45,9 +43,19 @@
            aria-label="Regras" title="Regras"><svg th:replace="~{componentes/icone :: icone('settings-2')}"></svg><span
                 class="rt-toolbar__rotulo">Regras</span></a>
         <th:block th:if="${acaoTexto != null}"><button th:replace="~{componentes/botao :: botao(texto=${acaoTexto},
-                variante=${acaoVariante ?: 'primary'}, icone=${acaoIcone}, href=${acaoHref}, tipo='button',
-                tamanho=null, iconeFinal=null, classe=null)}"></button></th:block>
+                variante=${acaoVariante ?: 'primary'}, icone=${acaoIcone}, href=${acaoHref},
+                tipo=${acaoFormulario != null ? 'submit' : 'button'}, formulario=${acaoFormulario}, tamanho=null,
+                iconeFinal=null, classe=null)}"></button></th:block>
     </div>
+</div>
+
+<div th:fragment="seletorDePeriodo(periodo, periodoCurto, anteriorHref, proximoHref)" class="rt-seg">
+    <a class="rt-icon-btn" th:href="${anteriorHref}" aria-label="Mês anterior" title="Mês anterior"><svg
+            th:replace="~{componentes/icone :: icone('chevron-left')}"></svg></a>
+    <span class="px-2 text-body-lg"><span class="rt-toolbar__longo" th:text="${periodo}">Outubro 2026</span><span
+            class="rt-toolbar__curto" th:text="${periodoCurto}">Out 2026</span></span>
+    <a class="rt-icon-btn" th:href="${proximoHref}" aria-label="Próximo mês" title="Próximo mês"><svg
+            th:replace="~{componentes/icone :: icone('chevron-right')}"></svg></a>
 </div>
 
 </body>

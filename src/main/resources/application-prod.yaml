@@ -12,6 +12,8 @@ server:
         secure: true
 
 escala:
+  # Endereço dos links que saem do app (lembrete de disponibilidade). DOMINIO é o mesmo do Caddy, no .env.
+  url-base: https://${DOMINIO}
   admin:
     nome: ${ESCALA_ADMIN_NOME:Administrador}
     email: ${ESCALA_ADMIN_EMAIL:}

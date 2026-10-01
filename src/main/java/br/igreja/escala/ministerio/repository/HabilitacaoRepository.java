@@ -1,6 +1,7 @@
 package br.igreja.escala.ministerio.repository;
 
 import br.igreja.escala.ministerio.domain.Habilitacao;
+import br.igreja.escala.ministerio.domain.Ministerio;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,7 +15,23 @@ public interface HabilitacaoRepository extends JpaRepository<Habilitacao, Long> 
 
     Optional<Habilitacao> findByUsuarioIdAndFuncaoId(Long usuarioId, Long funcaoId);
 
+    boolean existsByUsuarioIdAndFuncaoMinisterioId(Long usuarioId, Long ministerioId);
+
     long countByFuncaoId(Long funcaoId);
+
+    /** Quem tem habilitação em alguma função do ministério, sem repetir. */
+    @Query("""
+            select distinct h.usuarioId from Habilitacao h
+             where h.funcao.ministerio.id = :ministerioId
+            """)
+    List<Long> usuariosHabilitados(Long ministerioId);
+
+    /** Ministérios em que a pessoa tem habilitação, sem repetir e sem ordem. */
+    @Query("""
+            select distinct h.funcao.ministerio from Habilitacao h
+             where h.usuarioId = :usuarioId
+            """)
+    List<Ministerio> ministeriosDe(Long usuarioId);
 
     long countByNivelId(Long nivelId);
 

@@ -114,6 +114,7 @@ docker run --rm \
   -e ESCALA_ADMIN_EMAIL=validacao@escala.local \
   -e ESCALA_ADMIN_SENHA=validacao-descartavel \
   -e ESCALA_CHAVE_LEMBRAR_ME=validacao \
+  -e DOMINIO=validacao.local \
   -e JAVA_TOOL_OPTIONS=-Xmx512m \
   ghcr.io/joao-gabriel-meneses/escala:latest \
   --spring.main.web-application-type=none
@@ -191,6 +192,7 @@ No `.env`:
 
 - **`DB_URL`:** use o alias `escala_tp` do `wallet/tnsnames.ora`, por exemplo `jdbc:oracle:thin:@escala_tp?TNS_ADMIN=/wallet`.
 - **`DB_USUARIO`/`DB_SENHA`:** o usuário `escala_app` do passo 1.
+- **`DOMINIO`:** o domínio público. O Caddy emite o certificado com ele, e o app monta os links que saem dele (`https://DOMINIO/...`, no lembrete de disponibilidade). Sem ele, o app não sobe.
 - **`ESCALA_CHAVE_LEMBRAR_ME`:** gere com `openssl rand -base64 32`.
 - **`ESCALA_ADMIN_*`:** o admin criado na primeira subida. Sem eles, e com o banco vazio, a aplicação não sobe. Depois de entrar, você pode apagar a senha do `.env`.
 

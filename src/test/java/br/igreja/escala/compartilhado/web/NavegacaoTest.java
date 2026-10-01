@@ -116,13 +116,14 @@ class NavegacaoTest {
         var todos = AuthorityUtils.createAuthorityList("ROLE_MEMBRO", "ROLE_ADMIN");
 
         assertThat(Navegacao.PRINCIPAL.itens(todos, "/", MIDIA_E_LOUVOR))
-                .hasSize(3)
+                .extracting(ItemDeNavegacao::rotulo)
+                .containsExactly("Minhas escalas", "Disponibilidade", "Gerenciar", "Ministérios");
+        assertThat(Navegacao.PRINCIPAL.itens(todos, "/", MIDIA_E_LOUVOR))
                 .extracting(ItemDeNavegacao::icone)
                 .isSubsetOf(IconesTest.disponiveis());
         assertThat(Navegacao.PRINCIPAL.itens(todos, "/ministerios/1/funcoes", MIDIA_E_LOUVOR))
                 .extracting(ItemDeNavegacao::rotulo)
-                .containsExactly("Eventos", "Membros", "Funções", "Ministérios", "Minhas escalas")
-                .hasSize(5);
+                .containsExactly("Eventos", "Disponibilidade", "Membros", "Funções", "Ministérios", "Minhas escalas");
         assertThat(Navegacao.PRINCIPAL.itens(todos, "/ministerios/1/funcoes", MIDIA_E_LOUVOR))
                 .extracting(ItemDeNavegacao::icone)
                 .isSubsetOf(IconesTest.disponiveis());
@@ -154,7 +155,7 @@ class NavegacaoTest {
 
         assertThat(lista(model, "navegacao"))
                 .extracting(ItemDeNavegacao::rotulo)
-                .containsExactly("Minhas escalas");
+                .containsExactly("Minhas escalas", "Disponibilidade");
         assertThat(lista(model, "ministerios")).isEmpty();
     }
 

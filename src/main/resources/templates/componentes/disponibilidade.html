@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!--/*
+    AvailabilityPicker (docs/design/components/AvailabilityPicker): os eventos do mês para marcar, um toque por evento.
+    Cada linha é um <form> que envia a resposta por POST (o botão leva name="resposta") e, com htmx, troca o alvo pela
+    resposta do servidor. Sem JS, o mesmo form funciona com redirect. Não há botão de salvar.
+        <div class="rt-avail" th:classappend="${travado} ? 'rt-avail--locked'">
+            <th:block th:each="linha : ${grupo.linhas}"><div th:replace="~{componentes/disponibilidade :: linha(
+                linha=${linha}, acao=@{/disponibilidade/ministerios/1/eventos/{e}(e=${linha.eventoId}, mes='2026-11')},
+                alvo='#grupo-1', editavel=true)}"></div></th:block>
+        </div>
+      (th:replace roda antes de th:each: o laço fica num th:block em volta.)
+    linha(linha, acao, alvo, editavel): linha é um LinhaDeDisponibilidade (dia, evento, horário, resposta, quem marcou e
+        aviso de evento que mudou). Sem editavel, os botões ficam desativados; num período travado, ponha
+        rt-avail--locked no rt-avail e um Badge locked que explique.
+    "Prefiro não" não aparece: só vale com a regra PREFERENCIA (Fase 5).
+    Estado nunca só por cor: Pode tem ✓, Não pode tem ✕, e cada botão tem aria-pressed e aria-label com o evento. Os
+    botões têm id, para o htmx devolver o foco ao mesmo botão depois da troca.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="linha(linha, acao, alvo, editavel)" class="rt-avail__row" th:id="|evento-${linha.eventoId}|">
+    <span class="rt-avail__date"><span class="rt-avail__day" th:text="${linha.dia}">05</span><span class="rt-caption"
+            th:text="${linha.diaDaSemana}">Dom</span></span>
+    <span class="rt-avail__text">
+        <span th:text="${linha.nome}">Culto de domingo</span>
+        <span class="rt-caption" th:text="${linha.horario}">18h00</span>
+        <span th:if="${linha.marcadoPor != null}" class="rt-caption" th:text="|Marcado por ${linha.marcadoPor}|">Marcado
+            por Paula Ribeiro</span>
+        <span th:if="${linha.aviso != null}" class="rt-avail__aviso"><svg
+                th:replace="~{componentes/icone :: icone('triangle-alert')}"></svg><span th:text="${linha.aviso}">O
+            horário mudou (era 18h00). Toque de novo para confirmar.</span></span>
+    </span>
+    <form class="rt-choice" role="group" th:aria-label="|Disponibilidade em ${linha.descricao()}|" method="post"
+          th:action="${acao}" th:hx-post="${acao}" th:hx-target="${alvo}" hx-swap="outerHTML">
+        <button type="submit" name="resposta" value="PODE" class="is-yes" th:id="|pode-${linha.eventoId}|"
+                th:aria-pressed="${linha.pode()}" th:aria-label="|Pode — ${linha.descricao()}|"
+                th:disabled="${editavel != true}"><svg th:replace="~{componentes/icone :: icone('check')}"></svg></button>
+        <button type="submit" name="resposta" value="NAO_PODE" class="is-no" th:id="|nao-pode-${linha.eventoId}|"
+                th:aria-pressed="${linha.naoPode()}" th:aria-label="|Não pode — ${linha.descricao()}|"
+                th:disabled="${editavel != true}"><svg th:replace="~{componentes/icone :: icone('x')}"></svg></button>
+    </form>
+</div>
+
+</body>
+</html>

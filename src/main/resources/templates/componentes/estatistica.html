@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<!--/*
+    StatCard (docs/design/components/StatCard): indicador com rótulo, número grande (stat) e o contexto embaixo.
+    Empilhe em <div class="rt-stats">.
+        <div th:replace="~{componentes/estatistica :: cartao(rotulo='Sem resposta', valor=5, sub='de 20 membros',
+            href='#respostas')}"></div>
+      Opções, por nome:
+        sub    a proporção ou a divisão ("de 18 · 2 vazias"); nada de variação percentual inventada
+        href   seta ↗ para o detalhe (IconButton pequeno com aria-label "Ver <rótulo>")
+    Opção omitida herda a variável de mesmo nome do contexto: passe null quando precisar.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="cartao(rotulo, valor)" class="rt-panel rt-stat">
+    <span class="rt-label" th:text="${rotulo}">Sem resposta</span>
+    <div>
+        <div class="rt-stat__value" th:text="${valor}">5</div>
+        <div th:if="${sub != null}" class="rt-stat__sub" th:text="${sub}">de 20 membros</div>
+    </div>
+    <th:block th:if="${href != null}"><a th:replace="~{componentes/botao :: botaoIcone(icone='arrow-up-right',
+            rotulo=|Ver ${rotulo}|, href=${href}, tamanho='sm', variante=null, classe=null)}"></a></th:block>
+</div>
+
+</body>
+</html>

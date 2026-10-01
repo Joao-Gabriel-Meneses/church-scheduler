@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.igreja.escala.TesteDeController;
+import br.igreja.escala.disponibilidade.domain.Resposta;
+import br.igreja.escala.disponibilidade.service.LinhaDeDisponibilidade;
 import br.igreja.escala.identidade.domain.Usuario;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
 import br.igreja.escala.identidade.service.UsuarioDetailsService;
@@ -257,6 +259,86 @@ class ComponentesTest {
     }
 
     @Test
+    void botaoForaDoFormularioEnviaOFormularioPeloId() {
+        assertThat(secao("botao-formulario"))
+                .contains("<button type=\"submit\" class=\"rt-btn rt-btn--dark\" form=\"travar-disponibilidade\">")
+                .contains("#lock\"", "Travar disponibilidade");
+        assertThat(secao("botao-padrao")).doesNotContain("form=", "data-copiar");
+    }
+
+    @Test
+    void botaoDeCopiarIndicaOTextoQueCopia() {
+        assertThat(secao("botao-copiar"))
+                .contains("<button type=\"button\" class=\"rt-btn rt-btn--dark\" data-copiar=\"texto-do-lembrete\">")
+                .contains("#copy\"", "Copiar texto");
+    }
+
+    @Test
+    void statCardTemRotuloValorContextoESetaParaODetalhe() {
+        assertThat(secao("estatistica"))
+                .contains("<div class=\"rt-panel rt-stat\">", "<span class=\"rt-label\">Sem resposta</span>")
+                .contains("<div class=\"rt-stat__value\">5</div>", "<div class=\"rt-stat__sub\">de 20 membros</div>")
+                .contains(
+                        "<a href=\"#respostas\" class=\"rt-icon-btn rt-icon-btn--sm\" aria-label=\"Ver Sem resposta\"")
+                .contains("#arrow-up-right\"");
+        assertThat(secao("estatistica-simples"))
+                .contains("<div class=\"rt-stat__value\">9</div>")
+                .doesNotContain("rt-stat__sub", "rt-icon-btn");
+    }
+
+    @Test
+    void toolbarComFormularioEnviaAAcaoPorPost() {
+        assertThat(secao("toolbar-com-formulario"))
+                .contains("<button type=\"submit\" class=\"rt-btn rt-btn--dark\" form=\"travar-disponibilidade\">")
+                .contains("Disponibilidade aberta");
+        assertThat(secao("toolbar")).contains("<button type=\"button\" class=\"rt-btn rt-btn--primary\">");
+    }
+
+    @Test
+    void linhaDeDisponibilidadeEnviaARespostaPorHtmxComEstadoEmTexto() {
+        String linha = secao("disponibilidade");
+
+        assertThat(linha)
+                .contains("<div class=\"rt-avail__row\" id=\"evento-500\">")
+                .contains("<span class=\"rt-avail__day\">01</span><span class=\"rt-caption\">Dom</span>")
+                .contains("<span>Culto de domingo</span> <span class=\"rt-caption\">18h00</span>")
+                .contains("<form class=\"rt-choice\" role=\"group\""
+                        + " aria-label=\"Disponibilidade em 01/11 · Dom · Culto de domingo, 18h00\" method=\"post\""
+                        + " action=\"/disponibilidade/ministerios/1/eventos/500?mes=2026-11\""
+                        + " hx-post=\"/disponibilidade/ministerios/1/eventos/500?mes=2026-11\" hx-target=\"#grupo-1\""
+                        + " hx-swap=\"outerHTML\">")
+                .contains("<button type=\"submit\" name=\"resposta\" value=\"PODE\" class=\"is-yes\" id=\"pode-500\""
+                        + " aria-pressed=\"true\" aria-label=\"Pode — 01/11 · Dom · Culto de domingo, 18h00\">")
+                .contains("<button type=\"submit\" name=\"resposta\" value=\"NAO_PODE\" class=\"is-no\""
+                        + " id=\"nao-pode-500\" aria-pressed=\"false\"")
+                .contains("#check\"", "#x\"")
+                .doesNotContain("PREFERE_NAO", "is-maybe", "disabled", "Marcado por", "rt-avail__aviso");
+    }
+
+    @Test
+    void linhaTravadaDesativaOsBotoesEMostraQuemMarcouEOAviso() {
+        String linha = secao("disponibilidade-travada");
+
+        assertThat(linha)
+                .contains("aria-pressed=\"false\"", "disabled=\"disabled\"")
+                .contains("<span class=\"rt-caption\">Marcado por Paula Ribeiro</span>")
+                .contains("<span class=\"rt-avail__aviso\">", "#triangle-alert\"")
+                .contains("O horário mudou (era 18h00). Toque de novo para confirmar.");
+        assertThat(linha.split("disabled=\"disabled\"", -1)).hasSize(3);
+    }
+
+    @Test
+    void seletorDePeriodoSozinhoTemOsDoisRotulos() {
+        assertThat(secao("seletor-de-periodo"))
+                .contains("<div class=\"rt-seg\">")
+                .contains("href=\"/disponibilidade?mes=2026-10\" aria-label=\"Mês anterior\"")
+                .contains("href=\"/disponibilidade?mes=2026-12\" aria-label=\"Próximo mês\"")
+                .contains("<span class=\"rt-toolbar__longo\">Novembro 2026</span>")
+                .contains("<span class=\"rt-toolbar__curto\">Nov 2026</span>")
+                .doesNotContain("rt-toolbar__mais");
+    }
+
+    @Test
     void toolbarMinimaSoTemPeriodoETravaAbertaNoSheet() {
         assertThat(secao("toolbar-minima"))
                 .contains("class=\"rt-badge rt-toolbar__so-sheet\"", "Disponibilidade aberta")
@@ -287,6 +369,22 @@ class ComponentesTest {
             model.addAttribute("form", form);
             model.addAttribute(BindingResult.MODEL_KEY_PREFIX + "form", resultado);
             model.addAttribute("opcoes", List.of(new Opcao("1", "Projeção"), new Opcao("2", "Transmissão")));
+            model.addAttribute(
+                    "linhaRespondida",
+                    new LinhaDeDisponibilidade(
+                            500L, "Culto de domingo", "01", "Dom", "01/11 · Dom", "18h00", Resposta.PODE, null, null));
+            model.addAttribute(
+                    "linhaComAvisos",
+                    new LinhaDeDisponibilidade(
+                            501L,
+                            "Culto de domingo",
+                            "08",
+                            "Dom",
+                            "08/11 · Dom",
+                            "19h00",
+                            null,
+                            "Paula Ribeiro",
+                            "O horário mudou (era 18h00). Toque de novo para confirmar."));
             model.addAttribute(
                     "itens",
                     List.of(
