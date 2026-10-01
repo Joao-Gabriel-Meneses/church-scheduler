@@ -14,3 +14,8 @@ escala:
     senha: admin1234
   seguranca:
     chave-lembrar-me: chave-somente-para-dev
+  # Seed de desenvolvimento (SeedDeDesenvolvimento): Mídia e Louvor com membros, funções, modelos e eventos.
+  # Gerente da Mídia: paula.ribeiro@escala.local. Todos os membros entram com esta senha, menos a Carla Dias, que
+  # fica com a senha provisória (provisoria-dev) para mostrar a troca obrigatória.
+  dev:
+    senha-dos-membros: membro1234

@@ -17,6 +17,13 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Table(name = "usuario")
 public class Usuario {
 
+    public static final int TAMANHO_MINIMO_SENHA = 8;
+
+    /** O BCrypt só usa os primeiros 72 bytes da senha; 64 caracteres deixam folga para acentos. */
+    public static final int TAMANHO_MAXIMO_SENHA = 64;
+
+    public static final int TAMANHO_TELEFONE = 20;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -38,6 +45,9 @@ public class Usuario {
 
     @Column(nullable = false)
     private boolean ativo = true;
+
+    @Column(name = "senha_provisoria", nullable = false)
+    private boolean senhaProvisoria;
 
     @CreationTimestamp
     @Column(name = "criado_em", nullable = false, updatable = false)
@@ -64,6 +74,26 @@ public class Usuario {
         return new Usuario(nome, email, senhaHash, true);
     }
 
+    /** Membro cadastrado pelo gerente: entra com a senha que o gerente passou e precisa trocá-la no primeiro acesso. */
+    public static Usuario comSenhaProvisoria(String nome, String email, String telefone, String senhaHash) {
+        var usuario = new Usuario(nome, email, senhaHash, false);
+        usuario.telefone = telefoneOpcional(telefone);
+        usuario.senhaProvisoria = true;
+        return usuario;
+    }
+
+    /** Senha que outra pessoa definiu (gerente ou admin): o usuário vai precisar trocá-la. */
+    public void definirSenhaProvisoria(String senhaHash) {
+        this.senhaHash = exigirTexto(senhaHash, "senhaHash");
+        this.senhaProvisoria = true;
+    }
+
+    /** Senha escolhida pelo próprio usuário. */
+    public void definirSenha(String senhaHash) {
+        this.senhaHash = exigirTexto(senhaHash, "senhaHash");
+        this.senhaProvisoria = false;
+    }
+
     /** E-mail é a identidade de login: comparado sem diferenciar maiúsculas e sem espaços nas pontas. */
     public static String normalizarEmail(String email) {
         return exigirTexto(email, "email").strip().toLowerCase(Locale.ROOT);
@@ -71,6 +101,17 @@ public class Usuario {
 
     public Set<Perfil> perfis() {
         return admin ? EnumSet.of(Perfil.MEMBRO, Perfil.ADMIN) : EnumSet.of(Perfil.MEMBRO);
+    }
+
+    private static String telefoneOpcional(String telefone) {
+        if (telefone == null || telefone.isBlank()) {
+            return null;
+        }
+        String limpo = telefone.strip();
+        if (limpo.length() > TAMANHO_TELEFONE) {
+            throw new IllegalArgumentException("telefone tem mais de " + TAMANHO_TELEFONE + " caracteres");
+        }
+        return limpo;
     }
 
     private static String exigirTexto(String valor, String campo) {
@@ -106,5 +147,9 @@ public class Usuario {
 
     public boolean isAtivo() {
         return ativo;
+    }
+
+    public boolean isSenhaProvisoria() {
+        return senhaProvisoria;
     }
 }

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<!--/*
+    Evento avulso novo (${evento} nulo) ou edição de um evento. Num evento do modelo (${doModelo}), a data não muda:
+    vai num campo escondido e aparece como texto. Cancelar pede confirmação; o cancelado pode ser reativado.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title th:text="|${evento == null ? 'Criar evento avulso' : descricao} · ${ministerio.nome} · Escala|">Criar
+        evento avulso · Mídia · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6"
+      th:with="_acao=${evento == null} ? @{/ministerios/{m}/eventos(m=${ministerio.id})}
+                     : @{/ministerios/{m}/eventos/{e}(m=${ministerio.id}, e=${evento.id})}">
+    <header class="flex flex-col gap-2">
+        <p class="text-ink-muted" th:text="|${ministerio.nome} · Eventos|">Mídia · Eventos</p>
+        <h1 class="text-title" th:text="${evento == null} ? 'Criar evento avulso' : ${descricao}">Criar evento avulso</h1>
+        <div th:if="${evento != null}" class="rt-row">
+            <th:block th:if="${evento.cancelado}"><span th:replace="~{componentes/badge :: badge(texto='Cancelado',
+                    variante='draft', icone=null, tint=null, classe=null)}"></span></th:block>
+            <th:block th:if="${doModelo == null}"><span th:replace="~{componentes/badge :: badge(texto='Avulso',
+                    variante=null, icone=null, tint=null, classe=null)}"></span></th:block>
+        </div>
+        <p th:if="${doModelo != null}" class="text-ink-muted"
+           th:text="|Criado do modelo ${doModelo}. Mudar este evento não muda o modelo.|">Criado do modelo.</p>
+    </header>
+
+    <form th:action="${_acao}" th:object="${form}" method="post"
+          class="rt-panel flex w-full max-w-md flex-col gap-4 p-6">
+        <th:block th:replace="~{componentes/formulario :: errosGerais}"></th:block>
+        <div th:replace="~{componentes/formulario :: campoDoObjeto('Nome', 'nome')}"></div>
+        <th:block th:if="${doModelo == null}">
+            <th:block th:with="tipo='date'">
+                <div th:replace="~{componentes/formulario :: campoDoObjeto('Data', 'data')}"></div>
+            </th:block>
+        </th:block>
+        <div th:if="${doModelo != null}" class="flex flex-col">
+            <input type="hidden" th:field="*{data}">
+            <span class="text-label text-ink-muted">Data</span>
+            <span class="text-body-lg" th:text="${dataDoEvento}">04/10 · Dom</span>
+            <th:block th:with="_id='data', dica=null,
+                               erro=${#fields.hasErrors('data')} ? ${#strings.listJoin(#fields.errors('data'), ' ')} : null">
+                <th:block th:replace="~{componentes/formulario :: mensagensDoCampo}"></th:block>
+            </th:block>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+            <th:block th:with="tipo='time'">
+                <div th:replace="~{componentes/formulario :: campoDoObjeto('Horário', 'horario')}"></div>
+            </th:block>
+            <th:block th:replace="~{evento/fragments/duracao :: duracao}"></th:block>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <button th:replace="~{componentes/botao :: botao(texto='Salvar', variante=null, icone=null, classe=null,
+                    tipo=null)}"></button>
+            <a th:replace="~{componentes/botao :: botao(texto='Voltar', variante='secondary',
+                    href=@{/ministerios/{m}/eventos(m=${ministerio.id})}, icone=null, classe=null)}"></a>
+        </div>
+    </form>
+
+    <th:block th:if="${evento != null and !evento.cancelado}">
+        <div><button th:replace="~{componentes/sheet :: abrir(alvo='cancelar-evento', texto='Cancelar evento',
+                icone='calendar-x')}"></button></div>
+        <div th:replace="~{componentes/sheet :: confirmacao(id='cancelar-evento', titulo=|Cancelar ${descricao}?|,
+                texto='O evento sai do mês: some da disponibilidade dos membros e não entra na escala. Dá para reativar depois.',
+                acao=@{/ministerios/{m}/eventos/{e}/cancelar(m=${ministerio.id}, e=${evento.id})},
+                confirmar='Cancelar evento', voltar='Manter evento')}"></div>
+    </th:block>
+    <form th:if="${evento != null and evento.cancelado}"
+          th:action="@{/ministerios/{m}/eventos/{e}/reativar(m=${ministerio.id}, e=${evento.id})}" method="post">
+        <button th:replace="~{componentes/botao :: botao(texto='Reativar evento', variante='secondary',
+                icone='rotate-ccw', classe=null, tipo=null)}"></button>
+    </form>
+</main>
+</body>
+</html>

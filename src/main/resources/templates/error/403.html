@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<!--/* Acesso negado: o usuário está logado mas não tem perfil ou ministério para esta página. */-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/simples :: pagina(~{::title}, ~{::main})}">
+<head>
+    <title>Sem acesso · Escala</title>
+</head>
+<body>
+<main id="conteudo" class="flex flex-1 flex-col items-center justify-center p-4">
+    <div class="flex w-full max-w-sm flex-col gap-6 text-center">
+        <header class="flex flex-col gap-1">
+            <h1 class="text-title">Você não tem acesso a esta página</h1>
+            <p class="text-ink-muted">Ela é de um ministério que você não gerencia. Se precisar dela, fale com o
+                gerente do ministério ou com o administrador.</p>
+        </header>
+        <a th:replace="~{componentes/botao :: botao(texto='Voltar ao início', href=@{/}, icone=null,
+                classe='justify-center')}"></a>
+    </div>
+</main>
+</body>
+</html>

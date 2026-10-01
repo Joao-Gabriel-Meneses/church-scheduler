@@ -18,6 +18,7 @@ public final class UsuarioAutenticado implements UserDetails {
     private final String email;
     private final String senhaHash;
     private final boolean ativo;
+    private final boolean senhaProvisoria;
     private final List<SimpleGrantedAuthority> authorities;
 
     public UsuarioAutenticado(Usuario usuario) {
@@ -26,6 +27,7 @@ public final class UsuarioAutenticado implements UserDetails {
         this.email = usuario.getEmail();
         this.senhaHash = usuario.getSenhaHash();
         this.ativo = usuario.isAtivo();
+        this.senhaProvisoria = usuario.isSenhaProvisoria();
         this.authorities = usuario.perfis().stream()
                 .map(perfil -> new SimpleGrantedAuthority(perfil.authority()))
                 .toList();
@@ -41,6 +43,16 @@ public final class UsuarioAutenticado implements UserDetails {
 
     public String getEmail() {
         return email;
+    }
+
+    public boolean isAdmin() {
+        return authorities.stream()
+                .anyMatch(autoridade -> autoridade.getAuthority().equals(Perfil.ADMIN.authority()));
+    }
+
+    /** Enquanto for verdadeiro, só a troca de senha abre (SenhaProvisoriaInterceptor). */
+    public boolean isSenhaProvisoria() {
+        return senhaProvisoria;
     }
 
     @Override

@@ -11,6 +11,8 @@
     <p sec:authorize="hasRole('ADMIN')">
         <span th:replace="~{componentes/badge :: badge('Administrador')}"></span>
     </p>
+    <p><a th:replace="~{componentes/botao :: botao(texto='Trocar senha', variante='outline', href=@{/conta/senha},
+            icone='lock', classe=null)}"></a></p>
 </main>
 </body>
 </html>

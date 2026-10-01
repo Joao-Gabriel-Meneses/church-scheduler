@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<!--/*
+    Funções e níveis do ministério (gerente). Cada lista: ListRow no celular e DataTable no desktop.
+    O primário é "Criar função"; "Criar nível" é secundário.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title th:text="|${ministerio.nome} — Funções · Escala|">Mídia — Funções · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-8">
+    <header class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-col gap-1">
+            <h1 class="text-title" th:text="|${ministerio.nome} — Funções|">Mídia — Funções</h1>
+            <p class="text-ink-muted">O que cada evento pede e os níveis de experiência de quem serve.</p>
+        </div>
+        <a th:replace="~{componentes/botao :: botao(texto='Criar função', icone='plus',
+                href=@{/ministerios/{id}/funcoes/nova(id=${ministerio.id})}, variante=null, classe=null)}"></a>
+    </header>
+
+    <section class="flex flex-col gap-3" aria-labelledby="titulo-funcoes">
+        <h2 id="titulo-funcoes" class="text-heading">Funções</h2>
+        <p th:if="${funcoes.isEmpty()}" class="rt-panel p-6 text-ink-muted">Nenhuma função ainda. Crie a primeira,
+            como Projeção ou Transmissão.</p>
+        <th:block th:unless="${funcoes.isEmpty()}">
+            <ul class="rt-list md:hidden">
+                <li th:each="funcao : ${funcoes}"><a th:replace="~{componentes/lista :: linha(titulo=${funcao.nome},
+                        sub=|${funcao.pessoasPorEvento()} · ${funcao.descricaoDosHabilitados()}|,
+                        icone=${funcao.icone.lucide()},
+                        href=@{/ministerios/{m}/funcoes/{f}(m=${ministerio.id}, f=${funcao.id})},
+                        selecionada=false)}"></a></li>
+            </ul>
+            <div class="rt-panel hidden overflow-x-auto md:block">
+                <table class="rt-table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Função</th>
+                        <th scope="col">Pessoas por evento</th>
+                        <th scope="col">Habilitados</th>
+                        <th scope="col"><span class="sr-only">Ações</span></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="funcao : ${funcoes}">
+                        <td><div th:replace="~{componentes/tabela :: comIcone(${funcao.nome}, ${funcao.icone.lucide()})}"></div></td>
+                        <td th:text="${funcao.pessoasPorEvento()}">1 pessoa por evento</td>
+                        <td th:text="${funcao.habilitados}">12</td>
+                        <td class="text-right"><a th:replace="~{componentes/botao :: botaoIcone(icone='pencil',
+                                rotulo=${'Editar ' + funcao.nome},
+                                href=@{/ministerios/{m}/funcoes/{f}(m=${ministerio.id}, f=${funcao.id})},
+                                tamanho='sm', variante=null, classe=null)}"></a></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </th:block>
+    </section>
+
+    <section class="flex flex-col gap-3" aria-labelledby="titulo-niveis">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-col gap-1">
+                <h2 id="titulo-niveis" class="text-heading">Níveis</h2>
+                <p class="text-ink-muted">Do menos para o mais experiente. Cada membro tem um nível em cada função.</p>
+            </div>
+            <a th:replace="~{componentes/botao :: botao(texto='Criar nível', icone='plus', variante='secondary',
+                    href=@{/ministerios/{id}/funcoes/niveis/novo(id=${ministerio.id})}, classe=null)}"></a>
+        </div>
+        <p th:if="${niveis.isEmpty()}" class="rt-panel p-6 text-ink-muted">Nenhum nível ainda. Crie, por exemplo,
+            Iniciante e Experiente.</p>
+        <th:block th:unless="${niveis.isEmpty()}">
+            <ul class="rt-list md:hidden">
+                <li th:each="nivel : ${niveis}"><a th:replace="~{componentes/lista :: linha(titulo=${nivel.nome},
+                        sub=|Ordem ${nivel.ordem} · ${nivel.descricaoDasHabilitacoes()}|, icone=null,
+                        href=@{/ministerios/{m}/funcoes/niveis/{n}(m=${ministerio.id}, n=${nivel.id})},
+                        selecionada=false)}"></a></li>
+            </ul>
+            <div class="rt-panel hidden overflow-x-auto md:block">
+                <table class="rt-table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Ordem</th>
+                        <th scope="col">Nível</th>
+                        <th scope="col">Habilitações</th>
+                        <th scope="col"><span class="sr-only">Ações</span></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="nivel : ${niveis}">
+                        <td th:text="${nivel.ordem}">1</td>
+                        <td><span th:replace="~{componentes/badge :: badge(texto=${nivel.nome}, variante=null,
+                                icone=null, tint=null, classe=null)}"></span></td>
+                        <td th:text="${nivel.habilitacoes}">8</td>
+                        <td class="text-right"><a th:replace="~{componentes/botao :: botaoIcone(icone='pencil',
+                                rotulo=${'Editar ' + nivel.nome},
+                                href=@{/ministerios/{m}/funcoes/niveis/{n}(m=${ministerio.id}, n=${nivel.id})},
+                                tamanho='sm', variante=null, classe=null)}"></a></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </th:block>
+    </section>
+</main>
+</body>
+</html>

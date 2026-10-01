@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--/*
+    Cadastrar membro (gerente), com senha provisória. Se o e-mail já tem conta, a pessoa só entra no ministério (a
+    dica do campo avisa). A senha provisória fica visível: o gerente precisa passá-la para a pessoa.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title th:text="|Cadastrar membro · ${ministerio.nome} · Escala|">Cadastrar membro · Mídia · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-1">
+        <p class="text-ink-muted" th:text="|${ministerio.nome} · Membros|">Mídia · Membros</p>
+        <h1 class="text-title">Cadastrar membro</h1>
+    </header>
+
+    <form th:action="@{/ministerios/{m}/membros(m=${ministerio.id})}" th:object="${form}" method="post"
+          class="rt-panel flex w-full max-w-md flex-col gap-4 p-6">
+        <th:block th:replace="~{componentes/formulario :: errosGerais}"></th:block>
+        <th:block th:with="autocomplete='off'">
+            <div th:replace="~{componentes/formulario :: campoDoObjeto('Nome', 'nome')}"></div>
+        </th:block>
+        <th:block th:with="tipo='email', autocomplete='off',
+                           dica='Se a pessoa já tem conta neste e-mail, ela só entra no ministério e a senha dela não muda.'">
+            <div th:replace="~{componentes/formulario :: campoDoObjeto('E-mail', 'email')}"></div>
+        </th:block>
+        <th:block th:with="tipo='tel', inputmode='tel', autocomplete='off', dica='Opcional.'">
+            <div th:replace="~{componentes/formulario :: campoDoObjeto('Telefone', 'telefone')}"></div>
+        </th:block>
+        <th:block th:with="autocomplete='off', minlength=8, maxlength=64,
+                           dica='De 8 a 64 caracteres. Passe para a pessoa; ela troca no primeiro acesso.'">
+            <div th:replace="~{componentes/formulario :: campoDoObjeto('Senha provisória', 'senhaProvisoria')}"></div>
+        </th:block>
+        <div class="flex flex-wrap gap-2">
+            <button th:replace="~{componentes/botao :: botao(texto='Cadastrar', variante=null, icone=null, classe=null,
+                    tipo=null)}"></button>
+            <a th:replace="~{componentes/botao :: botao(texto='Cancelar', variante='secondary',
+                    href=@{/ministerios/{m}/membros(m=${ministerio.id})}, icone=null, classe=null)}"></a>
+        </div>
+    </form>
+</main>
+</body>
+</html>

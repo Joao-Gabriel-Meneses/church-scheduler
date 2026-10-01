@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!--/* Criar ou alterar uma função (gerente). ${funcaoId} nulo = nova. Editando, dá para excluir (com confirmação). */-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title th:text="|${cabecalho} · ${ministerio.nome} · Escala|">Criar função · Mídia · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6"
+      th:with="_acao=${funcaoId == null} ? @{/ministerios/{m}/funcoes(m=${ministerio.id})}
+                     : @{/ministerios/{m}/funcoes/{f}(m=${ministerio.id}, f=${funcaoId})}">
+    <header class="flex flex-col gap-1">
+        <p class="text-ink-muted" th:text="|${ministerio.nome} · Funções|">Mídia · Funções</p>
+        <h1 class="text-title" th:text="${cabecalho}">Criar função</h1>
+    </header>
+
+    <th:block th:if="${recusa != null}"><div th:replace="~{componentes/alerta :: alerta(titulo=${recusa}, corpo=null,
+            regra=null, acaoTexto=null, icone=null)}"></div></th:block>
+
+    <form th:action="${_acao}" th:object="${form}" method="post"
+          class="rt-panel flex w-full max-w-md flex-col gap-4 p-6">
+        <th:block th:replace="~{componentes/formulario :: errosGerais}"></th:block>
+        <div th:replace="~{componentes/formulario :: campoDoObjeto('Nome', 'nome')}"></div>
+        <th:block th:with="vazio='Escolha o ícone'">
+            <div th:replace="~{componentes/formulario :: selecaoDoObjeto('Ícone', 'icone', ${icones})}"></div>
+        </th:block>
+        <div class="grid grid-cols-2 gap-4"
+             th:with="tipo='number', inputmode='numeric', max=${T(br.igreja.escala.ministerio.domain.Funcao).QTD_MAXIMA}">
+            <th:block th:with="min=0, dica='Zero deixa a função opcional.'">
+                <div th:replace="~{componentes/formulario :: campoDoObjeto('Mínimo por evento', 'qtdMin')}"></div>
+            </th:block>
+            <th:block th:with="min=1">
+                <div th:replace="~{componentes/formulario :: campoDoObjeto('Máximo por evento', 'qtdMax')}"></div>
+            </th:block>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <button th:replace="~{componentes/botao :: botao(texto='Salvar', variante=null, icone=null, classe=null,
+                    tipo=null)}"></button>
+            <a th:replace="~{componentes/botao :: botao(texto='Cancelar', variante='secondary',
+                    href=@{/ministerios/{m}/funcoes(m=${ministerio.id})}, icone=null, classe=null)}"></a>
+        </div>
+    </form>
+
+    <th:block th:if="${funcaoId != null}">
+        <div><button th:replace="~{componentes/sheet :: abrir(alvo='excluir-funcao', texto='Excluir função',
+                icone='trash-2')}"></button></div>
+        <div th:replace="~{componentes/sheet :: confirmacao(id='excluir-funcao', titulo=|Excluir ${cabecalho}?|,
+                texto=|${cabecalho} deixa de existir neste ministério. Só dá para excluir uma função sem membros habilitados.|,
+                acao=@{/ministerios/{m}/funcoes/{f}/excluir(m=${ministerio.id}, f=${funcaoId})},
+                confirmar='Excluir função')}"></div>
+    </th:block>
+</main>
+</body>
+</html>

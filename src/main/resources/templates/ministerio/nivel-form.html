@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<!--/* Criar ou alterar um nível (gerente). ${nivelId} nulo = novo. Editando, dá para excluir (com confirmação). */-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title th:text="|${cabecalho} · ${ministerio.nome} · Escala|">Criar nível · Mídia · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6"
+      th:with="_acao=${nivelId == null} ? @{/ministerios/{m}/funcoes/niveis(m=${ministerio.id})}
+                     : @{/ministerios/{m}/funcoes/niveis/{n}(m=${ministerio.id}, n=${nivelId})}">
+    <header class="flex flex-col gap-1">
+        <p class="text-ink-muted" th:text="|${ministerio.nome} · Níveis|">Mídia · Níveis</p>
+        <h1 class="text-title" th:text="${cabecalho}">Criar nível</h1>
+    </header>
+
+    <th:block th:if="${recusa != null}"><div th:replace="~{componentes/alerta :: alerta(titulo=${recusa}, corpo=null,
+            regra=null, acaoTexto=null, icone=null)}"></div></th:block>
+
+    <form th:action="${_acao}" th:object="${form}" method="post"
+          class="rt-panel flex w-full max-w-md flex-col gap-4 p-6">
+        <th:block th:replace="~{componentes/formulario :: errosGerais}"></th:block>
+        <div th:replace="~{componentes/formulario :: campoDoObjeto('Nome', 'nome')}"></div>
+        <th:block th:with="tipo='number', inputmode='numeric', min=1,
+                           max=${T(br.igreja.escala.ministerio.domain.Nivel).ORDEM_MAXIMA},
+                           dica='1 é o menos experiente. Cada nível tem uma ordem diferente.'">
+            <div th:replace="~{componentes/formulario :: campoDoObjeto('Ordem', 'ordem')}"></div>
+        </th:block>
+        <div class="flex flex-wrap gap-2">
+            <button th:replace="~{componentes/botao :: botao(texto='Salvar', variante=null, icone=null, classe=null,
+                    tipo=null)}"></button>
+            <a th:replace="~{componentes/botao :: botao(texto='Cancelar', variante='secondary',
+                    href=@{/ministerios/{m}/funcoes(m=${ministerio.id})}, icone=null, classe=null)}"></a>
+        </div>
+    </form>
+
+    <th:block th:if="${nivelId != null}">
+        <div><button th:replace="~{componentes/sheet :: abrir(alvo='excluir-nivel', texto='Excluir nível',
+                icone='trash-2')}"></button></div>
+        <div th:replace="~{componentes/sheet :: confirmacao(id='excluir-nivel', titulo=|Excluir ${cabecalho}?|,
+                texto=|${cabecalho} deixa de existir neste ministério. Só dá para excluir um nível que nenhuma habilitação usa.|,
+                acao=@{/ministerios/{m}/funcoes/niveis/{n}/excluir(m=${ministerio.id}, n=${nivelId})},
+                confirmar='Excluir nível')}"></div>
+    </th:block>
+</main>
+</body>
+</html>

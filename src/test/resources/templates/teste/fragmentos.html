@@ -24,6 +24,7 @@
 <section id="tabela"><table><tr>
     <td><div th:replace="~{componentes/tabela :: pessoa('Ana Souza', 'AS')}"></div></td>
     <td><div th:replace="~{componentes/tabela :: duasLinhas('Projeção · Experiente', null)}"></div></td>
+    <td id="com-icone"><div th:replace="~{componentes/tabela :: comIcone('Projeção', 'monitor')}"></div></td>
     <td id="estado-ok"><th:block th:replace="~{componentes/tabela :: estado(texto='Respondeu', variante=null)}"></th:block></td>
     <td id="estado-alerta"><th:block th:replace="~{componentes/tabela :: estado(texto='Sem resposta', variante='alerta')}"></th:block></td>
 </tr></table></section>

@@ -30,6 +30,9 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**")
                         .permitAll()
+                        // Os controllers do admin também exigem o perfil; aqui é a segunda trava.
+                        .requestMatchers("/admin/**")
+                        .hasRole("ADMIN")
                         .anyRequest()
                         .authenticated())
                 .formLogin(login -> login.loginPage("/login")

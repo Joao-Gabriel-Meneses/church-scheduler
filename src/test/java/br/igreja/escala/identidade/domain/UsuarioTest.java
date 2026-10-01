@@ -53,4 +53,38 @@ class UsuarioTest {
                 .isThrownBy(() -> Usuario.membro("Ana", "ana@x.com", ""))
                 .withMessageContaining("senhaHash");
     }
+
+    @Test
+    void membroCadastradoPeloGerenteEntraComSenhaProvisoriaETelefone() {
+        var usuario = Usuario.comSenhaProvisoria("Ana", "Ana@X.com", " (11) 98888-7777 ", "hash");
+
+        assertThat(usuario.isSenhaProvisoria()).isTrue();
+        assertThat(usuario.isAdmin()).isFalse();
+        assertThat(usuario.getEmail()).isEqualTo("ana@x.com");
+        assertThat(usuario.getTelefone()).isEqualTo("(11) 98888-7777");
+        assertThat(Usuario.comSenhaProvisoria("Ana", "ana@x.com", " ", "hash").getTelefone())
+                .isNull();
+    }
+
+    @Test
+    void recusaTelefoneLongoDemais() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> Usuario.comSenhaProvisoria("Ana", "ana@x.com", "1".repeat(21), "hash"))
+                .withMessageContaining("telefone");
+    }
+
+    @Test
+    void senhaDefinidaPorOutraPessoaEProvisoriaEAEscolhidaPeloUsuarioNao() {
+        var usuario = Usuario.membro("Ana", "ana@x.com", "hash");
+        assertThat(usuario.isSenhaProvisoria()).isFalse();
+
+        usuario.definirSenhaProvisoria("hash-do-gerente");
+        assertThat(usuario.isSenhaProvisoria()).isTrue();
+        assertThat(usuario.getSenhaHash()).isEqualTo("hash-do-gerente");
+
+        usuario.definirSenha("hash-da-ana");
+        assertThat(usuario.isSenhaProvisoria()).isFalse();
+        assertThat(usuario.getSenhaHash()).isEqualTo("hash-da-ana");
+        assertThatIllegalArgumentException().isThrownBy(() -> usuario.definirSenha(" "));
+    }
 }

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!--/*
+    Troca da própria senha. Com senha provisória (${provisoria}), é a única tela que abre e não pede a senha atual.
+    Os campos de senha nunca voltam preenchidos depois de um erro.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/simples :: pagina(~{::title}, ~{::main})}">
+<head>
+    <title>Senha · Escala</title>
+</head>
+<body>
+<main id="conteudo" class="flex flex-1 flex-col items-center justify-center p-4">
+    <div class="flex w-full max-w-sm flex-col gap-6">
+        <header class="flex flex-col gap-1 text-center">
+            <h1 class="text-title" th:text="${provisoria} ? 'Crie sua senha' : 'Trocar senha'">Crie sua senha</h1>
+            <p class="text-ink-muted" th:text="${provisoria}
+                    ? 'Você entrou com uma senha provisória. Escolha uma só sua para continuar.'
+                    : 'Confirme a senha atual e escolha a nova.'">Você entrou com uma senha provisória.</p>
+        </header>
+
+        <form th:action="@{/conta/senha}" th:object="${form}" method="post" class="rt-panel flex flex-col gap-4 p-6">
+            <th:block th:unless="${provisoria}">
+                <div th:replace="~{componentes/formulario :: campo(rotulo='Senha atual', nome='senhaAtual',
+                        tipo='password', valor=null, autocomplete='current-password', obrigatorio=true, autofocus=true,
+                        erro=${#fields.hasErrors('senhaAtual')} ? ${#strings.listJoin(#fields.errors('senhaAtual'), ' ')} : null)}"></div>
+            </th:block>
+            <div th:replace="~{componentes/formulario :: campo(rotulo='Nova senha', nome='novaSenha', tipo='password',
+                    valor=null, autocomplete='new-password', obrigatorio=true, autofocus=${provisoria},
+                    dica='De 8 a 64 caracteres.',
+                    erro=${#fields.hasErrors('novaSenha')} ? ${#strings.listJoin(#fields.errors('novaSenha'), ' ')} : null)}"></div>
+            <div th:replace="~{componentes/formulario :: campo(rotulo='Repita a nova senha', nome='confirmacao',
+                    tipo='password', valor=null, autocomplete='new-password', obrigatorio=true, dica=null,
+                    erro=${#fields.hasErrors('confirmacao')} ? ${#strings.listJoin(#fields.errors('confirmacao'), ' ')} : null)}"></div>
+            <button th:replace="~{componentes/botao :: botao(texto='Salvar senha', classe='w-full justify-center')}"></button>
+        </form>
+
+        <th:block th:unless="${provisoria}"><a th:replace="~{componentes/botao :: botao(texto='Voltar',
+                variante='secondary', href=@{/}, classe='justify-center', icone=null)}"></a></th:block>
+        <form th:if="${provisoria}" th:action="@{/logout}" method="post" class="flex justify-center">
+            <button th:replace="~{componentes/botao :: botao(texto='Sair', variante='outline', icone='log-out',
+                    classe=null)}"></button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

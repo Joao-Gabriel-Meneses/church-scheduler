@@ -9,7 +9,8 @@
     campoDoObjeto(rotulo, nome): o mesmo, lendo valor e erros do th:object do <form> (Bean Validation).
         <form th:object="${form}"> <div th:replace="~{componentes/formulario :: campoDoObjeto('Nome', 'nome')}"></div>
       Opções, por nome: tipo (text) | valor | erro (texto que diz o que corrigir) | dica | obrigatorio | autofocus
-        | autocomplete | placeholder | inputmode | min | max | maxlength | campoId (padrão: o nome)
+        | autocomplete | placeholder | inputmode | min | max | minlength | maxlength
+        | campoId (padrão: o nome)
 
     selecao(rotulo, nome, opcoes) / selecaoDoObjeto(rotulo, nome, opcoes): select com opcoes = List<Opcao>.
       Opções: valor (o selecionado) | vazio (texto da opção vazia, ex.: 'Escolha a função') | erro | dica
@@ -17,6 +18,9 @@
 
     caixaDeSelecao(rotulo, nome) / caixaDeSelecaoDoObjeto(rotulo, nome): checkbox com alvo de 44px.
       Opções: marcada | valor | campoId. A versão do objeto manda "_nome" para o Spring gravar false quando desmarcada.
+
+    errosGerais: dentro de um <form th:object>, cada erro que não é de um campo (Formularios.rejeitar) vira um
+        AlertBanner. Ponha antes dos campos.
 
     Opção omitida herda a variável de mesmo nome do contexto: não use esses nomes em variáveis de página.
 */-->
@@ -30,7 +34,7 @@
     <input class="rt-input" th:id="${_id}" th:name="${nome}" th:type="${tipo ?: 'text'}" th:attr="value=${valor}"
            th:required="${obrigatorio == true}" th:autofocus="${autofocus == true}" th:autocomplete="${autocomplete}"
            th:placeholder="${placeholder}" th:inputmode="${inputmode}" th:min="${min}" th:max="${max}"
-           th:maxlength="${maxlength}" th:aria-invalid="${erro != null} ? 'true' : null"
+           th:minlength="${minlength}" th:maxlength="${maxlength}" th:aria-invalid="${erro != null} ? 'true' : null"
            th:aria-describedby="${_descricao.isEmpty()} ? null : ${_descricao}">
     <th:block th:replace="~{componentes/formulario :: mensagensDoCampo}"></th:block>
 </div>
@@ -64,6 +68,11 @@
                    _erro=${#fields.hasErrors(nome)} ? ${#strings.listJoin(#fields.errors(nome), ' ')} : null">
     <div th:replace="~{componentes/formulario :: selecao(rotulo=${rotulo}, nome=${nome}, opcoes=${opcoes},
             valor=${_valor}, erro=${_erro})}"></div>
+</th:block>
+
+<th:block th:fragment="errosGerais">
+    <th:block th:each="_erroGeral : ${#fields.globalErrors()}"><div th:replace="~{componentes/alerta :: alerta(
+            titulo=${_erroGeral}, corpo=null, regra=null, acaoTexto=null, icone=null)}"></div></th:block>
 </th:block>
 
 <th:block th:fragment="mensagensDoCampo">
