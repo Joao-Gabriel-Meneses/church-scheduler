@@ -8,6 +8,10 @@
 <main class="flex flex-col gap-4">
     <h1 class="text-title">Olá, <span sec:authentication="principal.nome">Nome</span>!</h1>
     <p class="text-ink-muted">Suas próximas escalas vão aparecer aqui.</p>
+    <p>
+        <a th:replace="~{componentes/botao :: botao(texto='Marcar disponibilidade', icone='list-checks',
+                href=@{/disponibilidade}, variante=null, classe='w-full justify-center md:w-auto')}"></a>
+    </p>
     <p sec:authorize="hasRole('ADMIN')">
         <span th:replace="~{componentes/badge :: badge('Administrador')}"></span>
     </p>

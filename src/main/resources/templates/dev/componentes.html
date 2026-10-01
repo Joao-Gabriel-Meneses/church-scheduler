@@ -182,6 +182,32 @@
         </div>
     </section>
 
+    <section id="availability-picker" class="flex flex-col gap-2">
+        <h2 class="text-heading">AvailabilityPicker</h2>
+        <p class="text-label text-ink-muted">"Prefiro não" fica oculto até a regra PREFERENCIA (Fase 5). As duas últimas
+            linhas mostram quem marcou em nome da pessoa e o aviso de evento que mudou; a segunda lista está travada.</p>
+        <div class="rt-canvas -mx-4 flex flex-col gap-6 md:mx-0 md:rounded-lg">
+            <div class="flex flex-col gap-3">
+                <div class="flex max-w-md items-center justify-between">
+                    <span class="text-heading">Outubro</span><span class="rt-label">4 de 5 respondidos</span>
+                </div>
+                <div class="rt-avail">
+                    <th:block th:each="linha : ${disponibilidade}"><div th:replace="~{componentes/disponibilidade ::
+                            linha(linha=${linha}, acao='#availability-picker', alvo='#availability-picker',
+                            editavel=true)}"></div></th:block>
+                </div>
+            </div>
+            <div class="flex flex-col gap-3">
+                <span th:replace="~{componentes/badge :: badge(texto='Disponibilidade travada', variante='locked')}"></span>
+                <div class="rt-avail rt-avail--locked">
+                    <th:block th:each="linha : ${disponibilidade.subList(0, 2)}"><div
+                            th:replace="~{componentes/disponibilidade :: linha(linha=${linha},
+                            acao='#availability-picker', alvo='#availability-picker', editavel=false)}"></div></th:block>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <section id="side-rail" class="flex flex-col gap-2">
         <h2 class="text-heading">SideRail</h2>
         <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">

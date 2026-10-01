@@ -30,6 +30,7 @@ public final class Navegacao {
     /** Entradas na ordem em que aparecem. O ícone precisa estar em src/main/frontend/icones.json. */
     static final Navegacao PRINCIPAL = new Navegacao(List.of(
             new Entrada(Area.MEMBRO, "Minhas escalas", "Escalas", "calendar-check", "/", Perfil.MEMBRO),
+            new Entrada(Area.MEMBRO, "Disponibilidade", "Disponib.", "list-checks", "/disponibilidade", Perfil.MEMBRO),
             new Entrada(
                     Area.MEMBRO,
                     "Gerenciar",

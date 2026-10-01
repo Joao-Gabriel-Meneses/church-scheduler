@@ -1,5 +1,7 @@
 package br.igreja.escala.compartilhado.web;
 
+import br.igreja.escala.disponibilidade.domain.Resposta;
+import br.igreja.escala.disponibilidade.service.LinhaDeDisponibilidade;
 import java.util.List;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
@@ -22,7 +24,39 @@ class ComponentesDevController {
         model.addAttribute("abas", abasDoGerente("Escalas"));
         model.addAttribute(
                 "niveis", List.of(new Opcao("INICIANTE", "Iniciante"), new Opcao("EXPERIENTE", "Experiente")));
+        model.addAttribute("disponibilidade", disponibilidade());
         return "dev/componentes";
+    }
+
+    /** As linhas do preview do AvailabilityPicker, mais uma marcada pelo gerente e outra de evento que mudou. */
+    private static List<LinhaDeDisponibilidade> disponibilidade() {
+        return List.of(
+                linha(1L, "05", "Dom", "Culto de domingo", "18h00", Resposta.PODE, null, null),
+                linha(2L, "09", "Qui", "Culto de quinta", "19h30", Resposta.NAO_PODE, null, null),
+                linha(3L, "12", "Dom", "Culto de domingo", "18h00", null, null, null),
+                linha(4L, "16", "Qui", "Culto de quinta", "19h30", Resposta.PODE, "Paula Ribeiro", null),
+                linha(
+                        5L,
+                        "18",
+                        "Sáb",
+                        "Conferência de jovens",
+                        "15h00",
+                        Resposta.PODE,
+                        null,
+                        "O horário mudou (era 14h00). Toque de novo para confirmar."));
+    }
+
+    private static LinhaDeDisponibilidade linha(
+            Long id,
+            String dia,
+            String diaDaSemana,
+            String nome,
+            String horario,
+            Resposta resposta,
+            String marcadoPor,
+            String aviso) {
+        return new LinhaDeDisponibilidade(
+                id, nome, dia, diaDaSemana, dia + "/10 · " + diaDaSemana, horario, resposta, marcadoPor, aviso);
     }
 
     @GetMapping("/membro")

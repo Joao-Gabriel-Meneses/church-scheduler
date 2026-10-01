@@ -1,0 +1,4 @@
+/* AvailabilityPicker no app: complementa o bundle.css, seguindo tokens.css (ver README.md ao lado). */
+/* Aviso de evento que mudou depois da resposta: texto em alert com o ícone de triângulo, como o erro do Field. */
+.rt-avail__aviso{display:flex;align-items:flex-start;gap:var(--space-1);font-size:12px;line-height:16px;color:var(--alert)}
+.rt-avail__aviso .rt-i{width:var(--space-4);height:var(--space-4);flex:none}

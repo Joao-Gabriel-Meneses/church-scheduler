@@ -3,9 +3,13 @@ package br.igreja.escala;
 import static br.igreja.escala.evento.ExemplosDeEvento.DUAS_HORAS;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.igreja.escala.compartilhado.Fuso;
+import br.igreja.escala.disponibilidade.domain.Disponibilidade;
+import br.igreja.escala.disponibilidade.domain.Resposta;
+import br.igreja.escala.disponibilidade.repository.DisponibilidadeRepository;
 import br.igreja.escala.evento.domain.Evento;
 import br.igreja.escala.evento.domain.ModeloEvento;
 import br.igreja.escala.evento.domain.Periodo;
@@ -31,6 +35,7 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -85,8 +90,13 @@ class PaginasDoGerenteIT {
     @Autowired
     EventoRepository eventos;
 
+    @Autowired
+    DisponibilidadeRepository disponibilidades;
+
     private Long ministerioId;
+    private YearMonth mes;
     private UsuarioAutenticado gerente;
+    private UsuarioAutenticado membro;
     private UsuarioAutenticado admin;
     private Long membroId;
     private Long desativadaId;
@@ -118,14 +128,16 @@ class PaginasDoGerenteIT {
             habilitacoes.save(new Habilitacao(ana.getId(), projecao, iniciante));
             var domingo = modelos.save(new ModeloEvento(
                     midia.getId(), "Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), DUAS_HORAS));
-            var mes = YearMonth.now(Fuso.SAO_PAULO).plusMonths(2);
+            mes = YearMonth.now(Fuso.SAO_PAULO).plusMonths(2);
             var periodo = periodos.save(new Periodo(midia.getId(), mes));
             var dataDoDomingo = mes.atDay(1).with(TemporalAdjusters.firstInMonth(DayOfWeek.SUNDAY));
-            eventoDoModeloId = eventos.save(Evento.doModelo(domingo, periodo, dataDoDomingo))
-                    .getId();
+            var doModelo = eventos.save(Evento.doModelo(domingo, periodo, dataDoDomingo));
+            eventoDoModeloId = doModelo.getId();
+            disponibilidades.save(new Disponibilidade(ana.getId(), doModelo, Resposta.PODE, paula.getId()));
             eventoAvulsoId = eventos.save(Evento.avulso(periodo, "Ensaio", mes.atDay(10), LocalTime.NOON, DUAS_HORAS))
                     .getId();
             gerente = new UsuarioAutenticado(paula);
+            membro = new UsuarioAutenticado(ana);
             membroId = ana.getId();
             funcaoId = projecao.getId();
             nivelId = iniciante.getId();
@@ -136,6 +148,9 @@ class PaginasDoGerenteIT {
     @AfterEach
     void apagaOsDados() {
         transacao.executeWithoutResult(status -> {
+            jdbc.update(
+                    "delete from disponibilidade where evento_id in (select id from evento where ministerio_id = ?)",
+                    ministerioId);
             jdbc.update("delete from evento where ministerio_id = ?", ministerioId);
             jdbc.update("delete from periodo where ministerio_id = ?", ministerioId);
             jdbc.update("delete from modelo_evento where ministerio_id = ?", ministerioId);
@@ -171,6 +186,13 @@ class PaginasDoGerenteIT {
         abre("/ministerios/{m}/funcoes", ministerioId);
         abre("/ministerios/{m}/funcoes/{f}", ministerioId, funcaoId);
         abre("/ministerios/{m}/funcoes/niveis/{n}", ministerioId, nivelId);
+    }
+
+    @Test
+    void disponibilidadeDoMembroAbreComQuemMarcouEmNomeDele() throws Exception {
+        mvc.perform(get("/disponibilidade").param("mes", mes.toString()).with(user(membro)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Marcado por Paula Páginas")));
     }
 
     @Test

@@ -58,6 +58,12 @@
 <section id="rail"><nav th:replace="~{componentes/navegacao :: rail(${ministerios})}"></nav></section>
 <section id="rail-unica"><nav th:replace="~{componentes/navegacao :: rail(${ministerios.subList(0, 1)})}"></nav></section>
 <section id="seletor"><details th:replace="~{componentes/navegacao :: seletorDeMinisterio(${ministerios})}"></details></section>
+<section id="disponibilidade"><div th:replace="~{componentes/disponibilidade :: linha(linha=${linhaRespondida},
+        acao=@{/disponibilidade/ministerios/1/eventos/500(mes='2026-11')}, alvo='#grupo-1', editavel=true)}"></div></section>
+<section id="disponibilidade-travada"><div th:replace="~{componentes/disponibilidade :: linha(linha=${linhaComAvisos},
+        acao='/x', alvo='#grupo-1', editavel=false)}"></div></section>
+<section id="seletor-de-periodo"><div th:replace="~{componentes/toolbar :: seletorDePeriodo('Novembro 2026', 'Nov 2026',
+        @{/disponibilidade(mes='2026-10')}, @{/disponibilidade(mes='2026-12')})}"></div></section>
 <section id="toolbar"><div th:replace="~{componentes/toolbar :: toolbar(periodo='Outubro 2026', periodoCurto='Out 2026',
         anteriorHref=@{/escalas/2026-09}, proximoHref=@{/escalas/2026-11}, travada=true, regrasHref=@{/regras},
         acaoTexto='Gerar escala', acaoIcone='sparkles', acaoHref=null)}"></div></section>

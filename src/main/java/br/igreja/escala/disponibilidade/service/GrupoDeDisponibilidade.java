@@ -1,7 +1,9 @@
 package br.igreja.escala.disponibilidade.service;
 
+import br.igreja.escala.compartilhado.Datas;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Os eventos por vir de um ministério no mês, para uma pessoa marcar.
@@ -21,6 +23,11 @@ public record GrupoDeDisponibilidade(
 
     public long respondidos() {
         return linhas.stream().filter(LinhaDeDisponibilidade::respondida).count();
+    }
+
+    /** "Nenhum evento por vir em novembro." */
+    public String semEventos() {
+        return "Nenhum evento por vir em " + Datas.nomeDoMes(mes).toLowerCase(Locale.ROOT) + ".";
     }
 
     /** "4 de 5 respondidos". */

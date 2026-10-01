@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<!--/*
+    Disponibilidade do membro (celular primeiro): os eventos por vir do mês, um grupo por ministério em que a pessoa
+    serve. Cada toque salva na hora (htmx), sem botão de salvar. Período travado: o grupo fica somente leitura.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/membro :: pagina(~{::title}, ~{::main})}">
+<head>
+    <title th:text="|${tela.titulo()} · Escala|">Mídia — Novembro · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-3">
+        <h1 class="text-title" th:text="${tela.titulo()}">Mídia — Novembro</h1>
+        <div class="flex items-center justify-between gap-2">
+            <div class="rt-toolbar"><div th:replace="~{componentes/toolbar :: seletorDePeriodo(${mesPorExtenso},
+                    ${mesCurto}, @{/disponibilidade(mes=${mesAnterior})}, @{/disponibilidade(mes=${proximoMes})})}"></div></div>
+            <p th:replace="~{disponibilidade/fragments/grupo :: total(${tela}, false)}"></p>
+        </div>
+        <p class="text-ink-muted">Toque em Pode ou Não pode em cada evento. Sem resposta conta como não pode.</p>
+    </header>
+
+    <th:block th:if="${recusa != null and tela.grupos.isEmpty()}"><div th:replace="~{componentes/alerta :: alerta(
+            titulo=${recusa}, corpo=null, regra=null, acaoTexto=null, icone=null)}"></div></th:block>
+
+    <p th:unless="${tela.serveEmAlgum}" class="rt-panel p-6 text-ink-muted">Você ainda não tem função em nenhum
+        ministério. Quando o gerente habilitar você, os eventos aparecem aqui.</p>
+
+    <th:block th:each="grupo : ${tela.grupos}">
+        <section th:replace="~{disponibilidade/fragments/grupo :: grupo(${grupo}, null, ${tela.grupos.size() > 1},
+                ${recusaDoGrupo == grupo.ministerioId ? recusa : null})}"></section>
+    </th:block>
+</main>
+</body>
+</html>
