@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +24,50 @@ public class UsuarioService {
     UsuarioService(UsuarioRepository usuarios, PasswordEncoder passwordEncoder) {
         this.usuarios = usuarios;
         this.passwordEncoder = passwordEncoder;
+    }
+
+    /**
+     * @throws java.util.NoSuchElementException se o usuário não existe (o chamador já sabe que ele existe, pela
+     *     membresia)
+     */
+    @Transactional(readOnly = true)
+    public UsuarioResumo buscar(Long id) {
+        return UsuarioResumo.de(usuarios.findById(id).orElseThrow());
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UsuarioResumo> buscarPorEmail(String email) {
+        return usuarios.findByEmail(Usuario.normalizarEmail(email)).map(UsuarioResumo::de);
+    }
+
+    /**
+     * Cria a conta de um membro cadastrado pelo gerente. A senha é provisória: o membro troca no primeiro acesso.
+     *
+     * @throws SenhaRecusadaException no campo {@code senhaProvisoria}, se a senha não tem o tamanho certo
+     * @throws IllegalStateException se o e-mail já tem conta (quem chama confere antes, com {@link #buscarPorEmail})
+     */
+    @Transactional
+    public UsuarioResumo criarComSenhaProvisoria(NovoUsuario novo) {
+        exigirTamanho(novo.senhaProvisoria(), "senhaProvisoria");
+        String email = Usuario.normalizarEmail(novo.email());
+        if (usuarios.existsByEmail(email)) {
+            throw new IllegalStateException("Já existe conta com o e-mail " + email);
+        }
+        var usuario = Usuario.comSenhaProvisoria(
+                novo.nome(), email, novo.telefone(), passwordEncoder.encode(novo.senhaProvisoria()));
+        return UsuarioResumo.de(usuarios.save(usuario));
+    }
+
+    /**
+     * Senha provisória definida por um gerente ou admin; o usuário volta a ter de trocá-la no próximo acesso. Quem
+     * pode redefinir a senha de quem é regra de quem chama (o módulo ministerio).
+     *
+     * @throws SenhaRecusadaException no campo {@code senha}, se a senha não tem o tamanho certo
+     */
+    @Transactional
+    public void redefinirSenhaProvisoria(Long usuarioId, String senha) {
+        exigirTamanho(senha, "senha");
+        usuarios.findById(usuarioId).orElseThrow().definirSenhaProvisoria(passwordEncoder.encode(senha));
     }
 
     /** Usuários pelos ids, em ordem de nome. Ids que não existem ficam de fora. */

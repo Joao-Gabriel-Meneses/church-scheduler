@@ -39,4 +39,12 @@ class UsuarioAutenticadoTest {
         assertThat(new UsuarioAutenticado(Usuario.membro("Bia", "bia@x.com", "hash")).isSenhaProvisoria())
                 .isFalse();
     }
+
+    @Test
+    void sabeSeEAdmin() {
+        assertThat(new UsuarioAutenticado(Usuario.admin("Bia", "bia@x.com", "hash")).isAdmin())
+                .isTrue();
+        assertThat(new UsuarioAutenticado(Usuario.membro("Ana", "ana@x.com", "hash")).isAdmin())
+                .isFalse();
+    }
 }

@@ -45,6 +45,11 @@ public final class UsuarioAutenticado implements UserDetails {
         return email;
     }
 
+    public boolean isAdmin() {
+        return authorities.stream()
+                .anyMatch(autoridade -> autoridade.getAuthority().equals(Perfil.ADMIN.authority()));
+    }
+
     /** Enquanto for verdadeiro, só a troca de senha abre (SenhaProvisoriaInterceptor). */
     public boolean isSenhaProvisoria() {
         return senhaProvisoria;

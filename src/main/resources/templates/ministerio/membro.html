@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<!--/*
+    Página de um membro do ministério (gerente): contato, habilitações e o acesso dele.
+    - Redefinir senha: Sheet com a nova senha provisória; some para contas de gerente e admin, que só o admin
+      redefine (${podeMexerNaConta}).
+    - Remover do ministério: Sheet de confirmação; um gerente só o admin remove (${podeRemover}).
+    - Tornar ou deixar de ser gerente: só para o admin (${ehAdmin}).
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title th:text="|${membro.nome} · ${ministerio.nome} · Escala|">Ana Souza · Mídia · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6"
+      th:with="_base=@{/ministerios/{m}/membros/{u}(m=${ministerio.id}, u=${membro.id})}">
+    <header class="flex flex-col gap-2">
+        <p class="text-ink-muted" th:text="|${ministerio.nome} · Membros|">Mídia · Membros</p>
+        <h1 class="text-title" th:text="${membro.nome}">Ana Souza</h1>
+        <div class="rt-row">
+            <th:block th:if="${membro.gerente}"><span th:replace="~{componentes/badge :: badge(texto='Gerente',
+                    variante=null, icone='shield-check', tint=null, classe=null)}"></span></th:block>
+            <th:block th:if="${membro.pessoa.admin}"><span th:replace="~{componentes/badge :: badge(
+                    texto='Administrador', variante=null, icone=null, tint=null, classe=null)}"></span></th:block>
+            <th:block th:if="${membro.pessoa.senhaProvisoria}"><span th:replace="~{componentes/badge :: badge(
+                    texto='Ainda com a senha provisória', variante='draft', icone=null, tint=null, classe=null)}"></span></th:block>
+        </div>
+    </header>
+
+    <th:block th:if="${recusa != null}"><div th:replace="~{componentes/alerta :: alerta(titulo=${recusa}, corpo=null,
+            regra=null, acaoTexto=null, icone=null)}"></div></th:block>
+
+    <section class="rt-panel flex flex-col gap-3 p-6" aria-labelledby="titulo-contato">
+        <h2 id="titulo-contato" class="text-heading">Contato</h2>
+        <dl class="grid gap-3 md:grid-cols-2">
+            <div class="flex flex-col"><dt class="text-label text-ink-muted">E-mail</dt>
+                <dd th:text="${membro.pessoa.email}">ana@exemplo.com</dd></div>
+            <div class="flex flex-col"><dt class="text-label text-ink-muted">Telefone</dt>
+                <dd th:text="${membro.pessoa.telefone ?: 'Não informado'}">(11) 98888-7777</dd></div>
+        </dl>
+    </section>
+
+    <section class="flex flex-col gap-3" aria-labelledby="titulo-habilitacoes">
+        <h2 id="titulo-habilitacoes" class="text-heading">Habilitações</h2>
+        <p th:if="${membro.habilitacoes.isEmpty()}" class="text-ink-muted">Sem habilitação ainda: a pessoa não entra
+            na escala até ter uma.</p>
+        <ul th:unless="${membro.habilitacoes.isEmpty()}" class="rt-list">
+            <li th:each="habilitacao : ${membro.habilitacoes}"><div th:replace="~{componentes/lista :: linha(
+                    titulo=${habilitacao}, sub=null, icone=null, href=null, selecionada=false)}"></div></li>
+        </ul>
+    </section>
+
+    <section class="flex flex-col gap-3" aria-labelledby="titulo-acesso">
+        <h2 id="titulo-acesso" class="text-heading">Acesso</h2>
+        <div class="flex flex-wrap gap-2">
+            <th:block th:if="${podeMexerNaConta and !ehVoce}"><button th:replace="~{componentes/sheet ::
+                    abrir(alvo='redefinir-senha', texto='Redefinir senha', icone='key-round')}"></button></th:block>
+            <th:block th:if="${ehAdmin and !membro.gerente}">
+                <form th:action="${_base + '/gerente'}" method="post"><button th:replace="~{componentes/botao ::
+                        botao(texto='Tornar gerente', variante='secondary', icone='shield-check', classe=null,
+                        tipo=null)}"></button></form>
+            </th:block>
+            <th:block th:if="${ehAdmin and membro.gerente}">
+                <form th:action="${_base + '/gerente/remover'}" method="post"><button th:replace="~{componentes/botao ::
+                        botao(texto='Deixar de ser gerente', variante='secondary', icone=null, classe=null,
+                        tipo=null)}"></button></form>
+            </th:block>
+            <th:block th:if="${podeRemover and !ehVoce}"><button th:replace="~{componentes/sheet :: abrir(
+                    alvo='remover-membro', texto='Remover do ministério', icone='user-minus')}"></button></th:block>
+        </div>
+        <p th:unless="${podeMexerNaConta}" class="text-label text-ink-muted">A senha de gerentes e administradores
+            só o administrador redefine.</p>
+        <p th:if="${ehVoce}" class="text-label text-ink-muted">Esta é a sua conta. Para mudar sua senha, use Trocar
+            senha no início.</p>
+    </section>
+
+    <th:block th:if="${podeMexerNaConta and !ehVoce}">
+        <div th:replace="~{componentes/sheet :: folha('redefinir-senha', 'Redefinir senha', ~{::#form-redefinir-senha})}">
+            <form id="form-redefinir-senha" th:action="${_base + '/senha'}" method="post" class="flex flex-col gap-3">
+                <p class="text-ink-muted" th:text="|${membro.nome} vai entrar com esta senha e escolher outra no
+                        primeiro acesso.|">Ana Souza vai entrar com esta senha.</p>
+                <div th:replace="~{componentes/formulario :: campo(rotulo='Nova senha provisória', nome='senha',
+                        valor=null, autocomplete='off', obrigatorio=true, minlength=8, maxlength=64,
+                        dica='De 8 a 64 caracteres. Passe para a pessoa.', erro=null)}"></div>
+                <button th:replace="~{componentes/sheet :: fechar('redefinir-senha')}"></button>
+                <button th:replace="~{componentes/botao :: botao(texto='Redefinir senha', variante='dark', icone=null,
+                        classe='w-full justify-center', tipo=null)}"></button>
+            </form>
+        </div>
+    </th:block>
+    <th:block th:if="${podeRemover and !ehVoce}">
+        <div th:replace="~{componentes/sheet :: confirmacao(id='remover-membro',
+                titulo=|Remover ${membro.nome} do ministério?|,
+                texto='As habilitações deste ministério são apagadas. A conta continua, e a pessoa segue nos outros ministérios em que estiver.',
+                acao=${_base + '/remover'}, confirmar='Remover do ministério')}"></div>
+    </th:block>
+</main>
+</body>
+</html>

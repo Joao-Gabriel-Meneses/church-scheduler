@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!--/* Membros do ministério (gerente): ListRow no celular e DataTable no desktop. O primário é "Cadastrar membro". */-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title th:text="|${ministerio.nome} — Membros · Escala|">Mídia — Membros · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6">
+    <header class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-col gap-1">
+            <h1 class="text-title" th:text="|${ministerio.nome} — Membros|">Mídia — Membros</h1>
+            <p class="text-ink-muted">Quem serve no ministério e o que cada pessoa pode fazer.</p>
+        </div>
+        <a th:replace="~{componentes/botao :: botao(texto='Cadastrar membro', icone='user-plus',
+                href=@{/ministerios/{id}/membros/novo(id=${ministerio.id})}, variante=null, classe=null)}"></a>
+    </header>
+
+    <p th:if="${membros.isEmpty()}" class="rt-panel p-6 text-ink-muted">Ninguém no ministério ainda. Cadastre os
+        membros com uma senha provisória e passe a senha para cada um.</p>
+
+    <th:block th:unless="${membros.isEmpty()}">
+        <ul class="rt-list md:hidden">
+            <li th:each="membro : ${membros}"><a th:replace="~{componentes/lista :: linha(
+                    titulo=${membro.gerente} ? |${membro.nome} · Gerente| : ${membro.nome},
+                    sub=${membro.descricaoDasHabilitacoes()}, icone='user',
+                    href=@{/ministerios/{m}/membros/{u}(m=${ministerio.id}, u=${membro.id})},
+                    selecionada=false)}"></a></li>
+        </ul>
+        <div class="rt-panel hidden overflow-x-auto md:block">
+            <table class="rt-table">
+                <thead>
+                <tr>
+                    <th scope="col">Membro</th>
+                    <th scope="col">Habilitações</th>
+                    <th scope="col">Contato</th>
+                    <th scope="col">Acesso</th>
+                    <th scope="col"><span class="sr-only">Ações</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="membro : ${membros}">
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <div th:replace="~{componentes/tabela :: pessoa(${membro.nome}, ${membro.pessoa.iniciais()})}"></div>
+                            <th:block th:if="${membro.gerente}"><span th:replace="~{componentes/badge ::
+                                    badge(texto='Gerente', variante=null, icone=null, tint=null, classe=null)}"></span></th:block>
+                        </div>
+                    </td>
+                    <td>
+                        <th:block th:if="${membro.habilitacoes.isEmpty()}"><span class="text-ink-muted">Sem habilitação
+                            ainda</span></th:block>
+                        <th:block th:unless="${membro.habilitacoes.isEmpty()}"><div th:replace="~{componentes/tabela ::
+                                duasLinhas(${membro.habilitacoes[0]},
+                                ${membro.habilitacoes.size() > 1} ? ${#strings.listJoin(membro.habilitacoes.subList(1, membro.habilitacoes.size()), ', ')} : null)}"></div></th:block>
+                    </td>
+                    <td><div th:replace="~{componentes/tabela :: duasLinhas(${membro.pessoa.email}, ${membro.pessoa.telefone})}"></div></td>
+                    <td>
+                        <th:block th:if="${membro.pessoa.senhaProvisoria}"><th:block th:replace="~{componentes/tabela ::
+                                estado(texto='Senha provisória', variante='vazio')}"></th:block></th:block>
+                        <th:block th:unless="${membro.pessoa.senhaProvisoria}"><th:block th:replace="~{componentes/tabela ::
+                                estado(texto='Senha própria', variante=null)}"></th:block></th:block>
+                    </td>
+                    <td class="text-right"><a th:replace="~{componentes/botao :: botaoIcone(icone='chevron-right',
+                            rotulo=${'Abrir ' + membro.nome},
+                            href=@{/ministerios/{m}/membros/{u}(m=${ministerio.id}, u=${membro.id})},
+                            tamanho='sm', variante=null, classe=null)}"></a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </th:block>
+</main>
+</body>
+</html>

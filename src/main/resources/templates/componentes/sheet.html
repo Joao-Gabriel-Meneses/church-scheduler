@@ -10,7 +10,14 @@
         <div th:replace="~{componentes/sheet :: confirmacao(id='excluir-funcao', titulo='Excluir Projeção?',
             texto='Os eventos deixam de pedir esta função.', acao=@{/…/excluir}, confirmar='Excluir')}"></div>
 
+    folha(id, titulo, conteudo): Sheet com cabeçalho e um conteúdo da página (em geral um formulário curto, como
+    redefinir a senha). Ações empilhadas em largura total, a principal por último.
+        <div th:replace="~{componentes/sheet :: folha('redefinir-senha', 'Redefinir senha', ~{::#form-senha})}">
+            <form id="form-senha" …>…</form>
+        </div>
+
     abrir(alvo, texto): botão contorno que abre o Sheet de id ${alvo}. Opção: icone.
+    fechar(alvo): botão "Cancelar" (secundário, largura total) que fecha o Sheet de id ${alvo}.
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <body>
@@ -29,6 +36,19 @@
         <button type="submit" class="rt-btn rt-btn--dark w-full justify-center" th:text="${confirmar}">Excluir</button>
     </form>
 </div>
+
+<div th:fragment="folha(id, titulo, conteudo)" th:id="${id}" popover class="rt-sheet md:mx-auto md:max-w-md"
+     role="dialog" th:aria-label="${titulo}">
+    <div class="rt-sheet__cabeca">
+        <p class="rt-sheet__titulo" th:text="${titulo}">Redefinir senha</p>
+        <button type="button" class="rt-icon-btn" th:attr="popovertarget=${id}" popovertargetaction="hide"
+                aria-label="Fechar" title="Fechar"><svg th:replace="~{componentes/icone :: icone('x')}"></svg></button>
+    </div>
+    <th:block th:replace="${conteudo}"></th:block>
+</div>
+
+<button th:fragment="fechar(alvo)" type="button" class="rt-btn rt-btn--secondary w-full justify-center"
+        th:attr="popovertarget=${alvo}" popovertargetaction="hide">Cancelar</button>
 
 <button th:fragment="abrir(alvo, texto)" type="button" class="rt-btn rt-btn--outline" th:attr="popovertarget=${alvo}"><th:block
         th:if="${icone != null}"><svg th:replace="~{componentes/icone :: icone(${icone})}"></svg></th:block><th:block
