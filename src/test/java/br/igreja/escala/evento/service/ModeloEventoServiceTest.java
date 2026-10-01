@@ -1,0 +1,95 @@
+package br.igreja.escala.evento.service;
+
+import static br.igreja.escala.evento.ExemplosDeEvento.cultoDeDomingo;
+import static br.igreja.escala.evento.ExemplosDeEvento.cultoDeQuinta;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import br.igreja.escala.compartilhado.NaoEncontradoException;
+import br.igreja.escala.evento.domain.ModeloEvento;
+import br.igreja.escala.evento.repository.ModeloEventoRepository;
+import br.igreja.escala.evento.repository.PeriodoRepository;
+import br.igreja.escala.ministerio.service.MinisterioService;
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.time.YearMonth;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.Test;
+
+class ModeloEventoServiceTest {
+
+    private final ModeloEventoRepository modelos = mock(ModeloEventoRepository.class);
+    private final MinisterioService ministerios = mock(MinisterioService.class);
+    private final ModeloEventoService servico = new ModeloEventoService(modelos, ministerios);
+
+    @Test
+    void listaDoDomingoAoSabadoComDiaEHorarioEscritos() {
+        var sabado = new ModeloEvento(1L, "Ensaio", DayOfWeek.SATURDAY, LocalTime.of(15, 0));
+        sabado.alterar("Ensaio", DayOfWeek.SATURDAY, LocalTime.of(15, 0), false);
+        when(modelos.findByMinisterioIdOrderByDiaDaSemanaAscHorarioAsc(1L))
+                .thenReturn(List.of(cultoDeQuinta(1L), sabado, cultoDeDomingo(1L)));
+
+        assertThat(servico.resumos(1L))
+                .extracting(ModeloResumo::descricao)
+                .containsExactly("Domingo · 18h00", "Quinta · 19h30", "Sábado · 15h00 · Inativo");
+    }
+
+    @Test
+    void criaNoMinisterioDaRotaJaComOAtivoDoFormulario() {
+        when(modelos.save(any())).thenAnswer(chamada -> chamada.getArgument(0));
+
+        var criado =
+                servico.criar(1L, new DadosDoModelo("Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), false));
+
+        verify(ministerios).buscar(1L);
+        assertThat(criado.getMinisterioId()).isEqualTo(1L);
+        assertThat(criado.isAtivo()).isFalse();
+    }
+
+    @Test
+    void alteraOModeloDoMinisterio() {
+        var domingo = cultoDeDomingo(1L);
+        when(modelos.findByIdAndMinisterioId(300L, 1L)).thenReturn(Optional.of(domingo));
+
+        servico.alterar(1L, 300L, new DadosDoModelo("Culto da noite", DayOfWeek.SUNDAY, LocalTime.of(19, 0), true));
+
+        assertThat(domingo.getNome()).isEqualTo("Culto da noite");
+        assertThat(domingo.getHorario()).isEqualTo(LocalTime.of(19, 0));
+    }
+
+    @Test
+    void modeloDeOutroMinisterioE404() {
+        when(modelos.findByIdAndMinisterioId(300L, 2L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> servico.buscar(2L, 300L)).isInstanceOf(NaoEncontradoException.class);
+        assertThatThrownBy(
+                        () -> servico.alterar(2L, 300L, new DadosDoModelo("X", DayOfWeek.SUNDAY, LocalTime.NOON, true)))
+                .isInstanceOf(NaoEncontradoException.class);
+        verify(modelos, never()).save(any());
+    }
+
+    @Test
+    void ativosSaoOsQueGeramEventos() {
+        when(modelos.findByMinisterioIdAndAtivoTrue(1L)).thenReturn(List.of(cultoDeDomingo(1L)));
+
+        assertThat(servico.ativos(1L)).extracting(ModeloEvento::getNome).containsExactly("Culto de domingo");
+    }
+
+    @Test
+    void periodoEObtidoOuCriado() {
+        var periodos = mock(PeriodoRepository.class);
+        var periodoService = new PeriodoService(periodos);
+        var outubro = YearMonth.of(2026, 10);
+        when(periodos.findByMinisterioIdAndAnoAndMes(1L, 2026, 10)).thenReturn(Optional.empty());
+        when(periodos.save(any())).thenAnswer(chamada -> chamada.getArgument(0));
+
+        assertThat(periodoService.obterOuCriar(1L, outubro).getMes()).isEqualTo(outubro);
+        assertThat(periodoService.doMes(1L, outubro)).isEmpty();
+    }
+}

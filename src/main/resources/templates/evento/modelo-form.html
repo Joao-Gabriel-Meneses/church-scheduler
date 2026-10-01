@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<!--/* Criar ou alterar um modelo de evento (gerente). ${modeloId} nulo = novo. Modelo não se exclui: fica inativo. */-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title th:text="|${cabecalho} · ${ministerio.nome} · Escala|">Criar modelo · Mídia · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6"
+      th:with="_acao=${modeloId == null} ? @{/ministerios/{m}/eventos/modelos(m=${ministerio.id})}
+                     : @{/ministerios/{m}/eventos/modelos/{id}(m=${ministerio.id}, id=${modeloId})}">
+    <header class="flex flex-col gap-1">
+        <p class="text-ink-muted" th:text="|${ministerio.nome} · Modelos de evento|">Mídia · Modelos de evento</p>
+        <h1 class="text-title" th:text="${cabecalho}">Criar modelo</h1>
+    </header>
+
+    <form th:action="${_acao}" th:object="${form}" method="post"
+          class="rt-panel flex w-full max-w-md flex-col gap-4 p-6">
+        <div th:replace="~{componentes/formulario :: campoDoObjeto('Nome', 'nome')}"></div>
+        <th:block th:with="vazio='Escolha o dia'">
+            <div th:replace="~{componentes/formulario :: selecaoDoObjeto('Dia da semana', 'diaDaSemana', ${dias})}"></div>
+        </th:block>
+        <th:block th:with="tipo='time', dica='O horário padrão. Dá para mudar em um evento sem mudar o modelo.'">
+            <div th:replace="~{componentes/formulario :: campoDoObjeto('Horário', 'horario')}"></div>
+        </th:block>
+        <th:block th:replace="~{componentes/formulario :: caixaDeSelecaoDoObjeto('Ativo: gera eventos nos próximos meses',
+                'ativo')}"></th:block>
+        <div class="flex flex-wrap gap-2">
+            <button th:replace="~{componentes/botao :: botao(texto='Salvar', variante=null, icone=null, classe=null,
+                    tipo=null)}"></button>
+            <a th:replace="~{componentes/botao :: botao(texto='Cancelar', variante='secondary',
+                    href=@{/ministerios/{m}/eventos/modelos(m=${ministerio.id})}, icone=null, classe=null)}"></a>
+        </div>
+    </form>
+</main>
+</body>
+</html>
