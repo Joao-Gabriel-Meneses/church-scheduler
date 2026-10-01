@@ -17,6 +17,8 @@ pre-commit install          # ativa os hooks: formatação, segredos e arquivos 
 ./mvnw spring-boot:run      # perfil dev; sobe o Oracle Free via compose.dev.yaml
 ```
 
+No perfil dev, o app cria dados de exemplo na primeira subida (Mídia e Louvor, com membros, funções e eventos). Entre como admin (`admin@escala.local` / `admin1234`) ou como gerente da Mídia (`paula.ribeiro@escala.local` / `membro1234`). A Carla Dias (`carla.dias@escala.local` / `provisoria-dev`) mostra o primeiro acesso com senha provisória.
+
 ## Testes e qualidade
 
 ```bash

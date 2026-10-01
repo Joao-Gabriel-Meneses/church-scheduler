@@ -52,7 +52,12 @@ br.igreja.escala       # pacote provisório (ver "Em aberto")
 
 - Módulos se comunicam por serviços públicos ou eventos de aplicação do Spring, nunca acessando repositórios de outro módulo.
 - Controllers devolvem views Thymeleaf; fragmentos htmx ficam em `templates/<modulo>/fragments/`. Componentes visuais ficam em `templates/componentes/` e layouts em `templates/layouts/` (ver "Visual").
-- Toda rota verifica autorização **por perfil e por ministério**.
+- Toda rota verifica autorização **por perfil e por ministério**:
+  - Rotas do gerente ficam em `/ministerios/{ministerioId}/...` e levam `@GerenteDoMinisterio` (admin abre todas, gerente só as do seu ministério). O `RotasDoGerenteTest` falha se uma rota desse caminho ficar sem a anotação.
+  - Páginas do admin ficam em `/admin/**`, com `hasRole('ADMIN')` no controller e na `SecurityConfig`.
+  - Serviços buscam todo registro filho pelo par (ministério, id). Id de outro ministério na rota responde 404 (`NaoEncontradoException`), inclusive em POST direto.
+- Recusa de regra de negócio que o usuário precisa ver é `RegraVioladaException` (com o campo do formulário, ou geral); o controller mostra com `Formularios.rejeitar` ou num AlertBanner.
+- Datas e horários de eventos são os da igreja, sem fuso no banco: `LocalDate` e `LocalTime` (em minutos, `HorarioEmMinutos`). "Hoje" vem do `Clock` de São Paulo (`RelogioConfig`). Para escrever datas, use `compartilhado.Datas` ("12/10 · Dom", "18h00", "Outubro 2026").
 
 ## Perfis
 
@@ -61,6 +66,11 @@ br.igreja.escala       # pacote provisório (ver "Em aberto")
 - **Admin:** tudo, em qualquer ministério; cria ministérios e nomeia gerentes.
 
 Gerente e admin também servem e aparecem na escala. Um usuário pode estar em vários ministérios e em várias funções em cada um.
+
+- **Acesso do membro:** o gerente cadastra o membro com uma **senha provisória** e a passa para a pessoa. Enquanto a senha for provisória, o `SenhaProvisoriaInterceptor` só deixa abrir `/conta/senha`. "Redefinir senha" do gerente gera outra provisória e é a recuperação de senha até existir e-mail.
+- O gerente mexe só em membros comuns. **Conta de gerente ou admin só o admin redefine ou remove**, e só o admin nomeia gerentes (senão um gerente entraria como alguém com mais acesso).
+- Cadastrar um e-mail que já tem conta só cria a membresia; a conta não muda.
+- **Navegação do gerente (desde a Fase 1):** Eventos (mês e modelos), Membros (e habilitações) e Funções (funções e níveis), mais Ministérios para o admin. O design prevê Escalas, Disponibilidade, Membros e Regras; a navegação é revista quando essas páginas existirem.
 
 ## Modelo de dados (resumo)
 
@@ -199,10 +209,12 @@ O design system "Escala" (feito no Claude Design) está em `docs/design/`. O `do
 - **Tokens:** `docs/design/tokens.css` é gerado de `tokens.json` por `python3 docs/design/gerar_tokens_css.py`. Nunca edite o `.css` à mão; token novo entra no `tokens.json`.
 - **Tailwind só para layout e ajustes.** O `src/main/frontend/app.css` liga o Tailwind aos tokens (`@theme inline reference`) e apaga o tema padrão: só existem utilitários dos tokens (`bg-brand`, `p-4` = `space-4`, `h-control`, `text-title`, `rounded-pill`...). Uma classe fora deles (`bg-slate-50`, `p-5`, `font-bold`) não gera CSS, sem erro nenhum.
 - **Componentes:** as classes `.rt-*` vêm de `docs/design/components/bundle.css` e dos componentes criados no app (Field, Toast, Sheet e a Toolbar no celular, com README na pasta de cada um). Não reescreva componentes em utilitários do Tailwind.
-- **Telas usam só os fragmentos de `templates/componentes/`** (botao, badge, lista, tabela, alerta, formulario, toast, navegacao, toolbar, icone) e os layouts de `templates/layouts/`: `simples` (sem navegação), `membro` (celular) e `gerente` (desktop). Cada fragmento documenta as opções no topo do arquivo.
+- **Telas usam só os fragmentos de `templates/componentes/`** (botao, badge, lista, tabela, alerta, formulario, toast, navegacao, toolbar, sheet, icone) e os layouts de `templates/layouts/`: `simples` (sem navegação), `membro` (celular) e `gerente` (desktop). Cada fragmento documenta as opções no topo do arquivo.
 - **Nenhuma cor ou tamanho fixo fora dos tokens:** nada de `style=`, `<style>`, valor arbitrário do Tailwind (`w-[37px]`) ou cor hexadecimal. O `TemplatesUsamSoTokensTest` falha nesses casos.
 - **Voz:** português, tratando por "você", sentence case, botões com verbo no infinitivo ("Gerar escala", "Salvar"), sem emoji. Títulos no padrão "Ministério — Período". Todo alerta diz o quê, onde e por quê.
 - **Listas de cadastro:** ListRow no celular (`rt-list md:hidden`) e DataTable no desktop (`rt-panel hidden md:block`).
+- **Nomes reservados no model:** o layout lê `${navegacao}`, `${ministerios}` (a SideRail) e `${sucesso}`. Uma página que ponha outra coisa nesses nomes quebra o layout; a lista do admin, por exemplo, é `${cadastrados}`. Opção omitida de um fragmento herda a variável de mesmo nome da página (ver o topo de cada fragmento).
+- **Ação que não se desfaz** (excluir, remover do ministério, cancelar evento) pede confirmação num Sheet: `componentes/sheet :: confirmacao`.
 - **Um botão primário por tela.** A Toolbar do gerente é contextual: "Gerar escala" só é primário na página de escalas. O `UmPrimarioPorTela` confere toda página renderizada nos testes de controller e de integração.
 - **Ícones:** Lucide com traço 1.5, via `componentes/icone`. Um ícone novo entra em `src/main/frontend/icones.json`; o `IconesTest` pega nome fora da lista.
 - **Fonte e ícones hospedados no app** (Urbanist OFL-1.1 e Lucide ISC, do npm com versão fixa). O `copiar-assets.mjs` gera tudo em `target/classes/static` junto com as licenças. Nada de CDN.
@@ -213,14 +225,17 @@ O design system "Escala" (feito no Claude Design) está em `docs/design/`. O `do
 
 - **Todo código com lógica nasce com teste unitário no mesmo commit:** services, domínio, validação de parâmetros de regra e utilitários. Use JUnit 5, AssertJ e Mockito, sem subir o Spring.
 - Controllers: `@TesteDeController(MeuController.class)` (`@WebMvcTest` com a `SecurityConfig` real, no perfil `test`) e MockMvc, cobrindo autorização (perfil e ministério), validação e CSRF. Não use `@WebMvcTest` direto.
+  - Rotas do gerente: `@TesteDeRotaDoGerente(MeuController.class)`, com o `AcessoAoMinisterio` de verdade sobre um `MembresiaRepository` simulado; `AcessoDeTeste` tem o admin, o gerente da Mídia e um membro comum. Teste o membro comum (403), o gerente de outro ministério (403, também no POST direto) e id de outro ministério (404).
 - Restrições do Timefold: `ConstraintVerifier`, cobrindo o caso que penaliza e o que não penaliza.
 - Integração com banco: classes `*IT` com Testcontainers (Oracle Free), executadas só no `./mvnw verify` (Failsafe). Testes unitários (`*Test`) rodam no `./mvnw test` (Surefire).
 - **Isolamento:**
   - Todo teste que sobe o Spring roda no perfil `test`, nunca no `dev`, para que o seed e as credenciais de dev não apareçam nos testes. O `@TesteDeIntegracao` e o `@TesteDeController` já incluem `@ActiveProfiles("test")`. O `PerfilDosTestesTest` falha se algum teste subir o Spring sem esse perfil, e o `EscalaApplicationIT` confere que ele vence o `SPRING_PROFILES_ACTIVE` do ambiente.
   - Todo `*IT` usa `@TesteDeIntegracao`, que declara toda a configuração (credenciais em `CredenciaisDeTeste`). Nada vem de `.env`, de variáveis de ambiente ou do perfil `dev`.
   - Cada teste cria os próprios dados e usa `@Transactional` para desfazê-los. Nunca dependa de dados de outra classe nem do admin criado na subida. O banco é um container novo, sem reuse.
+  - A exceção é o `PaginasDoGerenteIT`, que grava os dados de verdade e os apaga no `@AfterEach`: ele abre as páginas sem a transação do teste em volta, porque com `open-in-view` desligado uma associação lazy lida fora do serviço só falha assim. Página nova do gerente entra nele.
   - As classes rodam em ordem aleatória. Para reproduzir uma falha, use a semente do log (`-Dfailsafe.runOrder.random.seed=...`).
 - Não existe perfil padrão. O `./mvnw spring-boot:run` ativa o `dev`; na IDE, rode `TestEscalaApplication` ou ative o perfil `dev`.
+- O perfil `dev` tem seed (`SeedDeDesenvolvimento`): Mídia com 20 membros, funções, níveis, modelos e eventos, e Louvor. Gerente da Mídia: `paula.ribeiro@escala.local`; a senha dos membros está no `application-dev.yaml`.
 - Correção de bug começa por um teste que reproduz o bug.
 - O JaCoCo falha o `verify` se a cobertura de linhas dos testes unitários ficar abaixo de 70% (excluídos `*Application`, `config` e DTOs).
 
