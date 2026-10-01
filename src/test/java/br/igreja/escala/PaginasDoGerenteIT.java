@@ -196,6 +196,11 @@ class PaginasDoGerenteIT {
                 .andExpect(status().isOk())
                 .andExpect(content().string(Matchers.containsString("Ana Páginas")));
         abre("/ministerios/{m}/disponibilidade", ministerioId);
+        mvc.perform(get("/ministerios/{m}/disponibilidade/membros/{u}", ministerioId, membroId)
+                        .param("mes", mes.toString())
+                        .with(user(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Disponibilidade de Ana Páginas")));
     }
 
     @Test

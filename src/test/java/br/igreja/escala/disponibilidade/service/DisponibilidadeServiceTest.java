@@ -160,6 +160,66 @@ class DisponibilidadeServiceTest {
     }
 
     @Test
+    void gerenteMarcaEmNomeDaPessoaComOPeriodoTravadoERegistraNaAuditoria() {
+        novembro.travarDisponibilidade();
+
+        assertThat(servico.marcarPeloGerente(MIDIA, ANA, 500L, Resposta.PODE, AcessoDeTeste.GERENTE_DA_MIDIA))
+                .isTrue();
+
+        var gravada = ArgumentCaptor.forClass(Disponibilidade.class);
+        verify(disponibilidades).save(gravada.capture());
+        assertThat(gravada.getValue().getUsuarioId()).isEqualTo(ANA);
+        assertThat(gravada.getValue().getMarcadoPorId()).isEqualTo(AcessoDeTeste.GERENTE_DA_MIDIA.getId());
+        verify(periodos).bloquearParaAlterar(400L);
+        verify(auditoria)
+                .registrar(new RegistroDeAuditoria(
+                        AcaoAuditada.MARCAR_DISPONIBILIDADE,
+                        AcessoDeTeste.GERENTE_DA_MIDIA.getId(),
+                        MIDIA,
+                        ANA,
+                        "Pode para Ana Souza em 01/11 · Culto de domingo, com a disponibilidade travada (Mídia)."));
+    }
+
+    @Test
+    void gerenteConfirmandoAMesmaRespostaNaoRegistraNada() {
+        var existente = new Disponibilidade(ANA, culto, Resposta.NAO_PODE, ANA);
+        when(disponibilidades.findByUsuarioIdAndEventoId(ANA, 500L)).thenReturn(Optional.of(existente));
+
+        assertThat(servico.marcarPeloGerente(MIDIA, ANA, 500L, Resposta.NAO_PODE, AcessoDeTeste.ADMIN))
+                .isFalse();
+        assertThat(servico.marcarPeloGerente(MIDIA, ANA, 500L, Resposta.PODE, AcessoDeTeste.ADMIN))
+                .isTrue();
+
+        assertThat(existente.marcadaPorOutro()).isTrue();
+        verify(auditoria)
+                .registrar(new RegistroDeAuditoria(
+                        AcaoAuditada.MARCAR_DISPONIBILIDADE,
+                        AcessoDeTeste.ADMIN.getId(),
+                        MIDIA,
+                        ANA,
+                        "Pode para Ana Souza em 01/11 · Culto de domingo (Mídia)."));
+    }
+
+    @Test
+    void gerenteNaoMarcaPorQuemNaoServeNemPrefiroNao() {
+        when(membros.buscarQueServe(MIDIA, 99L)).thenThrow(new NaoEncontradoException("99 na Mídia"));
+        when(eventos.buscar(MIDIA, 999L)).thenThrow(new NaoEncontradoException("Evento 999 na Mídia"));
+
+        assertThatThrownBy(() ->
+                        servico.marcarPeloGerente(MIDIA, 99L, 500L, Resposta.PODE, AcessoDeTeste.GERENTE_DA_MIDIA))
+                .isInstanceOf(NaoEncontradoException.class);
+        assertThatThrownBy(() ->
+                        servico.marcarPeloGerente(MIDIA, ANA, 999L, Resposta.PODE, AcessoDeTeste.GERENTE_DA_MIDIA))
+                .isInstanceOf(NaoEncontradoException.class);
+        assertThatThrownBy(() -> servico.marcarPeloGerente(
+                        MIDIA, ANA, 500L, Resposta.PREFERE_NAO, AcessoDeTeste.GERENTE_DA_MIDIA))
+                .isInstanceOf(RegraVioladaException.class);
+
+        verify(disponibilidades, never()).save(any());
+        verify(auditoria, never()).registrar(any());
+    }
+
+    @Test
     void travarRegistraNaAuditoria() {
         when(periodos.travarDisponibilidade(MIDIA, NOVEMBRO)).thenReturn(true);
 

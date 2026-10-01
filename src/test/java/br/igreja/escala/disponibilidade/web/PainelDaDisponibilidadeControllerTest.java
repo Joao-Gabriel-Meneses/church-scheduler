@@ -6,6 +6,7 @@ import static br.igreja.escala.AcessoDeTeste.MEMBRO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,8 +25,11 @@ import br.igreja.escala.compartilhado.NaoEncontradoException;
 import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.disponibilidade.domain.Resposta;
 import br.igreja.escala.disponibilidade.service.ConsultaDaDisponibilidade;
+import br.igreja.escala.disponibilidade.service.DisponibilidadeDeUmMembro;
 import br.igreja.escala.disponibilidade.service.DisponibilidadeService;
 import br.igreja.escala.disponibilidade.service.EventoDoPainel;
+import br.igreja.escala.disponibilidade.service.GrupoDeDisponibilidade;
+import br.igreja.escala.disponibilidade.service.LinhaDeDisponibilidade;
 import br.igreja.escala.disponibilidade.service.LinhaDoPainel;
 import br.igreja.escala.disponibilidade.service.PainelDaDisponibilidade;
 import br.igreja.escala.evento.service.EventoService;
@@ -76,6 +80,8 @@ class PainelDaDisponibilidadeControllerTest {
         when(ministerios.buscar(9L)).thenThrow(new NaoEncontradoException("Ministério 9"));
         when(eventos.proximoMes()).thenReturn(NOVEMBRO);
         when(consulta.painel(1L, NOVEMBRO)).thenReturn(painel(false));
+        when(consulta.peloGerente(1L, 30L, NOVEMBRO)).thenReturn(daAna(false));
+        when(consulta.peloGerente(1L, 99L, NOVEMBRO)).thenThrow(new NaoEncontradoException("99 na Mídia"));
     }
 
     @Test
@@ -97,6 +103,91 @@ class PainelDaDisponibilidadeControllerTest {
 
         verify(disponibilidades, never()).travar(anyLong(), any(), any());
         verify(disponibilidades, never()).destravar(anyLong(), any(), any());
+    }
+
+    @Test
+    void membroComumNaoMarcaPorOutroMembroNemPorPostDireto() throws Exception {
+        mvc.perform(get("/ministerios/1/disponibilidade/membros/30").with(user(MEMBRO)))
+                .andExpect(status().isForbidden());
+        mvc.perform(marcarPor(1, 30, 500).with(user(MEMBRO))).andExpect(status().isForbidden());
+        mvc.perform(marcarPor(1, MEMBRO.getId(), 500).with(user(MEMBRO))).andExpect(status().isForbidden());
+
+        verify(disponibilidades, never()).marcarPeloGerente(anyLong(), anyLong(), anyLong(), any(), any());
+    }
+
+    @Test
+    void gerenteDaMidiaNaoMarcaNoLouvorNemPorPostDireto() throws Exception {
+        mvc.perform(get("/ministerios/2/disponibilidade/membros/30").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(status().isForbidden());
+        mvc.perform(marcarPor(2, 30, 500).with(user(GERENTE_DA_MIDIA))).andExpect(status().isForbidden());
+
+        verify(disponibilidades, never()).marcarPeloGerente(anyLong(), anyLong(), anyLong(), any(), any());
+    }
+
+    @Test
+    void membroOuEventoDeOutroMinisterioE404() throws Exception {
+        doThrow(new NaoEncontradoException("99 na Mídia"))
+                .when(disponibilidades)
+                .marcarPeloGerente(1L, 99L, 500L, Resposta.PODE, GERENTE_DA_MIDIA);
+        doThrow(new NaoEncontradoException("Evento 900 na Mídia"))
+                .when(disponibilidades)
+                .marcarPeloGerente(1L, 30L, 900L, Resposta.PODE, GERENTE_DA_MIDIA);
+
+        mvc.perform(get("/ministerios/1/disponibilidade/membros/99").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(status().isNotFound());
+        mvc.perform(marcarPor(1, 99, 500).with(user(GERENTE_DA_MIDIA))).andExpect(status().isNotFound());
+        mvc.perform(marcarPor(1, 30, 900).header("HX-Request", "true").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void paginaDoMembroUsaOMesmoAvailabilityPickerEditavelMesmoTravado() throws Exception {
+        when(consulta.peloGerente(1L, 30L, NOVEMBRO)).thenReturn(daAna(true));
+
+        String html = mvc.perform(
+                        get("/ministerios/1/disponibilidade/membros/30").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(status().isOk())
+                .andExpect(view().name(PainelDaDisponibilidadeController.MEMBRO))
+                .andReturn()
+                .getResponse()
+                .getContentAsString()
+                .replaceAll("\\s+", " ");
+
+        assertThat(html)
+                .contains("<h1 class=\"text-title\">Mídia — Novembro</h1>", "Disponibilidade de Ana Souza")
+                .contains("href=\"/ministerios/1/disponibilidade/membros/30?mes=2026-12\"")
+                .contains("hx-post=\"/ministerios/1/disponibilidade/membros/30/eventos/500?mes=2026-11\"")
+                .contains("Disponibilidade travada", "você ainda pode marcar", "1 de 1 respondido")
+                .contains("href=\"/ministerios/1/disponibilidade?mes=2026-11\"", "Voltar ao painel")
+                .doesNotContain("disabled", "rt-avail--locked");
+    }
+
+    @Test
+    void toqueDoGerenteComHtmxDevolveOGrupoDaPessoa() throws Exception {
+        String html = mvc.perform(
+                        marcarPor(1, 30, 500).header("HX-Request", "true").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(status().isOk())
+                .andExpect(view().name(PainelDaDisponibilidadeController.RESPOSTA))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        verify(disponibilidades).marcarPeloGerente(1L, 30L, 500L, Resposta.PODE, GERENTE_DA_MIDIA);
+        assertThat(html.strip())
+                .startsWith("<section id=\"grupo-1\"")
+                .contains("hx-post=\"/ministerios/1/disponibilidade/membros/30/eventos/500?mes=2026-11\"")
+                .doesNotContain("<html", "hx-swap-oob");
+    }
+
+    @Test
+    void toqueDoGerenteSemJsVoltaParaAPaginaDoMembroComOMotivo() throws Exception {
+        doThrow(RegraVioladaException.geral("01/11 · Culto da manhã já começou: não dá mais para marcar."))
+                .when(disponibilidades)
+                .marcarPeloGerente(1L, 30L, 500L, Resposta.PODE, GERENTE_DA_MIDIA);
+
+        mvc.perform(marcarPor(1, 30, 500).with(user(GERENTE_DA_MIDIA)))
+                .andExpect(redirectedUrl("/ministerios/1/disponibilidade/membros/30?mes=2026-11"))
+                .andExpect(flash().attribute("recusa", "01/11 · Culto da manhã já começou: não dá mais para marcar."));
     }
 
     @Test
@@ -124,7 +215,11 @@ class PainelDaDisponibilidadeControllerTest {
                 .contains("<span>01 Dom</span> <span class=\"rt-caption\">09h30</span>")
                 .contains("title=\"Culto da manhã\"", "<tr class=\"is-alert\">", "Sem resposta")
                 .contains("<span class=\"sr-only\">Pode</span>", "<span class=\"sr-only\">Não pode</span>")
-                .contains("<th scope=\"row\" colspan=\"2\">Podem</th>");
+                .contains("<th scope=\"row\" colspan=\"2\">Podem</th>")
+                .contains(
+                        "aria-label=\"Marcar por Ana Souza\"",
+                        "href=\"/ministerios/1/disponibilidade/membros/30?mes=2026-11\"")
+                .contains("<a href=\"/ministerios/1/disponibilidade/membros/31?mes=2026-11\" class=\"rt-list-row\">");
     }
 
     @Test
@@ -218,6 +313,20 @@ class PainelDaDisponibilidadeControllerTest {
         return post("/ministerios/{m}/disponibilidade/destravar", ministerioId)
                 .param("mes", "2026-11")
                 .with(csrf());
+    }
+
+    private static MockHttpServletRequestBuilder marcarPor(long ministerioId, long usuarioId, long eventoId) {
+        return post("/ministerios/{m}/disponibilidade/membros/{u}/eventos/{e}", ministerioId, usuarioId, eventoId)
+                .param("resposta", "PODE")
+                .param("mes", "2026-11")
+                .with(csrf());
+    }
+
+    private static DisponibilidadeDeUmMembro daAna(boolean travado) {
+        var manha = new LinhaDeDisponibilidade(
+                500L, "Culto da manhã", "01", "Dom", "01/11 · Dom", "09h30", Resposta.PODE, null, null);
+        return new DisponibilidadeDeUmMembro(
+                ANA, new GrupoDeDisponibilidade(1L, "Mídia", "mint", NOVEMBRO, travado, true, List.of(manha)));
     }
 
     private static PainelDaDisponibilidade painel(boolean travado) {

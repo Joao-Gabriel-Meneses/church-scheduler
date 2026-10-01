@@ -2,6 +2,7 @@ package br.igreja.escala.disponibilidade.service;
 
 import static br.igreja.escala.evento.ExemplosDeEvento.DUAS_HORAS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -11,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import br.igreja.escala.AcessoDeTeste;
+import br.igreja.escala.compartilhado.NaoEncontradoException;
 import br.igreja.escala.disponibilidade.domain.Disponibilidade;
 import br.igreja.escala.disponibilidade.domain.Resposta;
 import br.igreja.escala.disponibilidade.repository.DisponibilidadeRepository;
@@ -23,6 +25,7 @@ import br.igreja.escala.identidade.service.UsuarioResumo;
 import br.igreja.escala.identidade.service.UsuarioService;
 import br.igreja.escala.ministerio.Exemplos;
 import br.igreja.escala.ministerio.service.MembroService;
+import br.igreja.escala.ministerio.service.MinisterioService;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
@@ -51,9 +54,10 @@ class ConsultaDaDisponibilidadeTest {
     private final EventoService eventos = mock(EventoService.class);
     private final PeriodoService periodos = mock(PeriodoService.class);
     private final MembroService membros = mock(MembroService.class);
+    private final MinisterioService ministerios = mock(MinisterioService.class);
     private final UsuarioService usuarios = mock(UsuarioService.class);
     private final ConsultaDaDisponibilidade consulta =
-            new ConsultaDaDisponibilidade(disponibilidades, eventos, periodos, membros, usuarios);
+            new ConsultaDaDisponibilidade(disponibilidades, eventos, periodos, membros, ministerios, usuarios);
 
     private final Periodo novembroDaMidia = ExemplosDeEvento.periodo(MIDIA, NOVEMBRO);
     private final Periodo novembroDoLouvor = ExemplosDeEvento.comId(new Periodo(LOUVOR, NOVEMBRO), 401L);
@@ -172,6 +176,30 @@ class ConsultaDaDisponibilidadeTest {
         assertThat(semEvento.titulo()).isEqualTo("Louvor — Novembro");
         assertThat(semEvento.contagem()).isEqualTo("0 de 0 respondidos");
         verify(disponibilidades, never()).findByUsuarioIdAndEventoIdIn(anyLong(), any());
+    }
+
+    @Test
+    void gerenteMarcaEmNomeDaPessoaMesmoComOPeriodoTravado() {
+        novembroDaMidia.travarDisponibilidade();
+        when(membros.buscarQueServe(MIDIA, ANA)).thenReturn(ANA_SOUZA);
+        when(ministerios.buscar(MIDIA)).thenReturn(Exemplos.midia());
+        when(disponibilidades.findByUsuarioIdAndEventoIdIn(ANA, List.of(500L, 501L, 502L)))
+                .thenReturn(List.of());
+
+        var daAna = consulta.peloGerente(MIDIA, ANA, NOVEMBRO);
+
+        assertThat(daAna.pessoa()).isEqualTo(ANA_SOUZA);
+        assertThat(daAna.grupo())
+                .extracting(GrupoDeDisponibilidade::travado, GrupoDeDisponibilidade::editavel)
+                .containsExactly(true, true);
+        assertThat(daAna.grupo().linhas()).hasSize(3);
+    }
+
+    @Test
+    void gerenteNaoAbreQuemNaoServeNoMinisterio() {
+        when(membros.buscarQueServe(MIDIA, 99L)).thenThrow(new NaoEncontradoException("99 na Mídia"));
+
+        assertThatThrownBy(() -> consulta.peloGerente(MIDIA, 99L, NOVEMBRO)).isInstanceOf(NaoEncontradoException.class);
     }
 
     @Test

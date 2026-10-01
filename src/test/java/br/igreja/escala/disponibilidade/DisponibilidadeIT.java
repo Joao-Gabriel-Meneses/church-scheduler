@@ -274,6 +274,62 @@ class DisponibilidadeIT {
                 .isEmpty();
     }
 
+    @Test
+    void gerenteMarcaEmNomeDoMembroDepoisDaTravaComAuditoriaEOMembroVe() throws Exception {
+        var gerente = gerenteDe(midia, "gerente.marca@teste.local");
+        periodo.travarDisponibilidade();
+        entityManager.flush();
+
+        mvc.perform(post(
+                                "/ministerios/{m}/disponibilidade/membros/{u}/eventos/{e}",
+                                midia.getId(),
+                                ana.getId(),
+                                ensaio.getId())
+                        .param("resposta", "PODE")
+                        .param("mes", MES.toString())
+                        .header("HX-Request", "true")
+                        .with(user(gerente))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Marcado por Gerente")));
+
+        assertThat(disponibilidades.findByUsuarioIdAndEventoId(ana.getId(), ensaio.getId()))
+                .get()
+                .satisfies(resposta -> {
+                    assertThat(resposta.getResposta()).isEqualTo(Resposta.PODE);
+                    assertThat(resposta.getMarcadoPorId()).isEqualTo(gerente.getId());
+                });
+        assertThat(auditorias.findByMinisterioIdOrderByCriadoEmDesc(midia.getId()))
+                .singleElement()
+                .satisfies(registro -> {
+                    assertThat(registro.getAcao()).isEqualTo(AcaoAuditada.MARCAR_DISPONIBILIDADE);
+                    assertThat(registro.getAlvoUsuarioId()).isEqualTo(ana.getId());
+                    assertThat(registro.getDescricao()).contains("com a disponibilidade travada");
+                });
+        mvc.perform(get("/disponibilidade").param("mes", MES.toString()).with(user(logada(ana))))
+                .andExpect(content().string(Matchers.containsString("Marcado por Gerente")))
+                .andExpect(content().string(Matchers.containsString("rt-avail--locked")));
+    }
+
+    @Test
+    void membroNaoMarcaPorOutroMembroPelaRotaDoGerente() throws Exception {
+        var bia = usuarios.save(Usuario.membro("Bia Disponibilidade", "bia.disponibilidade@teste.local", "{noop}x"));
+        membresias.save(new Membresia(bia.getId(), midia));
+
+        mvc.perform(post(
+                                "/ministerios/{m}/disponibilidade/membros/{u}/eventos/{e}",
+                                midia.getId(),
+                                bia.getId(),
+                                ensaio.getId())
+                        .param("resposta", "PODE")
+                        .param("mes", MES.toString())
+                        .with(user(logada(ana)))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+
+        assertThat(disponibilidades.findByEventoIdIn(List.of(ensaio.getId()))).isEmpty();
+    }
+
     private UsuarioAutenticado gerenteDe(Ministerio ministerio, String email) {
         var usuario = usuarios.save(Usuario.membro("Gerente", email, "{noop}x"));
         var membresia = new Membresia(usuario.getId(), ministerio);

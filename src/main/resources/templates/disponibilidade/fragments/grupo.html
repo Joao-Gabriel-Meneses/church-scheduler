@@ -5,9 +5,11 @@
     travado, com o motivo.
     grupo(grupo, pessoaId, mostrarMinisterio, recusa):
         pessoaId          nulo na tela do membro (grava para quem está logado); o id do membro na página do gerente
-        mostrarMinisterio etiqueta com a cor do ministério, quando a tela tem mais de um
+        mostrarMinisterio etiqueta com a cor do ministério e a contagem do grupo, quando a tela tem mais de um ou na
+                          página do gerente
         recusa            mensagem da regra que recusou o último toque (AlertBanner), ou nulo
     respostaDoMembro: a resposta htmx da tela do membro: o grupo e o total "X de Y respondidos" fora da área trocada.
+    respostaDoGerente: a resposta htmx da página em que o gerente marca em nome de ${daPessoa.pessoa}.
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <body>
@@ -45,6 +47,11 @@
     <section th:replace="~{disponibilidade/fragments/grupo :: grupo(${grupo}, null, ${tela.grupos.size() > 1},
             ${recusa})}"></section>
     <p th:replace="~{disponibilidade/fragments/grupo :: total(${tela}, true)}"></p>
+</th:block>
+
+<th:block th:fragment="respostaDoGerente">
+    <section th:replace="~{disponibilidade/fragments/grupo :: grupo(${daPessoa.grupo}, ${daPessoa.pessoa.id}, true,
+            ${recusa})}"></section>
 </th:block>
 
 </body>

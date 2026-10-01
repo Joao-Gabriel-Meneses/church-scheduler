@@ -1,6 +1,7 @@
 package br.igreja.escala.disponibilidade.service;
 
 import br.igreja.escala.compartilhado.Datas;
+import br.igreja.escala.compartilhado.NaoEncontradoException;
 import br.igreja.escala.disponibilidade.domain.Disponibilidade;
 import br.igreja.escala.disponibilidade.domain.Resposta;
 import br.igreja.escala.disponibilidade.repository.DisponibilidadeRepository;
@@ -12,6 +13,7 @@ import br.igreja.escala.identidade.service.UsuarioResumo;
 import br.igreja.escala.identidade.service.UsuarioService;
 import br.igreja.escala.ministerio.domain.Ministerio;
 import br.igreja.escala.ministerio.service.MembroService;
+import br.igreja.escala.ministerio.service.MinisterioService;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,6 +37,7 @@ public class ConsultaDaDisponibilidade {
     private final EventoService eventos;
     private final PeriodoService periodos;
     private final MembroService membros;
+    private final MinisterioService ministerios;
     private final UsuarioService usuarios;
 
     ConsultaDaDisponibilidade(
@@ -42,11 +45,13 @@ public class ConsultaDaDisponibilidade {
             EventoService eventos,
             PeriodoService periodos,
             MembroService membros,
+            MinisterioService ministerios,
             UsuarioService usuarios) {
         this.disponibilidades = disponibilidades;
         this.eventos = eventos;
         this.periodos = periodos;
         this.membros = membros;
+        this.ministerios = ministerios;
         this.usuarios = usuarios;
     }
 
@@ -58,6 +63,17 @@ public class ConsultaDaDisponibilidade {
                 .map(ministerio -> grupo(ministerio, usuarioId, mes, false))
                 .toList();
         return new TelaDaDisponibilidade(mes, !ministerios.isEmpty(), grupos);
+    }
+
+    /**
+     * O grupo de uma pessoa para o gerente marcar em nome dela: editável mesmo com o período travado.
+     *
+     * @throws NaoEncontradoException se a pessoa não serve no ministério
+     */
+    @Transactional(readOnly = true)
+    public DisponibilidadeDeUmMembro peloGerente(Long ministerioId, Long usuarioId, YearMonth mes) {
+        var pessoa = membros.buscarQueServe(ministerioId, usuarioId);
+        return new DisponibilidadeDeUmMembro(pessoa, grupo(ministerios.buscar(ministerioId), usuarioId, mes, true));
     }
 
     /**

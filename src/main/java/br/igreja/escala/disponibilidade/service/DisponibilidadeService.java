@@ -81,6 +81,31 @@ public class DisponibilidadeService {
     }
 
     /**
+     * O gerente marca em nome de quem serve no ministério, inclusive com o período travado. Toda mudança fica na
+     * auditoria; a mesma resposta não muda nada nem registra.
+     *
+     * @return se mudou alguma coisa
+     * @throws NaoEncontradoException se a pessoa não serve no ministério ou o evento é de outro ministério
+     * @throws RegraVioladaException se a resposta é "Prefiro não" ou se o evento já começou ou foi cancelado
+     */
+    @Transactional
+    public boolean marcarPeloGerente(
+            Long ministerioId, Long usuarioId, Long eventoId, Resposta resposta, UsuarioAutenticado autor) {
+        var pessoa = membros.buscarQueServe(ministerioId, usuarioId);
+        var evento = eventoParaMarcar(ministerioId, eventoId, resposta);
+        var periodo = periodos.bloquearParaAlterar(evento.getPeriodo().getId());
+        boolean mudou = gravar(usuarioId, evento, resposta, autor.getId());
+        if (mudou) {
+            String descricao = resposta.rotulo() + " para " + pessoa.nome() + " em " + descrever(evento)
+                    + (periodo.isDisponibilidadeTravada() ? ", com a disponibilidade travada" : "") + " ("
+                    + ministerios.buscar(ministerioId).getNome() + ").";
+            auditoria.registrar(new RegistroDeAuditoria(
+                    AcaoAuditada.MARCAR_DISPONIBILIDADE, autor.getId(), ministerioId, usuarioId, descricao));
+        }
+        return mudou;
+    }
+
+    /**
      * Trava a disponibilidade do mês: o membro não muda mais as respostas, e o gerente ainda pode marcar em nome dele.
      * Travar de novo não faz nada nem registra outra vez.
      *

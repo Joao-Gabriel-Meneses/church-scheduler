@@ -63,15 +63,19 @@
                 <h2 class="text-heading" th:text="|Faltam responder (${painel.faltamResponder().size()})|">Faltam
                     responder (3)</h2>
                 <ul th:unless="${painel.faltamResponder().isEmpty()}" class="rt-list">
-                    <li th:each="membro : ${painel.faltamResponder()}"><div th:replace="~{componentes/lista :: linha(
-                            titulo=${membro.pessoa.nome}, sub=${membro.resumo()}, icone='user', href=null,
-                            selecionada=false)}"></div></li>
+                    <li th:each="membro : ${painel.faltamResponder()}"><a th:replace="~{componentes/lista :: linha(
+                            titulo=${membro.pessoa.nome}, sub=${membro.resumo()}, icone='user',
+                            href=@{/ministerios/{m}/disponibilidade/membros/{u}(m=${ministerio.id},
+                                u=${membro.pessoa.id}, mes=${painel.mes})},
+                            selecionada=false)}"></a></li>
                 </ul>
                 <h2 class="text-heading" th:text="|Responderam (${painel.responderam().size()})|">Responderam (17)</h2>
                 <ul th:unless="${painel.responderam().isEmpty()}" class="rt-list">
-                    <li th:each="membro : ${painel.responderam()}"><div th:replace="~{componentes/lista :: linha(
-                            titulo=${membro.pessoa.nome}, sub=${membro.resumo()}, icone='user', href=null,
-                            selecionada=false)}"></div></li>
+                    <li th:each="membro : ${painel.responderam()}"><a th:replace="~{componentes/lista :: linha(
+                            titulo=${membro.pessoa.nome}, sub=${membro.resumo()}, icone='user',
+                            href=@{/ministerios/{m}/disponibilidade/membros/{u}(m=${ministerio.id},
+                                u=${membro.pessoa.id}, mes=${painel.mes})},
+                            selecionada=false)}"></a></li>
                 </ul>
             </div>
 
@@ -86,6 +90,7 @@
                         <th th:each="evento : ${painel.eventos}" scope="col" th:title="${evento.nome}"><div
                                 th:replace="~{componentes/tabela :: duasLinhas(${evento.dia}, ${evento.horario})}"></div><span
                                 class="sr-only" th:text="${evento.nome}">Culto de domingo</span></th>
+                        <th scope="col"><span class="sr-only">Ações</span></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -105,12 +110,18 @@
                                         class="sr-only">Sem resposta</span></span>
                             </th:block>
                         </td>
+                        <td class="text-right"><a th:replace="~{componentes/botao :: botaoIcone(icone='pencil',
+                                rotulo=|Marcar por ${membro.pessoa.nome}|,
+                                href=@{/ministerios/{m}/disponibilidade/membros/{u}(m=${ministerio.id},
+                                    u=${membro.pessoa.id}, mes=${painel.mes})},
+                                tamanho='sm', variante=null, classe=null)}"></a></td>
                     </tr>
                     </tbody>
                     <tfoot>
                     <tr>
                         <th scope="row" colspan="2">Podem</th>
                         <td th:each="evento : ${painel.eventos}" th:text="${evento.podem}">3</td>
+                        <td></td>
                     </tr>
                     </tfoot>
                 </table>

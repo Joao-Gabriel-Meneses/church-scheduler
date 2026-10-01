@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!--/*
+    O gerente marca a disponibilidade em nome de um membro: o mesmo AvailabilityPicker do membro, editável mesmo com o
+    período travado. Cada mudança fica na auditoria e aparece na tela do membro como "Marcado por …".
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{::#barra}, ~{::main})}">
+<head>
+    <title th:text="|${daPessoa.pessoa.nome} — ${nomeDoMes} · Escala|">Ana Souza — Novembro · Escala</title>
+</head>
+<body>
+<div id="barra" th:replace="~{componentes/toolbar :: toolbar(periodo=${mesPorExtenso}, periodoCurto=${mesCurto},
+        anteriorHref=@{/ministerios/{m}/disponibilidade/membros/{u}(m=${ministerio.id}, u=${daPessoa.pessoa.id},
+            mes=${mesAnterior})},
+        proximoHref=@{/ministerios/{m}/disponibilidade/membros/{u}(m=${ministerio.id}, u=${daPessoa.pessoa.id},
+            mes=${proximoMes})},
+        travada=${daPessoa.grupo.travado}, regrasHref=null, acaoTexto=null)}"></div>
+
+<main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-1">
+        <h1 class="text-title" th:text="|${ministerio.nome} — ${nomeDoMes}|">Mídia — Novembro</h1>
+        <p class="text-heading" th:text="|Disponibilidade de ${daPessoa.pessoa.nome}|">Disponibilidade de Ana Souza</p>
+        <p th:unless="${daPessoa.grupo.travado}" class="text-ink-muted">Marque em nome da pessoa quando ela pedir.
+            Cada mudança fica registrada na auditoria e aparece na tela dela.</p>
+        <p th:if="${daPessoa.grupo.travado}" class="text-ink-muted">A disponibilidade está travada para os membros, mas
+            você ainda pode marcar. Cada mudança fica registrada na auditoria e aparece na tela da pessoa.</p>
+    </header>
+
+    <section th:replace="~{disponibilidade/fragments/grupo :: grupo(${daPessoa.grupo}, ${daPessoa.pessoa.id}, true,
+            ${recusa})}"></section>
+
+    <p><a th:replace="~{componentes/botao :: botao(texto='Voltar ao painel', variante='outline', icone='chevron-left',
+            href=@{/ministerios/{m}/disponibilidade(m=${ministerio.id}, mes=${mes})}, classe=null)}"></a></p>
+</main>
+</body>
+</html>
