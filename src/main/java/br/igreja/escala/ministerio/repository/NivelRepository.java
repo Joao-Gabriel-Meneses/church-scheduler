@@ -17,5 +17,5 @@ public interface NivelRepository extends JpaRepository<Nivel, Long> {
 
     boolean existsByMinisterioIdAndOrdem(Long ministerioId, int ordem);
 
-    boolean existsByMinisterioIdAndOrdemAndIdNot(Long ministerioId, int ordem, Long id);
+    Optional<Nivel> findByMinisterioIdAndOrdem(Long ministerioId, int ordem);
 }

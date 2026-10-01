@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!--/*
+    Sheet (docs/design/components/Sheet): folha inferior, popover nativo (Esc e toque fora fecham, sem JS).
+
+    confirmacao(id, titulo, texto, acao, confirmar): confirma uma ação que não se desfaz (excluir, remover do
+    ministério) antes de enviar o POST para ${acao}. "Cancelar" fecha; o botão de confirmar é escuro e fica por
+    último, perto do polegar. No desktop a folha fica centralizada e estreita.
+        <button th:replace="~{componentes/sheet :: abrir(alvo='excluir-funcao', texto='Excluir função',
+            icone='trash-2')}"></button>
+        <div th:replace="~{componentes/sheet :: confirmacao(id='excluir-funcao', titulo='Excluir Projeção?',
+            texto='Os eventos deixam de pedir esta função.', acao=@{/…/excluir}, confirmar='Excluir')}"></div>
+
+    abrir(alvo, texto): botão contorno que abre o Sheet de id ${alvo}. Opção: icone.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="confirmacao(id, titulo, texto, acao, confirmar)" th:id="${id}" popover
+     class="rt-sheet md:mx-auto md:max-w-md" role="dialog" th:aria-label="${titulo}">
+    <div class="rt-sheet__cabeca">
+        <p class="rt-sheet__titulo" th:text="${titulo}">Excluir Projeção?</p>
+        <button type="button" class="rt-icon-btn" th:attr="popovertarget=${id}" popovertargetaction="hide"
+                aria-label="Fechar" title="Fechar"><svg th:replace="~{componentes/icone :: icone('x')}"></svg></button>
+    </div>
+    <p class="text-ink-muted" th:text="${texto}">Os eventos deixam de pedir esta função.</p>
+    <form th:action="${acao}" method="post" class="flex flex-col gap-2">
+        <button type="button" class="rt-btn rt-btn--secondary w-full justify-center" th:attr="popovertarget=${id}"
+                popovertargetaction="hide">Cancelar</button>
+        <button type="submit" class="rt-btn rt-btn--dark w-full justify-center" th:text="${confirmar}">Excluir</button>
+    </form>
+</div>
+
+<button th:fragment="abrir(alvo, texto)" type="button" class="rt-btn rt-btn--outline" th:attr="popovertarget=${alvo}"><th:block
+        th:if="${icone != null}"><svg th:replace="~{componentes/icone :: icone(${icone})}"></svg></th:block><th:block
+        th:text="${texto}">Excluir função</th:block></button>
+
+</body>
+</html>
