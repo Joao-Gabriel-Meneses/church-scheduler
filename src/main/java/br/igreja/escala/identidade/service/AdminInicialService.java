@@ -7,12 +7,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Garante um admin na subida, para que alguém consiga entrar e cadastrar o resto. */
+/** Garante um admin na subida, para que alguém consiga entrar e cadastrar o resto. Roda antes dos outros runners. */
 @Service
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @EnableConfigurationProperties(AdminInicialProperties.class)
 public class AdminInicialService implements ApplicationRunner {
 
