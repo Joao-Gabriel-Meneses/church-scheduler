@@ -74,7 +74,8 @@ Gerente e admin também servem e aparecem na escala. Um usuário pode estar em v
 - **Sessões:** redefinir a senha de alguém ou desativar a conta encerra na hora todas as sessões abertas da pessoa, inclusive o "continuar conectado" (`SessoesAbertas`, depois do commit). Trocar a própria senha encerra as outras sessões e mantém a atual.
 - Editar a conta de outra pessoa, redefinir a senha, desativar e reativar registram `Auditoria`. A edição guarda só quais campos mudaram, sem os valores; desativar e reativar ficam sem ministério.
 - Cadastrar um e-mail que já tem conta só cria a membresia; a conta não muda (se estiver desativada, o gerente é avisado).
-- **Navegação do gerente (desde a Fase 1):** Eventos (mês e modelos), Membros (e habilitações) e Funções (funções e níveis), mais Ministérios para o admin. O design prevê Escalas, Disponibilidade, Membros e Regras; a navegação é revista quando essas páginas existirem.
+- **Navegação do gerente:** Eventos (mês e modelos), Disponibilidade (painel e trava), Membros (e habilitações) e Funções (funções e níveis), mais Ministérios para o admin. O design prevê Escalas, Disponibilidade, Membros e Regras; a navegação é revista quando essas páginas existirem.
+- **Navegação do membro:** Minhas escalas e Disponibilidade (como no README do NavPills). O início tem o botão "Marcar disponibilidade".
 
 ## Modelo de dados (resumo)
 
@@ -88,7 +89,7 @@ Gerente e admin também servem e aparecem na escala. Um usuário pode estar em v
 - `ModeloEvento`
 - `Evento`
 - `Periodo` (`disponibilidade_travada`, `status_escala` RASCUNHO/PUBLICADA)
-- `Disponibilidade` (PODE / NAO_PODE / PREFERE_NAO)
+- `Disponibilidade` (PODE / NAO_PODE / PREFERE_NAO; uma por usuário × evento, `uk_disponibilidade`; guarda `data_na_resposta`/`horario_na_resposta_minutos` e `marcado_por_id`)
 - `Vaga` (evento × funcao × posicao, `usuario_id` anulável, `fixada`, `forcada`, `justificativa`)
 - `SolicitacaoTroca`
 - `Auditoria`
@@ -122,7 +123,7 @@ Existe um **catálogo fixo de tipos de regra**. Cada tipo é implementado uma ú
 Outras regras:
 
 - **Níveis:** a mídia usa só **Iniciante** e **Experiente**. O nível é atribuído pelo gerente **por função**.
-- **Disponibilidade:** pode ser alterada a qualquer momento até o gerente **travar** o período.
+- **Disponibilidade:** pode ser alterada a qualquer momento até o gerente **travar** o período (ver "Disponibilidade (Fase 2)").
 - **Sem solução válida:** a vaga fica **vazia** e o gerente é alertado com o motivo. O solver nunca viola uma regra hard sem avisar.
 - **Forçar uma alocação** que viola regra exige justificativa e gera registro de auditoria.
 - **Desistência:** esvazia a vaga **na hora, sem aprovação**. A escala do mês **não é regerada nem reorganizada**; o buraco fica e o gerente recebe um alerta. O membro pode indicar opcionalmente um substituto habilitado, que não pode violar regras hard.
@@ -130,6 +131,20 @@ Outras regras:
   - Um modelo por ministério, dia da semana e horário (`uk_modelo_evento_horario`); dois modelos no mesmo dia em horários diferentes valem (culto da manhã e da noite).
   - O evento de um modelo é único por data (`uk_evento_modelo_data`); avulsos não têm esse limite, nem no mesmo dia e horário.
 - **Lembrete:** e-mail **24 h** antes do evento.
+
+### Disponibilidade (Fase 2)
+
+- **Quem marca:** só quem serve no ministério, isto é, conta ativa com habilitação em alguma função (`MembroService.queServem`). O "X de Y respondidos" e o painel contam só essas pessoas.
+- **Quais eventos:** os do mês, não cancelados, que ainda não começaram (`EventoService.porVirDoMes`, pelo `Clock` de São Paulo). Cada evento é uma linha com o horário, então dois cultos no mesmo dia aparecem separados. Evento cancelado ou que já começou some e recusa resposta.
+- **Sem resposta = indisponível.** `ConsultaDaDisponibilidade.quemPode(ministério, mês)` devolve, por evento, só quem serve e marcou PODE. É a entrada da geração (Fase 3). Evento criado depois das respostas aparece como sem resposta para todos e volta todos para pendente no painel ("respondeu" é ter respondido todos os eventos por vir).
+- **Evento que mudou:** a resposta guarda a data e o horário do evento na hora em que foi dada. Se o horário (ou a data de um avulso) mudar, a resposta continua e a tela do membro avisa; tocar de novo confirma.
+- **Gravação:** upsert por (usuário, evento). A trava do período é lida com `PeriodoService.bloquearParaAlterar` (`SELECT … FOR UPDATE`) na mesma transação da gravação; travar também bloqueia a linha, então trava e resposta se enfileiram, e o toque duplo nunca dá erro. A mesma resposta não muda nada nem registra. O `DisponibilidadeConcorrenciaIT` falha sem o bloqueio.
+- **PREFERE_NAO** existe no enum e no CHECK, mas é recusado (`RegraVioladaException`), inclusive por POST direto, até a regra PREFERENCIA (Fase 5). O botão "Prefiro não" não é renderizado.
+- **Trava:** só o gerente trava e destrava (Toolbar do painel), com `Auditoria`. Com o período travado, o membro não grava nada e a tela fica somente leitura (`rt-avail--locked` + Badge locked); o toque que chega depois da trava devolve o grupo travado com o motivo.
+- **Gerente em nome do membro:** `/ministerios/{id}/disponibilidade/membros/{usuarioId}`, mesmo com o período travado. Cada mudança registra `Auditoria` (`MARCAR_DISPONIBILIDADE`) e aparece na tela do membro como "Marcado por …".
+- **Rotas do membro:** `/disponibilidade` grava sempre para o usuário logado; a rota não recebe id de pessoa. Ministério em que a pessoa não serve, ou evento de outro ministério, responde 404.
+- **Lembrete:** "Copiar lembrete" monta o texto para o WhatsApp com o link da tela do mês e quem ainda falta. Sem envio de e-mail nesta fase. O link vem de `escala.url-base` (`EnderecoDoSistema`): em produção é `https://${DOMINIO}`, e sem ele o app não sobe.
+- **htmx:** cada toque troca o grupo do ministério inteiro (`#grupo-{id}`); na tela do membro, o total vai junto em OOB. Sem JS, o mesmo `<form>` funciona com redirect.
 
 ### Decidido para a Fase 3
 
@@ -139,6 +154,7 @@ Outras regras:
 - **Limite mensal** (`LIMITE_POR_PERIODO`): o gerente edita o limite do ministério na página de regras; o padrão é 3.
   - Conta **por evento**: cada evento do ministério no mês em que a pessoa serve conta 1, mesmo que dois caiam no mesmo dia. Uma pessoa tem no máximo uma vaga por evento (`UMA_FUNCAO_POR_EVENTO`).
   - O gerente pode **forçar** acima do limite, com justificativa e registro em `Auditoria`, como qualquer alocação forçada.
+- **Destravar a disponibilidade de um período com escala publicada exige confirmação** (Sheet, `componentes/sheet :: confirmacao`), porque a escala publicada foi gerada com aquelas respostas. Hoje, sem escala publicada, destravar é direto.
 - **Funções exigidas por evento: adiado para a Fase 3.** Hoje todo evento pede todas as funções do ministério, com o `qtd_min` e o `qtd_max` de cada função. Escolher quais funções cada evento ou modelo exige (ex.: a quinta sem Transmissão) entra junto com as vagas.
 
 ## Solver (Timefold)
@@ -226,7 +242,7 @@ O design system "Escala" (feito no Claude Design) está em `docs/design/`. O `do
 - **Tokens:** `docs/design/tokens.css` é gerado de `tokens.json` por `python3 docs/design/gerar_tokens_css.py`. Nunca edite o `.css` à mão; token novo entra no `tokens.json`.
 - **Tailwind só para layout e ajustes.** O `src/main/frontend/app.css` liga o Tailwind aos tokens (`@theme inline reference`) e apaga o tema padrão: só existem utilitários dos tokens (`bg-brand`, `p-4` = `space-4`, `h-control`, `text-title`, `rounded-pill`...). Uma classe fora deles (`bg-slate-50`, `p-5`, `font-bold`) não gera CSS, sem erro nenhum.
 - **Componentes:** as classes `.rt-*` vêm de `docs/design/components/bundle.css` e dos componentes criados no app (Field, Toast, Sheet e a Toolbar no celular, com README na pasta de cada um). Não reescreva componentes em utilitários do Tailwind.
-- **Telas usam só os fragmentos de `templates/componentes/`** (botao, badge, lista, tabela, alerta, formulario, toast, navegacao, toolbar, sheet, icone) e os layouts de `templates/layouts/`: `simples` (sem navegação), `membro` (celular) e `gerente` (desktop). Cada fragmento documenta as opções no topo do arquivo.
+- **Telas usam só os fragmentos de `templates/componentes/`** (botao, badge, lista, tabela, alerta, formulario, toast, navegacao, toolbar, sheet, icone, disponibilidade, estatistica) e os layouts de `templates/layouts/`: `simples` (sem navegação), `membro` (celular) e `gerente` (desktop). Cada fragmento documenta as opções no topo do arquivo.
 - **Nenhuma cor ou tamanho fixo fora dos tokens:** nada de `style=`, `<style>`, valor arbitrário do Tailwind (`w-[37px]`) ou cor hexadecimal. O `TemplatesUsamSoTokensTest` falha nesses casos.
 - **Voz:** português, tratando por "você", sentence case, botões com verbo no infinitivo ("Gerar escala", "Salvar"), sem emoji. Títulos no padrão "Ministério — Período". Todo alerta diz o quê, onde e por quê.
 - **Listas de cadastro:** ListRow no celular (`rt-list md:hidden`) e DataTable no desktop (`rt-panel hidden md:block`).
@@ -250,6 +266,7 @@ O design system "Escala" (feito no Claude Design) está em `docs/design/`. O `do
   - Todo `*IT` usa `@TesteDeIntegracao`, que declara toda a configuração (credenciais em `CredenciaisDeTeste`). Nada vem de `.env`, de variáveis de ambiente ou do perfil `dev`.
   - Cada teste cria os próprios dados e usa `@Transactional` para desfazê-los. Nunca dependa de dados de outra classe nem do admin criado na subida. O banco é um container novo, sem reuse.
   - A exceção é o `PaginasDoGerenteIT`, que grava os dados de verdade e os apaga no `@AfterEach`: ele abre as páginas sem a transação do teste em volta, porque com `open-in-view` desligado uma associação lazy lida fora do serviço só falha assim. Página nova do gerente entra nele.
+  - Teste de concorrência (ex.: `DisponibilidadeConcorrenciaIT`) também roda sem `@Transactional`, com transações de verdade em threads, e apaga os dados no `@AfterEach`.
   - As classes rodam em ordem aleatória. Para reproduzir uma falha, use a semente do log (`-Dfailsafe.runOrder.random.seed=...`).
 - Não existe perfil padrão. O `./mvnw spring-boot:run` ativa o `dev`; na IDE, rode `TestEscalaApplication` ou ative o perfil `dev`.
 - O perfil `dev` tem seed (`SeedDeDesenvolvimento`): Mídia com 20 membros, funções, níveis, modelos e eventos, e Louvor. Gerente da Mídia: `paula.ribeiro@escala.local`; a senha dos membros está no `application-dev.yaml`.
