@@ -3,15 +3,20 @@ package br.igreja.escala.disponibilidade;
 import static br.igreja.escala.evento.ExemplosDeEvento.DUAS_HORAS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.igreja.escala.TesteDeIntegracao;
 import br.igreja.escala.compartilhado.Fuso;
+import br.igreja.escala.compartilhado.domain.AcaoAuditada;
+import br.igreja.escala.compartilhado.domain.Auditoria;
+import br.igreja.escala.compartilhado.repository.AuditoriaRepository;
 import br.igreja.escala.disponibilidade.domain.Disponibilidade;
 import br.igreja.escala.disponibilidade.domain.Resposta;
 import br.igreja.escala.disponibilidade.repository.DisponibilidadeRepository;
@@ -87,6 +92,9 @@ class DisponibilidadeIT {
     HabilitacaoRepository habilitacoes;
 
     @Autowired
+    AuditoriaRepository auditorias;
+
+    @Autowired
     MockMvc mvc;
 
     @Autowired
@@ -100,6 +108,7 @@ class DisponibilidadeIT {
     private Usuario ana;
     private Evento ensaio;
     private Evento ensaioDoLouvor;
+    private Periodo periodoDoLouvor;
 
     @BeforeEach
     void criaOsDados() {
@@ -109,8 +118,9 @@ class DisponibilidadeIT {
         ana = usuarios.save(Usuario.membro("Ana Disponibilidade", "ana.disponibilidade@teste.local", "{noop}x"));
         servir(ana, midia);
         var louvor = ministerios.save(new Ministerio("Louvor Disponibilidade", CorDoMinisterio.ROSE, Icone.MUSIC));
-        ensaioDoLouvor = eventos.save(Evento.avulso(
-                periodos.save(new Periodo(louvor.getId(), MES)), "Ensaio", MES.atDay(14), LocalTime.NOON, DUAS_HORAS));
+        periodoDoLouvor = periodos.save(new Periodo(louvor.getId(), MES));
+        ensaioDoLouvor =
+                eventos.save(Evento.avulso(periodoDoLouvor, "Ensaio", MES.atDay(14), LocalTime.NOON, DUAS_HORAS));
     }
 
     @Test
@@ -219,6 +229,57 @@ class DisponibilidadeIT {
                 .andExpect(content().string(Matchers.containsString("ainda não vale")));
 
         assertThat(disponibilidades.findByEventoIdIn(List.of(ensaio.getId()))).isEmpty();
+    }
+
+    @Test
+    void gerenteTravaPeloPainelERegistraNaAuditoria() throws Exception {
+        var gerente = gerenteDe(midia, "gerente.disponibilidade@teste.local");
+
+        mvc.perform(post("/ministerios/{m}/disponibilidade/travar", midia.getId())
+                        .param("mes", MES.toString())
+                        .with(user(gerente))
+                        .with(csrf()))
+                .andExpect(redirectedUrl("/ministerios/" + midia.getId() + "/disponibilidade?mes=" + MES));
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(periodos.findById(periodo.getId()))
+                .get()
+                .extracting(Periodo::isDisponibilidadeTravada)
+                .isEqualTo(true);
+        assertThat(auditorias.findByMinisterioIdOrderByCriadoEmDesc(midia.getId()))
+                .extracting(Auditoria::getAcao, Auditoria::getAutorId)
+                .containsExactly(tuple(AcaoAuditada.TRAVAR_DISPONIBILIDADE, gerente.getId()));
+    }
+
+    @Test
+    void gerenteDaMidiaNaoTravaOLouvorNemPorPostDireto() throws Exception {
+        var gerente = gerenteDe(midia, "gerente.cruzado@teste.local");
+
+        for (String acao : List.of("travar", "destravar")) {
+            mvc.perform(post("/ministerios/{m}/disponibilidade/" + acao, periodoDoLouvor.getMinisterioId())
+                            .param("mes", MES.toString())
+                            .with(user(gerente))
+                            .with(csrf()))
+                    .andExpect(status().isForbidden());
+        }
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(periodos.findById(periodoDoLouvor.getId()))
+                .get()
+                .extracting(Periodo::isDisponibilidadeTravada)
+                .isEqualTo(false);
+        assertThat(auditorias.findByMinisterioIdOrderByCriadoEmDesc(periodoDoLouvor.getMinisterioId()))
+                .isEmpty();
+    }
+
+    private UsuarioAutenticado gerenteDe(Ministerio ministerio, String email) {
+        var usuario = usuarios.save(Usuario.membro("Gerente", email, "{noop}x"));
+        var membresia = new Membresia(usuario.getId(), ministerio);
+        membresia.tornarGerente();
+        membresias.save(membresia);
+        return logada(usuario);
     }
 
     private MockHttpServletRequestBuilder marcar(Long ministerioId, Long eventoId, String resposta) {

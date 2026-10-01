@@ -123,8 +123,7 @@ class NavegacaoTest {
                 .isSubsetOf(IconesTest.disponiveis());
         assertThat(Navegacao.PRINCIPAL.itens(todos, "/ministerios/1/funcoes", MIDIA_E_LOUVOR))
                 .extracting(ItemDeNavegacao::rotulo)
-                .containsExactly("Eventos", "Membros", "Funções", "Ministérios", "Minhas escalas")
-                .hasSize(5);
+                .containsExactly("Eventos", "Disponibilidade", "Membros", "Funções", "Ministérios", "Minhas escalas");
         assertThat(Navegacao.PRINCIPAL.itens(todos, "/ministerios/1/funcoes", MIDIA_E_LOUVOR))
                 .extracting(ItemDeNavegacao::icone)
                 .isSubsetOf(IconesTest.disponiveis());

@@ -259,6 +259,35 @@ class ComponentesTest {
     }
 
     @Test
+    void botaoForaDoFormularioEnviaOFormularioPeloId() {
+        assertThat(secao("botao-formulario"))
+                .contains("<button type=\"submit\" class=\"rt-btn rt-btn--dark\" form=\"travar-disponibilidade\">")
+                .contains("#lock\"", "Travar disponibilidade");
+        assertThat(secao("botao-padrao")).doesNotContain("form=");
+    }
+
+    @Test
+    void statCardTemRotuloValorContextoESetaParaODetalhe() {
+        assertThat(secao("estatistica"))
+                .contains("<div class=\"rt-panel rt-stat\">", "<span class=\"rt-label\">Sem resposta</span>")
+                .contains("<div class=\"rt-stat__value\">5</div>", "<div class=\"rt-stat__sub\">de 20 membros</div>")
+                .contains(
+                        "<a href=\"#respostas\" class=\"rt-icon-btn rt-icon-btn--sm\" aria-label=\"Ver Sem resposta\"")
+                .contains("#arrow-up-right\"");
+        assertThat(secao("estatistica-simples"))
+                .contains("<div class=\"rt-stat__value\">9</div>")
+                .doesNotContain("rt-stat__sub", "rt-icon-btn");
+    }
+
+    @Test
+    void toolbarComFormularioEnviaAAcaoPorPost() {
+        assertThat(secao("toolbar-com-formulario"))
+                .contains("<button type=\"submit\" class=\"rt-btn rt-btn--dark\" form=\"travar-disponibilidade\">")
+                .contains("Disponibilidade aberta");
+        assertThat(secao("toolbar")).contains("<button type=\"button\" class=\"rt-btn rt-btn--primary\">");
+    }
+
+    @Test
     void linhaDeDisponibilidadeEnviaARespostaPorHtmxComEstadoEmTexto() {
         String linha = secao("disponibilidade");
 

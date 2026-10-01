@@ -40,6 +40,12 @@ class ConsultaDaDisponibilidadeTest {
     private static final long ANA = 30L;
     private static final long PAULA = 10L;
     private static final YearMonth NOVEMBRO = YearMonth.of(2026, 11);
+    private static final UsuarioResumo ANA_SOUZA =
+            new UsuarioResumo(ANA, "Ana Souza", "ana@x.com", null, false, false, true);
+    private static final UsuarioResumo BRUNO =
+            new UsuarioResumo(31L, "Bruno Lima", "bruno@x.com", null, false, false, true);
+    private static final UsuarioResumo CARLA =
+            new UsuarioResumo(32L, "Carla Dias", "carla@x.com", null, false, false, true);
 
     private final DisponibilidadeRepository disponibilidades = mock(DisponibilidadeRepository.class);
     private final EventoService eventos = mock(EventoService.class);
@@ -166,6 +172,90 @@ class ConsultaDaDisponibilidadeTest {
         assertThat(semEvento.titulo()).isEqualTo("Louvor — Novembro");
         assertThat(semEvento.contagem()).isEqualTo("0 de 0 respondidos");
         verify(disponibilidades, never()).findByUsuarioIdAndEventoIdIn(anyLong(), any());
+    }
+
+    @Test
+    void painelPoeQuemFaltaPrimeiroEContaQuemPodeEmCadaEvento() {
+        when(membros.queServem(MIDIA)).thenReturn(List.of(ANA_SOUZA, BRUNO, CARLA));
+        when(disponibilidades.findByEventoIdIn(List.of(500L, 501L, 502L)))
+                .thenReturn(List.of(
+                        new Disponibilidade(ANA, manha, Resposta.PODE, ANA),
+                        new Disponibilidade(ANA, noite, Resposta.NAO_PODE, ANA),
+                        new Disponibilidade(ANA, quinta, Resposta.PODE, PAULA),
+                        new Disponibilidade(31L, noite, Resposta.PODE, 31L),
+                        new Disponibilidade(99L, manha, Resposta.PODE, 99L)));
+
+        var painel = consulta.painel(MIDIA, NOVEMBRO);
+
+        assertThat(painel.temPeriodo()).isTrue();
+        assertThat(painel.travado()).isFalse();
+        assertThat(painel.eventos())
+                .extracting(EventoDoPainel::dia, EventoDoPainel::horario, EventoDoPainel::podem)
+                .as("quem deixou de servir (99) não conta")
+                .containsExactly(
+                        tuple("01 Dom", "09h30", 1L), tuple("01 Dom", "18h00", 1L), tuple("05 Qui", "19h30", 1L));
+        assertThat(painel.membros())
+                .extracting(
+                        linha -> linha.pessoa().nome(),
+                        LinhaDoPainel::estado,
+                        LinhaDoPainel::varianteDoEstado,
+                        LinhaDoPainel::resumo)
+                .containsExactly(
+                        tuple("Bruno Lima", "Faltam 2", "vazio", "Respondeu 1 de 3"),
+                        tuple("Carla Dias", "Sem resposta", "alerta", "Sem resposta"),
+                        tuple("Ana Souza", "Respondeu", null, "Pode em 2 de 3"));
+        assertThat(painel.membros().get(0).respostas()).containsExactly(null, Resposta.PODE, null);
+        assertThat(painel.faltamResponder()).hasSize(2);
+        assertThat(painel.responderam()).hasSize(1);
+        assertThat(painel.semNenhumaResposta()).isEqualTo(1);
+        assertThat(painel.nomeDoMes()).isEqualTo("novembro");
+    }
+
+    @Test
+    void eventoNovoVoltaTodoMundoParaPendente() {
+        when(membros.queServem(MIDIA)).thenReturn(List.of(ANA_SOUZA));
+        var novo = evento(novembroDaMidia, 503L, "Culto de ação de graças", 26, LocalTime.of(20, 0));
+        when(eventos.porVirDoMes(MIDIA, NOVEMBRO)).thenReturn(List.of(manha, novo));
+        when(disponibilidades.findByEventoIdIn(List.of(500L, 503L)))
+                .thenReturn(List.of(new Disponibilidade(ANA, manha, Resposta.PODE, ANA)));
+
+        assertThat(consulta.painel(MIDIA, NOVEMBRO).membros())
+                .singleElement()
+                .extracting(LinhaDoPainel::estado)
+                .isEqualTo("Falta 1");
+    }
+
+    @Test
+    void mesSemEventosNaoTemPeriodoNemConsultaRespostas() {
+        when(periodos.doMes(MIDIA, NOVEMBRO)).thenReturn(Optional.empty());
+        when(eventos.porVirDoMes(MIDIA, NOVEMBRO)).thenReturn(List.of());
+        when(membros.queServem(MIDIA)).thenReturn(List.of(ANA_SOUZA));
+
+        var painel = consulta.painel(MIDIA, NOVEMBRO);
+
+        assertThat(painel.temPeriodo()).isFalse();
+        assertThat(painel.membros()).singleElement().satisfies(linha -> {
+            assertThat(linha.respondeuTudo())
+                    .as("sem eventos ninguém respondeu tudo")
+                    .isFalse();
+            assertThat(linha.estado()).isEqualTo("Sem resposta");
+        });
+        verify(disponibilidades, never()).findByEventoIdIn(any());
+    }
+
+    @Test
+    void quemPodeSoTemQuemServeEMarcouPode() {
+        when(membros.queServem(MIDIA)).thenReturn(List.of(ANA_SOUZA, BRUNO, CARLA));
+        when(disponibilidades.findByEventoIdIn(List.of(500L, 501L, 502L)))
+                .thenReturn(List.of(
+                        new Disponibilidade(ANA, manha, Resposta.PODE, ANA),
+                        new Disponibilidade(31L, manha, Resposta.NAO_PODE, 31L),
+                        new Disponibilidade(31L, noite, Resposta.PREFERE_NAO, 31L),
+                        new Disponibilidade(99L, noite, Resposta.PODE, 99L)));
+
+        assertThat(consulta.quemPode(MIDIA, NOVEMBRO))
+                .as("sem resposta, Não pode e quem não serve (desativado ou sem habilitação) ficam de fora")
+                .containsExactlyInAnyOrderEntriesOf(Map.of(500L, Set.of(ANA), 501L, Set.of(), 502L, Set.of()));
     }
 
     private static Evento evento(Periodo periodo, Long id, String nome, int dia, LocalTime horario) {

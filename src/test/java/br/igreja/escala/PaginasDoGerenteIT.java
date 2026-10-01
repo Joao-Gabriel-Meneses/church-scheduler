@@ -189,6 +189,16 @@ class PaginasDoGerenteIT {
     }
 
     @Test
+    void paginasDaDisponibilidadeAbrem() throws Exception {
+        mvc.perform(get("/ministerios/{m}/disponibilidade", ministerioId)
+                        .param("mes", mes.toString())
+                        .with(user(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Ana Páginas")));
+        abre("/ministerios/{m}/disponibilidade", ministerioId);
+    }
+
+    @Test
     void disponibilidadeDoMembroAbreComQuemMarcouEmNomeDele() throws Exception {
         mvc.perform(get("/disponibilidade").param("mes", mes.toString()).with(user(membro)))
                 .andExpect(status().isOk())

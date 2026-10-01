@@ -1,6 +1,8 @@
 package br.igreja.escala.disponibilidade.service;
 
+import br.igreja.escala.compartilhado.Datas;
 import br.igreja.escala.disponibilidade.domain.Disponibilidade;
+import br.igreja.escala.disponibilidade.domain.Resposta;
 import br.igreja.escala.disponibilidade.repository.DisponibilidadeRepository;
 import br.igreja.escala.evento.domain.Evento;
 import br.igreja.escala.evento.domain.Periodo;
@@ -11,9 +13,12 @@ import br.igreja.escala.identidade.service.UsuarioService;
 import br.igreja.escala.ministerio.domain.Ministerio;
 import br.igreja.escala.ministerio.service.MembroService;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -53,6 +58,85 @@ public class ConsultaDaDisponibilidade {
                 .map(ministerio -> grupo(ministerio, usuarioId, mes, false))
                 .toList();
         return new TelaDaDisponibilidade(mes, !ministerios.isEmpty(), grupos);
+    }
+
+    /**
+     * O painel do gerente: quem serve no ministério × os eventos por vir do mês. "Respondeu" é quem respondeu todos;
+     * quem falta vem primeiro.
+     */
+    @Transactional(readOnly = true)
+    public PainelDaDisponibilidade painel(Long ministerioId, YearMonth mes) {
+        var periodo = periodos.doMes(ministerioId, mes);
+        var doMes = eventos.porVirDoMes(ministerioId, mes);
+        var pessoas = membros.queServem(ministerioId);
+        Map<Long, Map<Long, Resposta>> porPessoa = respostasPorPessoa(doMes);
+        var linhas = pessoas.stream()
+                .map(pessoa -> {
+                    var dela = porPessoa.getOrDefault(pessoa.id(), Map.of());
+                    var respostas = new ArrayList<Resposta>();
+                    doMes.forEach(evento -> respostas.add(dela.get(evento.getId())));
+                    return new LinhaDoPainel(pessoa, respostas);
+                })
+                .sorted(Comparator.comparing(LinhaDoPainel::respondeuTudo))
+                .toList();
+        var colunas = doMes.stream()
+                .map(evento -> new EventoDoPainel(
+                        evento.getId(),
+                        evento.getNome(),
+                        Datas.dia(evento.getData()) + " "
+                                + Datas.diaDaSemanaCurto(evento.getData().getDayOfWeek()),
+                        Datas.horario(evento.getHorario()),
+                        podem(evento, pessoas, porPessoa)))
+                .toList();
+        return new PainelDaDisponibilidade(
+                mes,
+                periodo.isPresent(),
+                periodo.map(Periodo::isDisponibilidadeTravada).orElse(false),
+                colunas,
+                linhas);
+    }
+
+    /**
+     * Quem pode servir em cada evento por vir do mês: só quem serve no ministério e marcou Pode. Sem resposta conta como
+     * indisponível, assim como Não pode e a conta desativada. É o que a geração da escala (Fase 3) usa.
+     *
+     * @return por id de evento, os ids de quem pode; todo evento por vir aparece, mesmo sem ninguém
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, Set<Long>> quemPode(Long ministerioId, YearMonth mes) {
+        var doMes = eventos.porVirDoMes(ministerioId, mes);
+        var pessoas = membros.queServem(ministerioId);
+        var porPessoa = respostasPorPessoa(doMes);
+        return doMes.stream()
+                .collect(Collectors.toMap(
+                        Evento::getId,
+                        evento -> pessoas.stream()
+                                .map(UsuarioResumo::id)
+                                .filter(id -> pode(porPessoa, id, evento))
+                                .collect(Collectors.toSet())));
+    }
+
+    /** Respostas aos eventos, por pessoa e evento. */
+    private Map<Long, Map<Long, Resposta>> respostasPorPessoa(List<Evento> doMes) {
+        if (doMes.isEmpty()) {
+            return Map.of();
+        }
+        return disponibilidades
+                .findByEventoIdIn(doMes.stream().map(Evento::getId).toList())
+                .stream()
+                .collect(Collectors.groupingBy(
+                        Disponibilidade::getUsuarioId,
+                        Collectors.toMap(Disponibilidade::getEventoId, Disponibilidade::getResposta)));
+    }
+
+    private static long podem(Evento evento, List<UsuarioResumo> pessoas, Map<Long, Map<Long, Resposta>> porPessoa) {
+        return pessoas.stream()
+                .filter(pessoa -> pode(porPessoa, pessoa.id(), evento))
+                .count();
+    }
+
+    private static boolean pode(Map<Long, Map<Long, Resposta>> porPessoa, Long usuarioId, Evento evento) {
+        return porPessoa.getOrDefault(usuarioId, Map.of()).get(evento.getId()) == Resposta.PODE;
     }
 
     private GrupoDeDisponibilidade grupo(Ministerio ministerio, Long usuarioId, YearMonth mes, boolean peloGerente) {

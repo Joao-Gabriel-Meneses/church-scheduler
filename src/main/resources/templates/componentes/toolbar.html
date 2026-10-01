@@ -10,6 +10,7 @@
         travada      true: Badge "Disponibilidade travada" (no celular, o sheet mostra também "Disponibilidade aberta")
         regrasHref   atalho para as regras (IconButton no desktop, botão com rótulo no sheet)
         acaoTexto    ação da página, com acaoIcone, acaoHref (sem href é um botão) e acaoVariante (padrão primary)
+        acaoFormulario  id de um <form method="post"> da página que a ação envia (ex.: travar a disponibilidade)
     No celular (< 560px) fica numa linha: seletor compacto (periodoCurto) e "Mais ações", que abre um Sheet com a
     trava e as ações. As ações existem uma vez só no HTML (docs/design/components/Toolbar/toolbar-celular.css).
 
@@ -42,8 +43,9 @@
            aria-label="Regras" title="Regras"><svg th:replace="~{componentes/icone :: icone('settings-2')}"></svg><span
                 class="rt-toolbar__rotulo">Regras</span></a>
         <th:block th:if="${acaoTexto != null}"><button th:replace="~{componentes/botao :: botao(texto=${acaoTexto},
-                variante=${acaoVariante ?: 'primary'}, icone=${acaoIcone}, href=${acaoHref}, tipo='button',
-                tamanho=null, iconeFinal=null, classe=null)}"></button></th:block>
+                variante=${acaoVariante ?: 'primary'}, icone=${acaoIcone}, href=${acaoHref},
+                tipo=${acaoFormulario != null ? 'submit' : 'button'}, formulario=${acaoFormulario}, tamanho=null,
+                iconeFinal=null, classe=null)}"></button></th:block>
     </div>
 </div>
 

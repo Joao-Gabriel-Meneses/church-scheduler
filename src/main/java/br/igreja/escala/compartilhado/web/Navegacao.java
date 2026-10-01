@@ -48,6 +48,13 @@ public final class Navegacao {
                     Perfil.MEMBRO),
             new Entrada(
                     Area.MINISTERIO,
+                    "Disponibilidade",
+                    "Disponib.",
+                    "list-checks",
+                    "/ministerios/" + MINISTERIO + "/disponibilidade",
+                    Perfil.MEMBRO),
+            new Entrada(
+                    Area.MINISTERIO,
                     "Membros",
                     "Membros",
                     "users",

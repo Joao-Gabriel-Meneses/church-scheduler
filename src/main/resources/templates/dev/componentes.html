@@ -182,6 +182,22 @@
         </div>
     </section>
 
+    <section id="stat-card" class="flex flex-col gap-2">
+        <h2 class="text-heading">StatCard</h2>
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
+            <div class="rt-stats">
+                <div th:replace="~{componentes/estatistica :: cartao(rotulo='Eventos no mês', valor=9,
+                        sub='5 domingos · 4 quintas', href='#stat-card')}"></div>
+                <div th:replace="~{componentes/estatistica :: cartao(rotulo='Vagas preenchidas', valor=16,
+                        sub='de 18 · 2 vazias', href='#stat-card')}"></div>
+                <div th:replace="~{componentes/estatistica :: cartao(rotulo='Sem resposta', valor=5,
+                        sub='de 20 membros', href='#stat-card')}"></div>
+                <div th:replace="~{componentes/estatistica :: cartao(rotulo='Maior carga', valor=3,
+                        sub='escalas por pessoa', href='#stat-card')}"></div>
+            </div>
+        </div>
+    </section>
+
     <section id="availability-picker" class="flex flex-col gap-2">
         <h2 class="text-heading">AvailabilityPicker</h2>
         <p class="text-label text-ink-muted">"Prefiro não" fica oculto até a regra PREFERENCIA (Fase 5). As duas últimas
