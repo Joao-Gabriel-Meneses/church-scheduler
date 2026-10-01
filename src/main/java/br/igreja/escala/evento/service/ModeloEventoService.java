@@ -59,8 +59,9 @@ public class ModeloEventoService {
     @Transactional
     public ModeloEvento criar(Long ministerioId, DadosDoModelo dados) {
         ministerios.buscar(ministerioId);
-        var modelo = new ModeloEvento(ministerioId, dados.nome(), dados.diaDaSemana(), dados.horario());
-        modelo.alterar(dados.nome(), dados.diaDaSemana(), dados.horario(), dados.ativo());
+        var modelo =
+                new ModeloEvento(ministerioId, dados.nome(), dados.diaDaSemana(), dados.horario(), dados.duracao());
+        modelo.alterar(dados.nome(), dados.diaDaSemana(), dados.horario(), dados.duracao(), dados.ativo());
         return modelos.save(modelo);
     }
 
@@ -68,7 +69,7 @@ public class ModeloEventoService {
     @Transactional
     public ModeloEvento alterar(Long ministerioId, Long id, DadosDoModelo dados) {
         var modelo = buscar(ministerioId, id);
-        modelo.alterar(dados.nome(), dados.diaDaSemana(), dados.horario(), dados.ativo());
+        modelo.alterar(dados.nome(), dados.diaDaSemana(), dados.horario(), dados.duracao(), dados.ativo());
         return modelo;
     }
 }

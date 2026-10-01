@@ -2,6 +2,7 @@ package br.igreja.escala.compartilhado.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.time.LocalTime;
 import org.junit.jupiter.api.Test;
 
@@ -21,5 +22,15 @@ class HorarioEmMinutosTest {
     void nuloContinuaNulo() {
         assertThat(conversor.convertToDatabaseColumn(null)).isNull();
         assertThat(conversor.convertToEntityAttribute(null)).isNull();
+    }
+
+    @Test
+    void duracaoTambemViraMinutos() {
+        var duracao = new DuracaoEmMinutos();
+
+        assertThat(duracao.convertToDatabaseColumn(Duration.ofMinutes(90))).isEqualTo(90);
+        assertThat(duracao.convertToEntityAttribute(120)).isEqualTo(Duration.ofHours(2));
+        assertThat(duracao.convertToDatabaseColumn(null)).isNull();
+        assertThat(duracao.convertToEntityAttribute(null)).isNull();
     }
 }

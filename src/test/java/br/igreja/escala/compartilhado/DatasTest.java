@@ -3,6 +3,7 @@ package br.igreja.escala.compartilhado;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
@@ -22,6 +23,10 @@ class DatasTest {
     void horarioComH() {
         assertThat(Datas.horario(LocalTime.of(18, 0))).isEqualTo("18h00");
         assertThat(Datas.horario(LocalTime.of(9, 30))).isEqualTo("09h30");
+        assertThat(Datas.faixaDeHorario(LocalTime.of(18, 0), Duration.ofMinutes(90)))
+                .isEqualTo("18h00 às 19h30");
+        assertThat(Datas.faixaDeHorario(LocalTime.of(23, 0), Duration.ofHours(2)))
+                .isEqualTo("23h00 às 01h00");
     }
 
     @Test

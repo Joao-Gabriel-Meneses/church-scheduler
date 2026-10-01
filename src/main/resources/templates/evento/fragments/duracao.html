@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<!--/*
+    Campo "Duração" dos formulários de modelo e de evento, em minutos. Usa o th:object do <form> (campo duracaoMinutos).
+    A duração diz quando o evento termina: a escala não põe a mesma pessoa em dois eventos que se sobrepõem.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="duracao"
+          th:with="tipo='number', inputmode='numeric', dica='Em minutos: 120 é 2 horas.',
+                   min=${T(br.igreja.escala.evento.domain.Duracoes).MINIMA_EM_MINUTOS},
+                   max=${T(br.igreja.escala.evento.domain.Duracoes).MAXIMA_EM_MINUTOS}">
+    <div th:replace="~{componentes/formulario :: campoDoObjeto('Duração', 'duracaoMinutos')}"></div>
+</th:block>
+</body>
+</html>

@@ -66,8 +66,8 @@ class ViradaDoMesTest {
 
     @Test
     void hojeAindaEDia31() {
-        var hojeMesmo = new DadosDoEvento("Vigília", LocalDate.of(2026, 10, 31), LocalTime.of(23, 0));
-        var ontem = new DadosDoEvento("Ensaio", LocalDate.of(2026, 10, 30), LocalTime.of(20, 0));
+        var hojeMesmo = new DadosDoEvento("Vigília", LocalDate.of(2026, 10, 31), LocalTime.of(23, 0), 120);
+        var ontem = new DadosDoEvento("Ensaio", LocalDate.of(2026, 10, 30), LocalTime.of(20, 0), 120);
 
         assertThat(emSaoPaulo.criarAvulso(1L, hojeMesmo).getData()).isEqualTo(LocalDate.of(2026, 10, 31));
         assertThatThrownBy(() -> emSaoPaulo.criarAvulso(1L, ontem)).isInstanceOf(RegraVioladaException.class);

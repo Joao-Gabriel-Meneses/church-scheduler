@@ -1,5 +1,6 @@
 package br.igreja.escala.evento.service;
 
+import static br.igreja.escala.evento.ExemplosDeEvento.DUAS_HORAS;
 import static br.igreja.escala.evento.ExemplosDeEvento.cultoDeDomingo;
 import static br.igreja.escala.evento.ExemplosDeEvento.cultoDeQuinta;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,22 +31,23 @@ class ModeloEventoServiceTest {
 
     @Test
     void listaDoDomingoAoSabadoComDiaEHorarioEscritos() {
-        var sabado = new ModeloEvento(1L, "Ensaio", DayOfWeek.SATURDAY, LocalTime.of(15, 0));
-        sabado.alterar("Ensaio", DayOfWeek.SATURDAY, LocalTime.of(15, 0), false);
+        var sabado = new ModeloEvento(1L, "Ensaio", DayOfWeek.SATURDAY, LocalTime.of(15, 0), DUAS_HORAS);
+        sabado.alterar("Ensaio", DayOfWeek.SATURDAY, LocalTime.of(15, 0), DUAS_HORAS, false);
         when(modelos.findByMinisterioIdOrderByDiaDaSemanaAscHorarioAsc(1L))
                 .thenReturn(List.of(cultoDeQuinta(1L), sabado, cultoDeDomingo(1L)));
 
         assertThat(servico.resumos(1L))
                 .extracting(ModeloResumo::descricao)
-                .containsExactly("Domingo · 18h00", "Quinta · 19h30", "Sábado · 15h00 · Inativo");
+                .containsExactly(
+                        "Domingo · 18h00 às 20h00", "Quinta · 19h30 às 21h30", "Sábado · 15h00 às 17h00 · Inativo");
     }
 
     @Test
     void criaNoMinisterioDaRotaJaComOAtivoDoFormulario() {
         when(modelos.save(any())).thenAnswer(chamada -> chamada.getArgument(0));
 
-        var criado =
-                servico.criar(1L, new DadosDoModelo("Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), false));
+        var criado = servico.criar(
+                1L, new DadosDoModelo("Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), 120, false));
 
         verify(ministerios).buscar(1L);
         assertThat(criado.getMinisterioId()).isEqualTo(1L);
@@ -57,7 +59,8 @@ class ModeloEventoServiceTest {
         var domingo = cultoDeDomingo(1L);
         when(modelos.findByIdAndMinisterioId(300L, 1L)).thenReturn(Optional.of(domingo));
 
-        servico.alterar(1L, 300L, new DadosDoModelo("Culto da noite", DayOfWeek.SUNDAY, LocalTime.of(19, 0), true));
+        servico.alterar(
+                1L, 300L, new DadosDoModelo("Culto da noite", DayOfWeek.SUNDAY, LocalTime.of(19, 0), 120, true));
 
         assertThat(domingo.getNome()).isEqualTo("Culto da noite");
         assertThat(domingo.getHorario()).isEqualTo(LocalTime.of(19, 0));
@@ -68,8 +71,8 @@ class ModeloEventoServiceTest {
         when(modelos.findByIdAndMinisterioId(300L, 2L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> servico.buscar(2L, 300L)).isInstanceOf(NaoEncontradoException.class);
-        assertThatThrownBy(
-                        () -> servico.alterar(2L, 300L, new DadosDoModelo("X", DayOfWeek.SUNDAY, LocalTime.NOON, true)))
+        assertThatThrownBy(() ->
+                        servico.alterar(2L, 300L, new DadosDoModelo("X", DayOfWeek.SUNDAY, LocalTime.NOON, 120, true)))
                 .isInstanceOf(NaoEncontradoException.class);
         verify(modelos, never()).save(any());
     }

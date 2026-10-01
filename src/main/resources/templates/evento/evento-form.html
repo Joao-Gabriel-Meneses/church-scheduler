@@ -44,9 +44,12 @@
                 <th:block th:replace="~{componentes/formulario :: mensagensDoCampo}"></th:block>
             </th:block>
         </div>
-        <th:block th:with="tipo='time'">
-            <div th:replace="~{componentes/formulario :: campoDoObjeto('Horário', 'horario')}"></div>
-        </th:block>
+        <div class="grid grid-cols-2 gap-4">
+            <th:block th:with="tipo='time'">
+                <div th:replace="~{componentes/formulario :: campoDoObjeto('Horário', 'horario')}"></div>
+            </th:block>
+            <th:block th:replace="~{evento/fragments/duracao :: duracao}"></th:block>
+        </div>
         <div class="flex flex-wrap gap-2">
             <button th:replace="~{componentes/botao :: botao(texto='Salvar', variante=null, icone=null, classe=null,
                     tipo=null)}"></button>

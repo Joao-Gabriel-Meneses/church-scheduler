@@ -151,13 +151,13 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
         var paula = usuarios.buscarPorEmail("paula.ribeiro@escala.local").orElseThrow();
         membros.tornarGerente(midia, paula.id(), admin);
 
-        modelos.criar(midia, new DadosDoModelo("Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), true));
-        modelos.criar(midia, new DadosDoModelo("Culto de quinta", DayOfWeek.THURSDAY, LocalTime.of(19, 30), true));
+        modelos.criar(midia, new DadosDoModelo("Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), 120, true));
+        modelos.criar(midia, new DadosDoModelo("Culto de quinta", DayOfWeek.THURSDAY, LocalTime.of(19, 30), 120, true));
         var proximo = eventos.proximoMes();
         eventos.gerarDoMes(midia, proximo.minusMonths(1));
         eventos.gerarDoMes(midia, proximo);
         eventos.criarAvulso(
-                midia, new DadosDoEvento("Conferência de jovens", terceiroSabado(proximo), LocalTime.of(15, 0)));
+                midia, new DadosDoEvento("Conferência de jovens", terceiroSabado(proximo), LocalTime.of(15, 0), 120));
         log.info(
                 "Seed de desenvolvimento criado: Mídia e Louvor, {} membros. Gerente: paula.ribeiro@escala.local",
                 PESSOAS.size());

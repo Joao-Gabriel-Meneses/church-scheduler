@@ -1,5 +1,6 @@
 package br.igreja.escala;
 
+import static br.igreja.escala.evento.ExemplosDeEvento.DUAS_HORAS;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -110,14 +111,14 @@ class PaginasDoGerenteIT {
             var projecao = funcoes.save(new Funcao(midia, "Projeção", Icone.MONITOR, 1, 1));
             var iniciante = niveis.save(new Nivel(midia, "Iniciante", 1));
             habilitacoes.save(new Habilitacao(ana.getId(), projecao, iniciante));
-            var domingo = modelos.save(
-                    new ModeloEvento(midia.getId(), "Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0)));
+            var domingo = modelos.save(new ModeloEvento(
+                    midia.getId(), "Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), DUAS_HORAS));
             var mes = YearMonth.now(Fuso.SAO_PAULO).plusMonths(2);
             var periodo = periodos.save(new Periodo(midia.getId(), mes));
             var dataDoDomingo = mes.atDay(1).with(TemporalAdjusters.firstInMonth(DayOfWeek.SUNDAY));
             eventoDoModeloId = eventos.save(Evento.doModelo(domingo, periodo, dataDoDomingo))
                     .getId();
-            eventoAvulsoId = eventos.save(Evento.avulso(periodo, "Ensaio", mes.atDay(10), LocalTime.NOON))
+            eventoAvulsoId = eventos.save(Evento.avulso(periodo, "Ensaio", mes.atDay(10), LocalTime.NOON, DUAS_HORAS))
                     .getId();
             gerente = new UsuarioAutenticado(paula);
             membroId = ana.getId();

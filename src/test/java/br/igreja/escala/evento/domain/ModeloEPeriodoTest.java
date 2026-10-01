@@ -1,5 +1,6 @@
 package br.igreja.escala.evento.domain;
 
+import static br.igreja.escala.evento.ExemplosDeEvento.DUAS_HORAS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
@@ -13,7 +14,7 @@ class ModeloEPeriodoTest {
 
     @Test
     void modeloNasceAtivoComHorarioSemSegundos() {
-        var modelo = new ModeloEvento(1L, " Culto de domingo ", DayOfWeek.SUNDAY, LocalTime.of(18, 0, 30));
+        var modelo = new ModeloEvento(1L, " Culto de domingo ", DayOfWeek.SUNDAY, LocalTime.of(18, 0, 30), DUAS_HORAS);
 
         assertThat(modelo.getNome()).isEqualTo("Culto de domingo");
         assertThat(modelo.isAtivo()).isTrue();
@@ -22,9 +23,9 @@ class ModeloEPeriodoTest {
 
     @Test
     void modeloMudaEDesativa() {
-        var modelo = new ModeloEvento(1L, "Culto de quinta", DayOfWeek.THURSDAY, LocalTime.of(19, 30));
+        var modelo = new ModeloEvento(1L, "Culto de quinta", DayOfWeek.THURSDAY, LocalTime.of(19, 30), DUAS_HORAS);
 
-        modelo.alterar("Culto de quarta", DayOfWeek.WEDNESDAY, LocalTime.of(20, 0), false);
+        modelo.alterar("Culto de quarta", DayOfWeek.WEDNESDAY, LocalTime.of(20, 0), DUAS_HORAS, false);
 
         assertThat(modelo.getDiaDaSemana()).isEqualTo(DayOfWeek.WEDNESDAY);
         assertThat(modelo.isAtivo()).isFalse();
@@ -33,11 +34,13 @@ class ModeloEPeriodoTest {
     @Test
     void modeloExigeMinisterioNomeDiaEHorario() {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new ModeloEvento(null, "Culto", DayOfWeek.SUNDAY, LocalTime.NOON));
+                .isThrownBy(() -> new ModeloEvento(null, "Culto", DayOfWeek.SUNDAY, LocalTime.NOON, DUAS_HORAS));
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new ModeloEvento(1L, " ", DayOfWeek.SUNDAY, LocalTime.NOON));
-        assertThatIllegalArgumentException().isThrownBy(() -> new ModeloEvento(1L, "Culto", null, LocalTime.NOON));
-        assertThatIllegalArgumentException().isThrownBy(() -> new ModeloEvento(1L, "Culto", DayOfWeek.SUNDAY, null));
+                .isThrownBy(() -> new ModeloEvento(1L, " ", DayOfWeek.SUNDAY, LocalTime.NOON, DUAS_HORAS));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new ModeloEvento(1L, "Culto", null, LocalTime.NOON, DUAS_HORAS));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new ModeloEvento(1L, "Culto", DayOfWeek.SUNDAY, null, DUAS_HORAS));
     }
 
     @Test

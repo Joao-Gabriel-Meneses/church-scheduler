@@ -9,7 +9,7 @@ import br.igreja.escala.evento.domain.Evento;
  * @param dia "04"
  * @param diaDaSemana "Dom"
  * @param data "04/10 · Dom"
- * @param horario "18h00"
+ * @param horario "18h00 às 20h00"
  */
 public record EventoResumo(
         Long id,
@@ -28,12 +28,12 @@ public record EventoResumo(
                 Datas.dia(evento.getData()),
                 Datas.diaDaSemanaCurto(evento.getData().getDayOfWeek()),
                 Datas.dataCurta(evento.getData()),
-                Datas.horario(evento.getHorario()),
+                Datas.faixaDeHorario(evento.getHorario(), evento.getDuracao()),
                 evento.isAvulso(),
                 evento.isCancelado());
     }
 
-    /** "04/10 · Dom · 18h00", com " · Avulso" e " · Cancelado" quando for o caso. */
+    /** "04/10 · Dom · 18h00 às 20h00", com " · Avulso" e " · Cancelado" quando for o caso. */
     public String descricao() {
         return data + " · " + horario + (avulso ? " · Avulso" : "") + (cancelado ? " · Cancelado" : "");
     }

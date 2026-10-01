@@ -1,10 +1,12 @@
 package br.igreja.escala.evento.domain;
 
+import static br.igreja.escala.evento.ExemplosDeEvento.DUAS_HORAS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import br.igreja.escala.evento.ExemplosDeEvento;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
@@ -44,7 +46,7 @@ class EventoTest {
     void mudarOHorarioDoEventoNaoMudaOModelo() {
         var evento = Evento.doModelo(cultoDeDomingo, outubro, DOMINGO);
 
-        evento.alterar("Culto de domingo especial", LocalTime.of(19, 0, 15));
+        evento.alterar("Culto de domingo especial", LocalTime.of(19, 0, 15), DUAS_HORAS);
 
         assertThat(evento.getHorario()).isEqualTo(LocalTime.of(19, 0));
         assertThat(cultoDeDomingo.getHorario()).isEqualTo(LocalTime.of(18, 0));
@@ -53,8 +55,8 @@ class EventoTest {
 
     @Test
     void avulsoMudaDeDataEDePeriodoMasODoModeloNao() {
-        var conferencia =
-                Evento.avulso(outubro, "Conferência de jovens", LocalDate.of(2026, 10, 17), LocalTime.of(15, 0));
+        var conferencia = Evento.avulso(
+                outubro, "Conferência de jovens", LocalDate.of(2026, 10, 17), LocalTime.of(15, 0), DUAS_HORAS);
         var novembro = ExemplosDeEvento.periodo(1L, YearMonth.of(2026, 11));
 
         conferencia.mudarData(LocalDate.of(2026, 11, 7), novembro);
@@ -80,9 +82,54 @@ class EventoTest {
 
     @Test
     void avulsoExigeNomeDataEHorario() {
-        assertThatIllegalArgumentException().isThrownBy(() -> Evento.avulso(outubro, " ", DOMINGO, LocalTime.NOON));
-        assertThatIllegalArgumentException().isThrownBy(() -> Evento.avulso(outubro, "Ensaio", null, LocalTime.NOON));
-        assertThatIllegalArgumentException().isThrownBy(() -> Evento.avulso(outubro, "Ensaio", DOMINGO, null));
-        assertThatIllegalArgumentException().isThrownBy(() -> Evento.avulso(null, "Ensaio", DOMINGO, LocalTime.NOON));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> Evento.avulso(outubro, " ", DOMINGO, LocalTime.NOON, DUAS_HORAS));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> Evento.avulso(outubro, "Ensaio", null, LocalTime.NOON, DUAS_HORAS));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> Evento.avulso(outubro, "Ensaio", DOMINGO, null, DUAS_HORAS));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> Evento.avulso(null, "Ensaio", DOMINGO, LocalTime.NOON, DUAS_HORAS));
+    }
+
+    @Test
+    void eventoDoModeloLevaADuracaoDoModeloETerminaNoFimDela() {
+        var evento = Evento.doModelo(cultoDeDomingo, outubro, DOMINGO);
+
+        assertThat(evento.getDuracao()).isEqualTo(DUAS_HORAS);
+        assertThat(evento.getInicio()).isEqualTo(DOMINGO.atTime(18, 0));
+        assertThat(evento.getFim()).isEqualTo(DOMINGO.atTime(20, 0));
+    }
+
+    @Test
+    void eventoQueTerminaDepoisDaMeiaNoiteTerminaNoDiaSeguinte() {
+        var vigilia = Evento.avulso(outubro, "Vigília", LocalDate.of(2026, 10, 30), LocalTime.of(23, 0), DUAS_HORAS);
+
+        assertThat(vigilia.getFim()).isEqualTo(LocalDate.of(2026, 10, 31).atTime(1, 0));
+    }
+
+    @Test
+    void mudarADuracaoDoEventoNaoMudaADoModelo() {
+        var evento = Evento.doModelo(cultoDeDomingo, outubro, DOMINGO);
+
+        evento.alterar("Culto de domingo", LocalTime.of(18, 0), Duration.ofMinutes(90));
+
+        assertThat(evento.getFim()).isEqualTo(DOMINGO.atTime(19, 30));
+        assertThat(cultoDeDomingo.getDuracao()).isEqualTo(DUAS_HORAS);
+    }
+
+    @Test
+    void duracaoVaiDe15MinutosAUmDiaEmMinutosInteiros() {
+        var evento = Evento.doModelo(cultoDeDomingo, outubro, DOMINGO);
+
+        evento.alterar("Culto", LocalTime.NOON, Duration.ofMinutes(15));
+        evento.alterar("Culto", LocalTime.NOON, Duration.ofHours(24));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> evento.alterar("Culto", LocalTime.NOON, Duration.ofMinutes(14)));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> evento.alterar("Culto", LocalTime.NOON, Duration.ofMinutes(24 * 60 + 1)));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> evento.alterar("Culto", LocalTime.NOON, Duration.ofSeconds(90 * 60 + 30)));
+        assertThatIllegalArgumentException().isThrownBy(() -> evento.alterar("Culto", LocalTime.NOON, null));
     }
 }

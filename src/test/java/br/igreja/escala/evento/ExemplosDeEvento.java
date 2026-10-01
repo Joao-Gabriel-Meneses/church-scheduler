@@ -3,6 +3,7 @@ package br.igreja.escala.evento;
 import br.igreja.escala.evento.domain.ModeloEvento;
 import br.igreja.escala.evento.domain.Periodo;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -10,14 +11,20 @@ import org.springframework.test.util.ReflectionTestUtils;
 /** Modelos e períodos com id, para testes sem banco. */
 public final class ExemplosDeEvento {
 
+    public static final Duration DUAS_HORAS = Duration.ofHours(2);
+
     private ExemplosDeEvento() {}
 
     public static ModeloEvento cultoDeDomingo(Long ministerioId) {
-        return comId(new ModeloEvento(ministerioId, "Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0)), 300L);
+        return comId(
+                new ModeloEvento(ministerioId, "Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), DUAS_HORAS),
+                300L);
     }
 
     public static ModeloEvento cultoDeQuinta(Long ministerioId) {
-        return comId(new ModeloEvento(ministerioId, "Culto de quinta", DayOfWeek.THURSDAY, LocalTime.of(19, 30)), 301L);
+        return comId(
+                new ModeloEvento(ministerioId, "Culto de quinta", DayOfWeek.THURSDAY, LocalTime.of(19, 30), DUAS_HORAS),
+                301L);
     }
 
     public static Periodo periodo(Long ministerioId, YearMonth mes) {

@@ -1,6 +1,7 @@
 package br.igreja.escala.compartilhado;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
@@ -54,6 +55,11 @@ public final class Datas {
     /** "18h00". */
     public static String horario(LocalTime horario) {
         return horario.format(HORARIO);
+    }
+
+    /** "18h00 às 20h00": do início ao fim, que pode cair no dia seguinte. */
+    public static String faixaDeHorario(LocalTime inicio, Duration duracao) {
+        return horario(inicio) + " às " + horario(inicio.plus(duracao));
     }
 
     /** "Domingo". */

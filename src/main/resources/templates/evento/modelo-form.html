@@ -20,9 +20,14 @@
         <th:block th:with="vazio='Escolha o dia'">
             <div th:replace="~{componentes/formulario :: selecaoDoObjeto('Dia da semana', 'diaDaSemana', ${dias})}"></div>
         </th:block>
-        <th:block th:with="tipo='time', dica='O horário padrão. Dá para mudar em um evento sem mudar o modelo.'">
-            <div th:replace="~{componentes/formulario :: campoDoObjeto('Horário', 'horario')}"></div>
-        </th:block>
+        <div class="grid grid-cols-2 gap-4">
+            <th:block th:with="tipo='time'">
+                <div th:replace="~{componentes/formulario :: campoDoObjeto('Horário', 'horario')}"></div>
+            </th:block>
+            <th:block th:replace="~{evento/fragments/duracao :: duracao}"></th:block>
+        </div>
+        <p class="text-label text-ink-muted">O horário e a duração padrão. Dá para mudar num evento sem mudar o
+            modelo.</p>
         <th:block th:replace="~{componentes/formulario :: caixaDeSelecaoDoObjeto('Ativo: gera eventos nos próximos meses',
                 'ativo')}"></th:block>
         <div class="flex flex-wrap gap-2">

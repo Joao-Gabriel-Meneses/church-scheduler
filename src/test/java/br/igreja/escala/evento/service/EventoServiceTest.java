@@ -1,5 +1,6 @@
 package br.igreja.escala.evento.service;
 
+import static br.igreja.escala.evento.ExemplosDeEvento.DUAS_HORAS;
 import static br.igreja.escala.evento.ExemplosDeEvento.cultoDeDomingo;
 import static br.igreja.escala.evento.ExemplosDeEvento.cultoDeQuinta;
 import static br.igreja.escala.evento.ExemplosDeEvento.periodo;
@@ -118,7 +119,7 @@ class EventoServiceTest {
         when(eventos.save(any())).thenAnswer(chamada -> chamada.getArgument(0));
 
         var conferencia = servico.criarAvulso(
-                1L, new DadosDoEvento("Conferência de jovens", LocalDate.of(2026, 11, 14), LocalTime.of(15, 0)));
+                1L, new DadosDoEvento("Conferência de jovens", LocalDate.of(2026, 11, 14), LocalTime.of(15, 0), 120));
 
         assertThat(conferencia.isAvulso()).isTrue();
         assertThat(conferencia.getPeriodo()).isSameAs(novembro);
@@ -126,8 +127,8 @@ class EventoServiceTest {
 
     @Test
     void avulsoNaoPodeSerNoPassado() {
-        assertThatThrownBy(() ->
-                        servico.criarAvulso(1L, new DadosDoEvento("Ensaio", LocalDate.of(2026, 10, 6), LocalTime.NOON)))
+        assertThatThrownBy(() -> servico.criarAvulso(
+                        1L, new DadosDoEvento("Ensaio", LocalDate.of(2026, 10, 6), LocalTime.NOON, 120)))
                 .isInstanceOfSatisfying(
                         RegraVioladaException.class,
                         recusa -> assertThat(recusa.campo()).isEqualTo("data"));
@@ -139,12 +140,13 @@ class EventoServiceTest {
         var evento = Evento.doModelo(cultoDeDomingo(1L), novembro, LocalDate.of(2026, 11, 1));
         when(eventos.findByIdAndMinisterioId(500L, 1L)).thenReturn(Optional.of(evento));
 
-        servico.alterar(1L, 500L, new DadosDoEvento("Culto de Ceia", LocalDate.of(2026, 11, 1), LocalTime.of(19, 0)));
+        servico.alterar(
+                1L, 500L, new DadosDoEvento("Culto de Ceia", LocalDate.of(2026, 11, 1), LocalTime.of(19, 0), 120));
         assertThat(evento.getHorario()).isEqualTo(LocalTime.of(19, 0));
         assertThat(evento.getNome()).isEqualTo("Culto de Ceia");
 
         assertThatThrownBy(() -> servico.alterar(
-                        1L, 500L, new DadosDoEvento("Culto", LocalDate.of(2026, 11, 2), LocalTime.of(19, 0))))
+                        1L, 500L, new DadosDoEvento("Culto", LocalDate.of(2026, 11, 2), LocalTime.of(19, 0), 120)))
                 .isInstanceOfSatisfying(
                         RegraVioladaException.class,
                         recusa ->
@@ -154,14 +156,14 @@ class EventoServiceTest {
 
     @Test
     void avulsoMudaDeDataParaOutroMes() {
-        var ensaio = Evento.avulso(outubro, "Ensaio", LocalDate.of(2026, 10, 24), LocalTime.of(15, 0));
+        var ensaio = Evento.avulso(outubro, "Ensaio", LocalDate.of(2026, 10, 24), LocalTime.of(15, 0), DUAS_HORAS);
         when(eventos.findByIdAndMinisterioId(501L, 1L)).thenReturn(Optional.of(ensaio));
 
-        servico.alterar(1L, 501L, new DadosDoEvento("Ensaio", LocalDate.of(2026, 11, 7), LocalTime.of(15, 0)));
+        servico.alterar(1L, 501L, new DadosDoEvento("Ensaio", LocalDate.of(2026, 11, 7), LocalTime.of(15, 0), 120));
 
         assertThat(ensaio.getPeriodo()).isSameAs(novembro);
         assertThatThrownBy(() -> servico.alterar(
-                        1L, 501L, new DadosDoEvento("Ensaio", LocalDate.of(2026, 10, 1), LocalTime.of(15, 0))))
+                        1L, 501L, new DadosDoEvento("Ensaio", LocalDate.of(2026, 10, 1), LocalTime.of(15, 0), 120)))
                 .isInstanceOf(RegraVioladaException.class);
     }
 
@@ -180,8 +182,8 @@ class EventoServiceTest {
 
         assertThatThrownBy(() -> servico.buscar(2L, 500L)).isInstanceOf(NaoEncontradoException.class);
         assertThatThrownBy(() -> servico.cancelar(2L, 500L)).isInstanceOf(NaoEncontradoException.class);
-        assertThatThrownBy(() ->
-                        servico.alterar(2L, 500L, new DadosDoEvento("X", LocalDate.of(2026, 11, 1), LocalTime.NOON)))
+        assertThatThrownBy(() -> servico.alterar(
+                        2L, 500L, new DadosDoEvento("X", LocalDate.of(2026, 11, 1), LocalTime.NOON, 120)))
                 .isInstanceOf(NaoEncontradoException.class);
     }
 
@@ -196,7 +198,7 @@ class EventoServiceTest {
         assertThat(servico.doMes(1L, NOVEMBRO))
                 .singleElement()
                 .extracting(EventoResumo::descricao)
-                .isEqualTo("01/11 · Dom · 18h00 · Cancelado");
+                .isEqualTo("01/11 · Dom · 18h00 às 20h00 · Cancelado");
         assertThat(servico.doMes(1L, OUTUBRO)).isEmpty();
     }
 

@@ -1,6 +1,7 @@
 package br.igreja.escala.evento.domain;
 
 import br.igreja.escala.compartilhado.Exigencias;
+import br.igreja.escala.compartilhado.domain.DuracaoEmMinutos;
 import br.igreja.escala.compartilhado.domain.HorarioEmMinutos;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
@@ -10,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalTime;
 
 /**
@@ -40,20 +42,25 @@ public class ModeloEvento {
     @Column(name = "horario_minutos", nullable = false)
     private LocalTime horario;
 
+    @Convert(converter = DuracaoEmMinutos.class)
+    @Column(name = "duracao_minutos", nullable = false)
+    private Duration duracao;
+
     @Column(nullable = false)
     private boolean ativo = true;
 
     protected ModeloEvento() {}
 
-    public ModeloEvento(Long ministerioId, String nome, DayOfWeek diaDaSemana, LocalTime horario) {
+    public ModeloEvento(Long ministerioId, String nome, DayOfWeek diaDaSemana, LocalTime horario, Duration duracao) {
         this.ministerioId = Exigencias.presente(ministerioId, "ministerioId");
-        alterar(nome, diaDaSemana, horario, true);
+        alterar(nome, diaDaSemana, horario, duracao, true);
     }
 
-    public void alterar(String nome, DayOfWeek diaDaSemana, LocalTime horario, boolean ativo) {
+    public void alterar(String nome, DayOfWeek diaDaSemana, LocalTime horario, Duration duracao, boolean ativo) {
         this.nome = Exigencias.texto(nome, "nome", TAMANHO_NOME);
         this.diaDaSemana = Exigencias.presente(diaDaSemana, "diaDaSemana");
         this.horario = Exigencias.presente(horario, "horario").withSecond(0).withNano(0);
+        this.duracao = Duracoes.exigirValida(duracao);
         this.ativo = ativo;
     }
 
@@ -75,6 +82,10 @@ public class ModeloEvento {
 
     public LocalTime getHorario() {
         return horario;
+    }
+
+    public Duration getDuracao() {
+        return duracao;
     }
 
     public boolean isAtivo() {

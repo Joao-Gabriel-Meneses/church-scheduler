@@ -1,5 +1,6 @@
 package br.igreja.escala.evento;
 
+import static br.igreja.escala.evento.ExemplosDeEvento.DUAS_HORAS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -29,6 +30,7 @@ import br.igreja.escala.ministerio.repository.MembresiaRepository;
 import br.igreja.escala.ministerio.repository.MinisterioRepository;
 import jakarta.persistence.EntityManager;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
@@ -85,7 +87,7 @@ class EventosIT {
     @Test
     void modeloGuardaDiaDaSemanaEHorarioDaIgreja() {
         var domingo = modelos.save(
-                new ModeloEvento(midia.getId(), "Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0)));
+                new ModeloEvento(midia.getId(), "Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), DUAS_HORAS));
         entityManager.flush();
         entityManager.clear();
 
@@ -94,10 +96,11 @@ class EventosIT {
         assertThat(lido.getDiaDaSemana()).isEqualTo(DayOfWeek.SUNDAY);
         assertThat(lido.getHorario()).isEqualTo(LocalTime.of(18, 0));
         assertThat(jdbc.queryForObject(
-                        "select dia_semana || '/' || horario_minutos from modelo_evento where id = ?",
+                        "select dia_semana || '/' || horario_minutos || '/' || duracao_minutos from modelo_evento"
+                                + " where id = ?",
                         String.class,
                         domingo.getId()))
-                .isEqualTo("7/1080");
+                .isEqualTo("7/1080/120");
     }
 
     @Test
@@ -118,8 +121,10 @@ class EventosIT {
     @Test
     void gerarOMesDeNovoNaoDuplicaNemRecriaOCancelado() throws Exception {
         var gerente = gerenteDaMidia();
-        modelos.save(new ModeloEvento(midia.getId(), "Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0)));
-        modelos.save(new ModeloEvento(midia.getId(), "Culto de quinta", DayOfWeek.THURSDAY, LocalTime.of(19, 30)));
+        modelos.save(
+                new ModeloEvento(midia.getId(), "Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), DUAS_HORAS));
+        modelos.save(new ModeloEvento(
+                midia.getId(), "Culto de quinta", DayOfWeek.THURSDAY, LocalTime.of(19, 30), DUAS_HORAS));
 
         mvc.perform(gerar(gerente)).andExpect(flash().attributeExists("sucesso"));
         var doMes = eventosDoMes();
@@ -155,9 +160,10 @@ class EventosIT {
     void doisAvulsosNoMesmoDiaPodemMasOModeloSoUmaVezPorData() {
         var periodo = periodos.save(new Periodo(midia.getId(), MES));
         var data = MES.atDay(10);
-        eventos.save(Evento.avulso(periodo, "Ensaio", data, LocalTime.of(9, 0)));
-        eventos.saveAndFlush(Evento.avulso(periodo, "Reunião", data, LocalTime.of(20, 0)));
-        var modelo = modelos.save(new ModeloEvento(midia.getId(), "Culto", data.getDayOfWeek(), LocalTime.of(18, 0)));
+        eventos.save(Evento.avulso(periodo, "Ensaio", data, LocalTime.of(9, 0), DUAS_HORAS));
+        eventos.saveAndFlush(Evento.avulso(periodo, "Reunião", data, LocalTime.of(20, 0), DUAS_HORAS));
+        var modelo = modelos.save(
+                new ModeloEvento(midia.getId(), "Culto", data.getDayOfWeek(), LocalTime.of(18, 0), DUAS_HORAS));
         eventos.saveAndFlush(Evento.doModelo(modelo, periodo, data));
 
         assertThat(eventos.existsByModeloIdAndData(modelo.getId(), data)).isTrue();
@@ -170,7 +176,8 @@ class EventosIT {
         var gerente = gerenteDaMidia();
         var louvor = ministerios.save(new Ministerio("Louvor Eventos", CorDoMinisterio.ROSE, Icone.MUSIC));
         var periodoDoLouvor = periodos.save(new Periodo(louvor.getId(), MES));
-        var ensaio = eventos.save(Evento.avulso(periodoDoLouvor, "Ensaio do louvor", MES.atDay(5), LocalTime.NOON));
+        var ensaio = eventos.save(
+                Evento.avulso(periodoDoLouvor, "Ensaio do louvor", MES.atDay(5), LocalTime.NOON, DUAS_HORAS));
 
         mvc.perform(get("/ministerios/{m}/eventos/{e}", midia.getId(), ensaio.getId())
                         .with(user(gerente)))
@@ -200,7 +207,8 @@ class EventosIT {
                         .with(csrf())
                         .param("nome", "Conferência de jovens")
                         .param("data", data.toString())
-                        .param("horario", "15:30"))
+                        .param("horario", "15:30")
+                        .param("duracaoMinutos", "120"))
                 .andExpect(status().is3xxRedirection());
         entityManager.flush();
         entityManager.clear();
@@ -208,6 +216,7 @@ class EventosIT {
         assertThat(eventosDoMes()).singleElement().satisfies(evento -> {
             assertThat(evento.getData()).isEqualTo(data);
             assertThat(evento.getHorario()).isEqualTo(LocalTime.of(15, 30));
+            assertThat(evento.getDuracao()).isEqualTo(Duration.ofMinutes(120));
             assertThat(evento.isAvulso()).isTrue();
         });
     }

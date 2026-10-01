@@ -78,14 +78,14 @@ class ModeloEventoControllerTest {
     void listaComDiaHorarioEEstado() throws Exception {
         when(modelos.resumos(1L))
                 .thenReturn(List.of(
-                        new ModeloResumo(300L, "Culto de domingo", "Domingo", "18h00", true),
-                        new ModeloResumo(301L, "Ensaio", "Sábado", "15h00", false)));
+                        new ModeloResumo(300L, "Culto de domingo", "Domingo", "18h00 às 20h00", true),
+                        new ModeloResumo(301L, "Ensaio", "Sábado", "15h00 às 17h00", false)));
 
         String html = pagina(
                 get("/ministerios/1/eventos/modelos").with(user(GERENTE_DA_MIDIA)), ModeloEventoController.LISTA);
 
         assertThat(html)
-                .contains("Mídia — Modelos de evento", "Domingo · 18h00", "Sábado · 15h00 · Inativo")
+                .contains("Mídia — Modelos de evento", "Domingo · 18h00 às 20h00", "Sábado · 15h00 às 17h00 · Inativo")
                 .contains("href=\"/ministerios/1/eventos/modelos/300\"", "Criar modelo", "Eventos do mês");
     }
 
@@ -96,12 +96,14 @@ class ModeloEventoControllerTest {
 
         assertThat(html)
                 .contains("<option value=\"\">Escolha o dia</option> <option value=\"SUNDAY\">Domingo</option>")
-                .contains("type=\"time\"", "type=\"checkbox\" id=\"ativo\" name=\"ativo\" value=\"true\" checked");
+                .contains("type=\"time\"", "type=\"checkbox\" id=\"ativo\" name=\"ativo\" value=\"true\" checked")
+                .contains("name=\"duracaoMinutos\" type=\"number\"", "min=\"15\" max=\"1440\"")
+                .contains("aria-describedby=\"duracaoMinutos-dica\" value=\"120\">", "Em minutos: 120 é 2 horas.");
     }
 
     @Test
     void criaEVoltaParaALista() throws Exception {
-        when(modelos.criar(1L, new DadosDoModelo("Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), true)))
+        when(modelos.criar(1L, new DadosDoModelo("Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), 120, true)))
                 .thenReturn(ExemplosDeEvento.cultoDeDomingo(1L));
 
         mvc.perform(criar(1).with(user(GERENTE_DA_MIDIA)))
@@ -122,7 +124,7 @@ class ModeloEventoControllerTest {
 
         assertThat(html)
                 .contains("Informe o nome do evento, como Culto de domingo.", "Escolha o dia da semana.")
-                .contains("Informe o horário, como 18:00.");
+                .contains("Informe o horário, como 18:00.", "Informe a duração em minutos, como 120.");
         verify(modelos, never()).criar(anyLong(), any());
     }
 
@@ -139,10 +141,14 @@ class ModeloEventoControllerTest {
                         .param("nome", "Culto de domingo")
                         .param("diaDaSemana", "SUNDAY")
                         .param("horario", "19:00")
+                        .param("duracaoMinutos", "120")
                         .param("_ativo", "on"))
                 .andExpect(redirectedUrl("/ministerios/1/eventos/modelos"));
         verify(modelos)
-                .alterar(1L, 300L, new DadosDoModelo("Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(19, 0), false));
+                .alterar(
+                        1L,
+                        300L,
+                        new DadosDoModelo("Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(19, 0), 120, false));
     }
 
     @Test
@@ -167,6 +173,7 @@ class ModeloEventoControllerTest {
                 .param("nome", "Culto de domingo")
                 .param("diaDaSemana", "SUNDAY")
                 .param("horario", "18:00")
+                .param("duracaoMinutos", "120")
                 .param("ativo", "true")
                 .param("_ativo", "on");
     }

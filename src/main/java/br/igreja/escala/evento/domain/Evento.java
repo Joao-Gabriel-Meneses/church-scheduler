@@ -1,6 +1,7 @@
 package br.igreja.escala.evento.domain;
 
 import br.igreja.escala.compartilhado.Exigencias;
+import br.igreja.escala.compartilhado.domain.DuracaoEmMinutos;
 import br.igreja.escala.compartilhado.domain.HorarioEmMinutos;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
@@ -12,7 +13,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 /**
@@ -50,19 +53,24 @@ public class Evento {
     @Column(name = "horario_minutos", nullable = false)
     private LocalTime horario;
 
+    @Convert(converter = DuracaoEmMinutos.class)
+    @Column(name = "duracao_minutos", nullable = false)
+    private Duration duracao;
+
     @Column(nullable = false)
     private boolean cancelado;
 
     protected Evento() {}
 
-    private Evento(Periodo periodo, ModeloEvento modelo, String nome, LocalDate data, LocalTime horario) {
+    private Evento(
+            Periodo periodo, ModeloEvento modelo, String nome, LocalDate data, LocalTime horario, Duration duracao) {
         this.ministerioId = Exigencias.presente(periodo, "periodo").getMinisterioId();
         this.modelo = modelo;
         moverPara(data, periodo);
-        alterar(nome, horario);
+        alterar(nome, horario, duracao);
     }
 
-    /** Evento do modelo numa data do dia da semana dele, com o nome e o horário padrão. */
+    /** Evento do modelo numa data do dia da semana dele, com o nome, o horário e a duração padrão. */
     public static Evento doModelo(ModeloEvento modelo, Periodo periodo, LocalDate data) {
         Exigencias.presente(modelo, "modelo");
         if (!modelo.getMinisterioId().equals(periodo.getMinisterioId())) {
@@ -71,16 +79,26 @@ public class Evento {
         if (data.getDayOfWeek() != modelo.getDiaDaSemana()) {
             throw new IllegalArgumentException("a data " + data + " não é " + modelo.getDiaDaSemana());
         }
-        return new Evento(periodo, modelo, modelo.getNome(), data, modelo.getHorario());
+        return new Evento(periodo, modelo, modelo.getNome(), data, modelo.getHorario(), modelo.getDuracao());
     }
 
-    public static Evento avulso(Periodo periodo, String nome, LocalDate data, LocalTime horario) {
-        return new Evento(periodo, null, nome, data, horario);
+    public static Evento avulso(Periodo periodo, String nome, LocalDate data, LocalTime horario, Duration duracao) {
+        return new Evento(periodo, null, nome, data, horario, duracao);
     }
 
-    public void alterar(String nome, LocalTime horario) {
+    public void alterar(String nome, LocalTime horario, Duration duracao) {
         this.nome = Exigencias.texto(nome, "nome", TAMANHO_NOME);
         this.horario = Exigencias.presente(horario, "horario").withSecond(0).withNano(0);
+        this.duracao = Duracoes.exigirValida(duracao);
+    }
+
+    public LocalDateTime getInicio() {
+        return data.atTime(horario);
+    }
+
+    /** Pode cair no dia seguinte (culto às 23h00 de 2 horas termina à 01h00). */
+    public LocalDateTime getFim() {
+        return getInicio().plus(duracao);
     }
 
     /**
@@ -142,6 +160,10 @@ public class Evento {
 
     public LocalTime getHorario() {
         return horario;
+    }
+
+    public Duration getDuracao() {
+        return duracao;
     }
 
     public boolean isCancelado() {

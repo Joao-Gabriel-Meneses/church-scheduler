@@ -91,11 +91,11 @@ public class EventoService {
         ministerios.buscar(ministerioId);
         exigirHojeOuDepois(dados.data());
         var periodo = periodos.obterOuCriar(ministerioId, YearMonth.from(dados.data()));
-        return eventos.save(Evento.avulso(periodo, dados.nome(), dados.data(), dados.horario()));
+        return eventos.save(Evento.avulso(periodo, dados.nome(), dados.data(), dados.horario(), dados.duracao()));
     }
 
     /**
-     * Muda nome e horário; num avulso, também a data. Não muda o modelo de onde o evento veio.
+     * Muda nome, horário e duração; num avulso, também a data. Não muda o modelo de onde o evento veio.
      *
      * @throws RegraVioladaException no campo {@code data}, se tentar mudar a data de um evento do modelo ou pôr um
      *     avulso numa data que já passou
@@ -112,7 +112,7 @@ public class EventoService {
             exigirHojeOuDepois(dados.data());
             evento.mudarData(dados.data(), periodos.obterOuCriar(ministerioId, YearMonth.from(dados.data())));
         }
-        evento.alterar(dados.nome(), dados.horario());
+        evento.alterar(dados.nome(), dados.horario(), dados.duracao());
         return evento;
     }
 
