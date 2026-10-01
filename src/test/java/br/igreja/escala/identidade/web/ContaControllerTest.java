@@ -103,6 +103,19 @@ class ContaControllerTest {
     }
 
     @Test
+    void senhaEmBrancoTemUmaMensagemSo() throws Exception {
+        String html = pagina(post("/conta/senha")
+                .with(user(comProvisoria))
+                .with(csrf())
+                .param("novaSenha", "")
+                .param("confirmacao", ""));
+
+        assertThat(html)
+                .containsOnlyOnce("A senha precisa ter de 8 a 64 caracteres.")
+                .doesNotContain("Escolha a nova");
+    }
+
+    @Test
     void recusaDoServicoApareceNoCampoIndicado() throws Exception {
         when(usuarios.trocarSenha(2L, "errada", "senha-nova-1"))
                 .thenThrow(new SenhaRecusadaException("senhaAtual", "A senha atual não confere."));

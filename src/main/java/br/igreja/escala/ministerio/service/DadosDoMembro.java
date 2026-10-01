@@ -3,12 +3,15 @@ package br.igreja.escala.ministerio.service;
 import br.igreja.escala.identidade.domain.Usuario;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
  * Cadastro de um membro pelo gerente; também é o objeto do formulário. Se o e-mail já tem conta, só o e-mail conta: a
  * pessoa entra no ministério sem mudar nome, telefone nem senha.
+ *
+ * <p>A senha usa {@code NotNull}, e não {@code NotBlank}: em branco, só o {@code Size} reclama, com uma mensagem só.
  */
 public record DadosDoMembro(
         @NotBlank(message = "Informe o nome.") @Size(max = 150, message = "Use no máximo {max} caracteres.") String nome,
@@ -20,7 +23,7 @@ public record DadosDoMembro(
                 message = "Use só números, espaços, parênteses, + e -, como (11) 98888-7777.")
         String telefone,
 
-        @NotBlank(message = "Defina a senha provisória.") @Size(
+        @NotNull(message = "Defina a senha provisória.") @Size(
                 min = Usuario.TAMANHO_MINIMO_SENHA,
                 max = Usuario.TAMANHO_MAXIMO_SENHA,
                 message = "A senha precisa ter de {min} a {max} caracteres.")

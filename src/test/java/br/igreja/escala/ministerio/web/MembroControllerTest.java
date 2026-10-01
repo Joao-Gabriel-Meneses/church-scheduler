@@ -192,6 +192,22 @@ class MembroControllerTest {
     }
 
     @Test
+    void senhaProvisoriaEmBrancoTemUmaMensagemSo() throws Exception {
+        String html = pagina(
+                post("/ministerios/1/membros")
+                        .with(user(GERENTE_DA_MIDIA))
+                        .with(csrf())
+                        .param("nome", "Ana")
+                        .param("email", "ana@x.com")
+                        .param("senhaProvisoria", ""),
+                "ministerio/membro-form");
+
+        assertThat(html)
+                .containsOnlyOnce("A senha precisa ter de 8 a 64 caracteres.")
+                .doesNotContain("Defina a senha provisória.");
+    }
+
+    @Test
     void quemJaEstaNoMinisterioApareceNoCampoEmail() throws Exception {
         when(membros.cadastrar(anyLong(), any()))
                 .thenThrow(new RegraVioladaException("email", "Ana Souza já está neste ministério."));
