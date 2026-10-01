@@ -40,8 +40,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Dados de exemplo só no perfil dev: Mídia (com 20 membros, funções, níveis, habilitações, modelos e os eventos deste
- * mês e do próximo) e Louvor, para a SideRail aparecer. Roda depois do admin inicial e só se a Mídia ainda não
- * existe. Usa só os serviços públicos dos módulos, como uma pessoa faria pelas telas.
+ * mês e do próximo, com dois cultos em cada domingo) e Louvor, para a SideRail aparecer. Roda depois do admin inicial
+ * e só se a Mídia ainda não existe. Usa só os serviços públicos dos módulos, como uma pessoa faria pelas telas. O
+ * SeedDeDesenvolvimentoIT roda o seed no banco dos testes.
  */
 @Component
 @Profile("dev")
@@ -151,13 +152,16 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
         var paula = usuarios.buscarPorEmail("paula.ribeiro@escala.local").orElseThrow();
         membros.tornarGerente(midia, paula.id(), admin);
 
+        // Dois cultos no mesmo domingo: a escala (Fase 3) não pode pôr a mesma pessoa nos dois se eles se sobrepuserem,
+        // e o limite do mês conta cada um.
+        modelos.criar(midia, new DadosDoModelo("Culto da manhã", DayOfWeek.SUNDAY, LocalTime.of(9, 30), 90, true));
         modelos.criar(midia, new DadosDoModelo("Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), 120, true));
         modelos.criar(midia, new DadosDoModelo("Culto de quinta", DayOfWeek.THURSDAY, LocalTime.of(19, 30), 120, true));
         var proximo = eventos.proximoMes();
         eventos.gerarDoMes(midia, proximo.minusMonths(1));
         eventos.gerarDoMes(midia, proximo);
         eventos.criarAvulso(
-                midia, new DadosDoEvento("Conferência de jovens", terceiroSabado(proximo), LocalTime.of(15, 0), 120));
+                midia, new DadosDoEvento("Conferência de jovens", terceiroSabado(proximo), LocalTime.of(15, 0), 240));
         log.info(
                 "Seed de desenvolvimento criado: Mídia e Louvor, {} membros. Gerente: paula.ribeiro@escala.local",
                 PESSOAS.size());
