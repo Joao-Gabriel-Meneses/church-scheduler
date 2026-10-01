@@ -178,10 +178,15 @@ class EventosIT {
         var data = MES.atDay(10);
         eventos.save(Evento.avulso(periodo, "Ensaio", data, LocalTime.of(9, 0), DUAS_HORAS));
         eventos.saveAndFlush(Evento.avulso(periodo, "Reunião", data, LocalTime.of(20, 0), DUAS_HORAS));
+        eventos.saveAndFlush(Evento.avulso(periodo, "Ensaio do coral", data, LocalTime.of(9, 0), DUAS_HORAS));
         var modelo = modelos.save(
                 new ModeloEvento(midia.getId(), "Culto", data.getDayOfWeek(), LocalTime.of(18, 0), DUAS_HORAS));
         eventos.saveAndFlush(Evento.doModelo(modelo, periodo, data));
 
+        assertThat(eventos.findByPeriodoIdOrderByDataAscHorarioAsc(periodo.getId()))
+                .as("avulsos em horários diferentes e no mesmo horário, e o evento do modelo")
+                .extracting(Evento::getNome)
+                .containsExactlyInAnyOrder("Ensaio", "Ensaio do coral", "Culto", "Reunião");
         assertThat(eventos.existsByModeloIdAndData(modelo.getId(), data)).isTrue();
         assertThatThrownBy(() -> eventos.saveAndFlush(Evento.doModelo(modelo, periodo, data)))
                 .isInstanceOf(DataIntegrityViolationException.class);
