@@ -19,6 +19,7 @@ import br.igreja.escala.ministerio.repository.MembresiaRepository;
 import br.igreja.escala.ministerio.repository.MinisterioRepository;
 import br.igreja.escala.ministerio.repository.NivelRepository;
 import jakarta.persistence.EntityManager;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -138,5 +139,23 @@ class CadastrosDoMinisterioIT {
                         1))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("CK_FUNCAO_QTD");
+    }
+
+    @Test
+    void ministeriosGerenciadosVemEmOrdemDeNomeSoOndeEGerente() {
+        var louvor = ministerios.save(new Ministerio("Louvor Cadastros", CorDoMinisterio.ROSE, Icone.MUSIC));
+        var recepcao = ministerios.save(new Ministerio("Recepção Cadastros", CorDoMinisterio.LEMON, Icone.DOOR_OPEN));
+        for (var ministerio : List.of(recepcao, midia, louvor)) {
+            var membresia = new Membresia(ana.getId(), ministerio);
+            if (ministerio != recepcao) {
+                membresia.tornarGerente();
+            }
+            membresias.save(membresia);
+        }
+        entityManager.flush();
+
+        assertThat(membresias.ministeriosGerenciadosPor(ana.getId()))
+                .extracting(Ministerio::getNome)
+                .containsExactly("Louvor Cadastros", "Mídia Cadastros");
     }
 }

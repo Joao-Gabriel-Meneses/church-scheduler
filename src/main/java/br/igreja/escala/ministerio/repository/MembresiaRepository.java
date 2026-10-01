@@ -1,9 +1,11 @@
 package br.igreja.escala.ministerio.repository;
 
 import br.igreja.escala.ministerio.domain.Membresia;
+import br.igreja.escala.ministerio.domain.Ministerio;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 public interface MembresiaRepository extends JpaRepository<Membresia, Long> {
 
@@ -18,4 +20,11 @@ public interface MembresiaRepository extends JpaRepository<Membresia, Long> {
     boolean existsByUsuarioIdAndMinisterioIdAndGerenteTrue(Long usuarioId, Long ministerioId);
 
     boolean existsByUsuarioIdAndGerenteTrue(Long usuarioId);
+
+    @Query("""
+            select m.ministerio from Membresia m
+             where m.usuarioId = :usuarioId and m.gerente = true
+             order by m.ministerio.nome
+            """)
+    List<Ministerio> ministeriosGerenciadosPor(Long usuarioId);
 }
