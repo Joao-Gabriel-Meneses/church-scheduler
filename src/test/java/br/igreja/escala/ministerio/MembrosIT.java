@@ -234,6 +234,47 @@ class MembrosIT {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void habilitacoesSoAceitamFuncaoENivelDoProprioMinisterio() throws Exception {
+        var midia = ministerio("Mídia Habilitações");
+        var louvor = ministerio("Louvor Habilitações");
+        var gerente = gerenteDe(midia, "gerente.habilitacoes@teste.local");
+        var ana = membroDe(midia, "ana.habilitacoes@teste.local");
+        var doLouvor = membroDe(louvor, "bia.habilitacoes@teste.local");
+        var projecao = funcoes.save(new Funcao(midia, "Projeção", Icone.MONITOR, 1, 1));
+        var experiente = niveis.save(new Nivel(midia, "Experiente", 2));
+        var solista = niveis.save(new Nivel(louvor, "Solista", 1));
+        var vocal = funcoes.save(new Funcao(louvor, "Vocal", Icone.MIC, 1, 3));
+        long m = midia.getId();
+
+        mvc.perform(post("/ministerios/{m}/membros/{u}/habilitacoes", m, ana.getId())
+                        .with(user(gerente))
+                        .with(csrf())
+                        .param("nivel-" + projecao.getId(), solista.getId().toString()))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/ministerios/{m}/membros/{u}/habilitacoes", m, ana.getId())
+                        .with(user(gerente))
+                        .with(csrf())
+                        .param("nivel-" + vocal.getId(), experiente.getId().toString()))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/ministerios/{m}/membros/{u}/habilitacoes", m, doLouvor.getId())
+                        .with(user(gerente))
+                        .with(csrf())
+                        .param("nivel-" + projecao.getId(), experiente.getId().toString()))
+                .andExpect(status().isNotFound());
+        assertThat(habilitacoes.findByFuncaoMinisterioId(m)).isEmpty();
+
+        mvc.perform(post("/ministerios/{m}/membros/{u}/habilitacoes", m, ana.getId())
+                        .with(user(gerente))
+                        .with(csrf())
+                        .param("nivel-" + projecao.getId(), experiente.getId().toString()))
+                .andExpect(flash().attribute("sucesso", "Habilitações de ana.habilitacoes salvas"));
+        assertThat(habilitacoes.findByUsuarioIdAndFuncaoId(ana.getId(), projecao.getId()))
+                .get()
+                .extracting(habilitacao -> habilitacao.getNivel().getNome())
+                .isEqualTo("Experiente");
+    }
+
     private long cadastrar(UsuarioAutenticado quem, Ministerio ministerio, String nome, String email, String senha)
             throws Exception {
         mvc.perform(post("/ministerios/{m}/membros", ministerio.getId())

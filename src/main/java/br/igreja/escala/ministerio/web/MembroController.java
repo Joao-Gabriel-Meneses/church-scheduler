@@ -2,11 +2,17 @@ package br.igreja.escala.ministerio.web;
 
 import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.compartilhado.web.Formularios;
+import br.igreja.escala.compartilhado.web.Opcao;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
 import br.igreja.escala.ministerio.service.DadosDoMembro;
+import br.igreja.escala.ministerio.service.HabilitacaoService;
 import br.igreja.escala.ministerio.service.MembroService;
 import br.igreja.escala.ministerio.service.MinisterioService;
+import br.igreja.escala.ministerio.service.NivelService;
 import jakarta.validation.Valid;
+import java.util.HashMap;
+import java.util.Map;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -18,6 +24,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
@@ -35,10 +42,18 @@ class MembroController {
 
     private final MinisterioService ministerios;
     private final MembroService membros;
+    private final HabilitacaoService habilitacoes;
+    private final NivelService niveis;
 
-    MembroController(MinisterioService ministerios, MembroService membros) {
+    MembroController(
+            MinisterioService ministerios,
+            MembroService membros,
+            HabilitacaoService habilitacoes,
+            NivelService niveis) {
         this.ministerios = ministerios;
         this.membros = membros;
+        this.habilitacoes = habilitacoes;
+        this.niveis = niveis;
     }
 
     @GetMapping
@@ -91,7 +106,46 @@ class MembroController {
         model.addAttribute("podeRemover", autor.isAdmin() || !membro.gerente());
         model.addAttribute("ehAdmin", autor.isAdmin());
         model.addAttribute("ehVoce", autor.getId().equals(usuarioId));
+        model.addAttribute("linhas", habilitacoes.doMembro(ministerioId, usuarioId));
+        model.addAttribute(
+                "niveis",
+                niveis.listar(ministerioId).stream()
+                        .map(nivel -> new Opcao(nivel.getId().toString(), nivel.getNome()))
+                        .toList());
         return PAGINA_DO_MEMBRO;
+    }
+
+    /** Um campo "nivel-{funcaoId}" por função; vazio tira a habilitação. */
+    @PostMapping("/{usuarioId}/habilitacoes")
+    String definirHabilitacoes(
+            @PathVariable Long ministerioId,
+            @PathVariable Long usuarioId,
+            @RequestParam Map<String, String> campos,
+            RedirectAttributes redirecionamento) {
+        var membro = membros.buscar(ministerioId, usuarioId);
+        habilitacoes.definir(ministerioId, usuarioId, nivelPorFuncao(campos));
+        redirecionamento.addFlashAttribute("sucesso", "Habilitações de " + membro.nome() + " salvas");
+        return paraOMembro(ministerioId, usuarioId);
+    }
+
+    private static Map<Long, Long> nivelPorFuncao(Map<String, String> campos) {
+        var nivelPorFuncao = new HashMap<Long, Long>();
+        campos.forEach((campo, valor) -> {
+            if (campo.startsWith(HabilitacaoService.CAMPO)) {
+                nivelPorFuncao.put(
+                        numero(campo.substring(HabilitacaoService.CAMPO.length())),
+                        valor.isBlank() ? null : numero(valor));
+            }
+        });
+        return nivelPorFuncao;
+    }
+
+    private static Long numero(String texto) {
+        try {
+            return Long.valueOf(texto.strip());
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Id inválido: " + texto, e);
+        }
     }
 
     @PostMapping("/{usuarioId}/senha")

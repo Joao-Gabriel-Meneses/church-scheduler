@@ -26,12 +26,17 @@ import br.igreja.escala.compartilhado.NaoEncontradoException;
 import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.identidade.service.UsuarioResumo;
 import br.igreja.escala.ministerio.Exemplos;
+import br.igreja.escala.ministerio.domain.Icone;
 import br.igreja.escala.ministerio.repository.MembresiaRepository;
 import br.igreja.escala.ministerio.service.DadosDoMembro;
+import br.igreja.escala.ministerio.service.HabilitacaoService;
+import br.igreja.escala.ministerio.service.LinhaDeHabilitacao;
 import br.igreja.escala.ministerio.service.MembroResumo;
 import br.igreja.escala.ministerio.service.MembroService;
 import br.igreja.escala.ministerio.service.MinisterioService;
+import br.igreja.escala.ministerio.service.NivelService;
 import br.igreja.escala.ministerio.service.ResultadoDoCadastro;
+import java.util.HashMap;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,6 +63,12 @@ class MembroControllerTest {
 
     @MockitoBean
     MembroService membros;
+
+    @MockitoBean
+    HabilitacaoService habilitacoes;
+
+    @MockitoBean
+    NivelService niveis;
 
     @BeforeEach
     void prepara() {
@@ -196,7 +207,7 @@ class MembroControllerTest {
 
         assertThat(html)
                 .contains("<h1 class=\"text-title\">Ana Souza</h1>", "Ainda com a senha provisória")
-                .contains("Projeção · Experiente", "ana@x.com")
+                .contains("ana@x.com", "(11) 98888-7777")
                 .contains("popovertarget=\"redefinir-senha\"", "action=\"/ministerios/1/membros/30/senha\"")
                 .contains("minlength=\"8\"", "maxlength=\"64\"")
                 .contains("popovertarget=\"remover-membro\"", "action=\"/ministerios/1/membros/30/remover\"")
@@ -285,6 +296,79 @@ class MembroControllerTest {
                                 .flashAttr("recusa", "Ana Souza continua no ministério."),
                         MembroController.PAGINA_DO_MEMBRO))
                 .contains("class=\"rt-alert\" role=\"alert\"", "Ana Souza continua no ministério.");
+    }
+
+    @Test
+    void habilitacoesTemUmSelectPorFuncaoComONivelAtual() throws Exception {
+        var midia = Exemplos.midia();
+        when(habilitacoes.doMembro(1L, 30L))
+                .thenReturn(List.of(
+                        new LinhaDeHabilitacao(100L, "Projeção", Icone.MONITOR, 201L),
+                        new LinhaDeHabilitacao(101L, "Transmissão", Icone.VIDEO, null)));
+        when(niveis.listar(1L)).thenReturn(List.of(Exemplos.iniciante(midia), Exemplos.experiente(midia)));
+
+        String html = pagina(
+                get("/ministerios/1/membros/30").with(user(GERENTE_DA_MIDIA)), MembroController.PAGINA_DO_MEMBRO);
+
+        assertThat(html)
+                .contains("action=\"/ministerios/1/membros/30/habilitacoes\"")
+                .contains("<label class=\"rt-field__label\" for=\"nivel-100\">Projeção</label>")
+                .contains("<option value=\"201\" selected=\"selected\">Experiente</option>")
+                .contains("name=\"nivel-101\"", "<option value=\"\">Sem habilitação</option>")
+                .contains("Salvar habilitações");
+    }
+
+    @Test
+    void semFuncoesOuNiveisAvisaComoComecar() throws Exception {
+        when(habilitacoes.doMembro(1L, 30L)).thenReturn(List.of());
+
+        assertThat(pagina(
+                        get("/ministerios/1/membros/30").with(user(GERENTE_DA_MIDIA)),
+                        MembroController.PAGINA_DO_MEMBRO))
+                .contains("O ministério ainda não tem funções", "href=\"/ministerios/1/funcoes\"")
+                .doesNotContain("Salvar habilitações");
+    }
+
+    @Test
+    void salvaAsHabilitacoesComCampoVazioTirandoAHabilitacao() throws Exception {
+        mvc.perform(post("/ministerios/1/membros/30/habilitacoes")
+                        .with(user(GERENTE_DA_MIDIA))
+                        .with(csrf())
+                        .param("nivel-100", "201")
+                        .param("nivel-101", ""))
+                .andExpect(redirectedUrl("/ministerios/1/membros/30"))
+                .andExpect(flash().attribute("sucesso", "Habilitações de Ana Souza salvas"));
+
+        var esperado = new HashMap<Long, Long>();
+        esperado.put(100L, 201L);
+        esperado.put(101L, null);
+        verify(habilitacoes).definir(1L, 30L, esperado);
+    }
+
+    @Test
+    void idQueNaoENumeroE400() throws Exception {
+        mvc.perform(post("/ministerios/1/membros/30/habilitacoes")
+                        .with(user(GERENTE_DA_MIDIA))
+                        .with(csrf())
+                        .param("nivel-abc", "201"))
+                .andExpect(status().isBadRequest());
+        verify(habilitacoes, never()).definir(anyLong(), anyLong(), any());
+    }
+
+    @Test
+    void gerenteDeOutroMinisterioNaoMexeNasHabilitacoes() throws Exception {
+        mvc.perform(post("/ministerios/2/membros/30/habilitacoes")
+                        .with(user(GERENTE_DA_MIDIA))
+                        .with(csrf())
+                        .param("nivel-100", "201"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/ministerios/1/membros/30/habilitacoes")
+                        .with(user(MEMBRO))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/ministerios/1/membros/30/habilitacoes").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(status().isForbidden());
+        verify(habilitacoes, never()).definir(anyLong(), anyLong(), any());
     }
 
     @Test

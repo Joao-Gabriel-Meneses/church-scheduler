@@ -5,6 +5,7 @@
       redefine (${podeMexerNaConta}).
     - Remover do ministério: Sheet de confirmação; um gerente só o admin remove (${podeRemover}).
     - Tornar ou deixar de ser gerente: só para o admin (${ehAdmin}).
+    - Habilitações: um select de nível por função (${linhas}, ${niveis}); "Salvar habilitações" é o primário.
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
@@ -41,13 +42,28 @@
     </section>
 
     <section class="flex flex-col gap-3" aria-labelledby="titulo-habilitacoes">
-        <h2 id="titulo-habilitacoes" class="text-heading">Habilitações</h2>
-        <p th:if="${membro.habilitacoes.isEmpty()}" class="text-ink-muted">Sem habilitação ainda: a pessoa não entra
-            na escala até ter uma.</p>
-        <ul th:unless="${membro.habilitacoes.isEmpty()}" class="rt-list">
-            <li th:each="habilitacao : ${membro.habilitacoes}"><div th:replace="~{componentes/lista :: linha(
-                    titulo=${habilitacao}, sub=null, icone=null, href=null, selecionada=false)}"></div></li>
-        </ul>
+        <div class="flex flex-col gap-1">
+            <h2 id="titulo-habilitacoes" class="text-heading">Habilitações</h2>
+            <p class="text-ink-muted">O nível em cada função. Sem habilitação, a pessoa não entra na escala daquela
+                função.</p>
+        </div>
+        <th:block th:if="${linhas.isEmpty() or niveis.isEmpty()}">
+            <div th:replace="~{componentes/alerta :: alerta(
+                    titulo=${linhas.isEmpty()} ? 'O ministério ainda não tem funções' : 'O ministério ainda não tem níveis',
+                    corpo='Para habilitar alguém, crie antes as funções e os níveis do ministério.', regra=null,
+                    acaoTexto='Abrir funções', acaoHref=@{/ministerios/{m}/funcoes(m=${ministerio.id})},
+                    icone=null)}"></div>
+        </th:block>
+        <form th:unless="${linhas.isEmpty() or niveis.isEmpty()}" th:action="${_base + '/habilitacoes'}" method="post"
+              class="rt-panel flex w-full max-w-md flex-col gap-4 p-6">
+            <th:block th:each="linha : ${linhas}">
+                <div th:replace="~{componentes/formulario :: selecao(rotulo=${linha.funcao}, nome=${linha.campo()},
+                        opcoes=${niveis}, valor=${linha.nivelId}, vazio='Sem habilitação', erro=null, dica=null,
+                        obrigatorio=null, campoId=${linha.campo()})}"></div>
+            </th:block>
+            <button th:replace="~{componentes/botao :: botao(texto='Salvar habilitações', variante=null, icone=null,
+                    classe='self-start', tipo=null)}"></button>
+        </form>
     </section>
 
     <section class="flex flex-col gap-3" aria-labelledby="titulo-acesso">
