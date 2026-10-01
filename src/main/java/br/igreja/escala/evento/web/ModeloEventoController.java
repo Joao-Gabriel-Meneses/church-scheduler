@@ -1,6 +1,8 @@
 package br.igreja.escala.evento.web;
 
 import br.igreja.escala.compartilhado.Datas;
+import br.igreja.escala.compartilhado.RegraVioladaException;
+import br.igreja.escala.compartilhado.web.Formularios;
 import br.igreja.escala.compartilhado.web.Opcao;
 import br.igreja.escala.evento.service.DadosDoModelo;
 import br.igreja.escala.evento.service.ModeloEventoService;
@@ -56,12 +58,16 @@ class ModeloEventoController {
             BindingResult erros,
             Model model,
             RedirectAttributes redirecionamento) {
-        if (erros.hasErrors()) {
-            return formulario(ministerioId, null, form, "Criar modelo", model);
+        if (!erros.hasErrors()) {
+            try {
+                var criado = modelos.criar(ministerioId, form);
+                redirecionamento.addFlashAttribute("sucesso", "Modelo " + criado.getNome() + " criado");
+                return paraALista(ministerioId);
+            } catch (RegraVioladaException recusa) {
+                Formularios.rejeitar(erros, recusa);
+            }
         }
-        var criado = modelos.criar(ministerioId, form);
-        redirecionamento.addFlashAttribute("sucesso", "Modelo " + criado.getNome() + " criado");
-        return paraALista(ministerioId);
+        return formulario(ministerioId, null, form, "Criar modelo", model);
     }
 
     @GetMapping("/{modeloId}")
@@ -79,12 +85,16 @@ class ModeloEventoController {
             Model model,
             RedirectAttributes redirecionamento) {
         var atual = modelos.buscar(ministerioId, modeloId);
-        if (erros.hasErrors()) {
-            return formulario(ministerioId, modeloId, form, atual.getNome(), model);
+        if (!erros.hasErrors()) {
+            try {
+                var alterado = modelos.alterar(ministerioId, modeloId, form);
+                redirecionamento.addFlashAttribute("sucesso", "Modelo " + alterado.getNome() + " salvo");
+                return paraALista(ministerioId);
+            } catch (RegraVioladaException recusa) {
+                Formularios.rejeitar(erros, recusa);
+            }
         }
-        var alterado = modelos.alterar(ministerioId, modeloId, form);
-        redirecionamento.addFlashAttribute("sucesso", "Modelo " + alterado.getNome() + " salvo");
-        return paraALista(ministerioId);
+        return formulario(ministerioId, modeloId, form, atual.getNome(), model);
     }
 
     private String formulario(Long ministerioId, Long modeloId, DadosDoModelo form, String cabecalho, Model model) {

@@ -104,6 +104,22 @@ class EventosIT {
     }
 
     @Test
+    void umModeloPorMinisterioDiaEHorario() {
+        var louvor = ministerios.save(new Ministerio("Louvor Modelos", CorDoMinisterio.ROSE, Icone.MUSIC));
+        modelos.saveAndFlush(
+                new ModeloEvento(midia.getId(), "Culto da noite", DayOfWeek.SUNDAY, LocalTime.of(18, 0), DUAS_HORAS));
+        modelos.saveAndFlush(
+                new ModeloEvento(midia.getId(), "Culto da manhã", DayOfWeek.SUNDAY, LocalTime.of(9, 30), DUAS_HORAS));
+        modelos.saveAndFlush(
+                new ModeloEvento(louvor.getId(), "Culto da noite", DayOfWeek.SUNDAY, LocalTime.of(18, 0), DUAS_HORAS));
+
+        assertThatThrownBy(() -> modelos.saveAndFlush(
+                        new ModeloEvento(midia.getId(), "Outro", DayOfWeek.SUNDAY, LocalTime.of(18, 0), DUAS_HORAS)))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("UK_MODELO_EVENTO_HORARIO");
+    }
+
+    @Test
     void umPeriodoPorMinisterioEMes() {
         periodos.saveAndFlush(new Periodo(midia.getId(), YearMonth.of(2026, 10)));
 

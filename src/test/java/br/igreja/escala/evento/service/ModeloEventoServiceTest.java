@@ -12,11 +12,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import br.igreja.escala.compartilhado.NaoEncontradoException;
+import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.evento.domain.ModeloEvento;
 import br.igreja.escala.evento.repository.ModeloEventoRepository;
 import br.igreja.escala.evento.repository.PeriodoRepository;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.List;
@@ -64,6 +66,57 @@ class ModeloEventoServiceTest {
 
         assertThat(domingo.getNome()).isEqualTo("Culto da noite");
         assertThat(domingo.getHorario()).isEqualTo(LocalTime.of(19, 0));
+    }
+
+    @Test
+    void naoCriaDoisModelosNoMesmoDiaEHorario() {
+        var domingo = cultoDeDomingo(1L);
+        when(modelos.findByMinisterioIdAndDiaDaSemanaAndHorario(1L, DayOfWeek.SUNDAY, LocalTime.of(18, 0)))
+                .thenReturn(Optional.of(domingo));
+
+        assertThatThrownBy(() -> servico.criar(
+                        1L, new DadosDoModelo("Culto da noite", DayOfWeek.SUNDAY, LocalTime.of(18, 0), 90, true)))
+                .isInstanceOfSatisfying(RegraVioladaException.class, recusa -> {
+                    assertThat(recusa.campo()).isEqualTo("horario");
+                    assertThat(recusa.getMessage()).isEqualTo("O modelo Culto de domingo já é neste dia e horário.");
+                });
+        verify(modelos, never()).save(any());
+    }
+
+    @Test
+    void outroHorarioNoMesmoDiaPode() {
+        when(modelos.save(any())).thenAnswer(chamada -> chamada.getArgument(0));
+
+        var manha =
+                servico.criar(1L, new DadosDoModelo("Culto da manhã", DayOfWeek.SUNDAY, LocalTime.of(9, 30), 90, true));
+
+        assertThat(manha.getHorario()).isEqualTo(LocalTime.of(9, 30));
+    }
+
+    @Test
+    void modeloInativoNoMesmoHorarioSugereReativar() {
+        var inativo = cultoDeDomingo(1L);
+        inativo.alterar("Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), DUAS_HORAS, false);
+        when(modelos.findByMinisterioIdAndDiaDaSemanaAndHorario(1L, DayOfWeek.SUNDAY, LocalTime.of(18, 0)))
+                .thenReturn(Optional.of(inativo));
+
+        assertThatThrownBy(() ->
+                        servico.criar(1L, new DadosDoModelo("Culto", DayOfWeek.SUNDAY, LocalTime.of(18, 0), 120, true)))
+                .hasMessage("O modelo Culto de domingo já é neste dia e horário. Ele está inativo: reative-o em vez de"
+                        + " criar outro.");
+    }
+
+    @Test
+    void alterarOProprioModeloSemMudarODiaEOHorarioPode() {
+        var domingo = cultoDeDomingo(1L);
+        when(modelos.findByIdAndMinisterioId(300L, 1L)).thenReturn(Optional.of(domingo));
+        when(modelos.findByMinisterioIdAndDiaDaSemanaAndHorario(1L, DayOfWeek.SUNDAY, LocalTime.of(18, 0)))
+                .thenReturn(Optional.of(domingo));
+
+        servico.alterar(
+                1L, 300L, new DadosDoModelo("Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), 90, true));
+
+        assertThat(domingo.getDuracao()).isEqualTo(Duration.ofMinutes(90));
     }
 
     @Test

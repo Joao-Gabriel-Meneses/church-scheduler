@@ -1,6 +1,7 @@
 package br.igreja.escala.evento.service;
 
 import br.igreja.escala.compartilhado.NaoEncontradoException;
+import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.evento.domain.ModeloEvento;
 import br.igreja.escala.evento.repository.ModeloEventoRepository;
 import br.igreja.escala.ministerio.service.MinisterioService;
@@ -56,20 +57,41 @@ public class ModeloEventoService {
                 .orElseThrow(() -> new NaoEncontradoException("Modelo " + id + " no ministério " + ministerioId));
     }
 
+    /**
+     * @throws RegraVioladaException no campo {@code horario}, se o ministério já tem um modelo nesse dia e horário
+     */
     @Transactional
     public ModeloEvento criar(Long ministerioId, DadosDoModelo dados) {
         ministerios.buscar(ministerioId);
+        exigirHorarioLivre(ministerioId, null, dados);
         var modelo =
                 new ModeloEvento(ministerioId, dados.nome(), dados.diaDaSemana(), dados.horario(), dados.duracao());
         modelo.alterar(dados.nome(), dados.diaDaSemana(), dados.horario(), dados.duracao(), dados.ativo());
         return modelos.save(modelo);
     }
 
-    /** Muda o modelo para os próximos meses; os eventos já criados ficam como estão. */
+    /**
+     * Muda o modelo para os próximos meses; os eventos já criados ficam como estão.
+     *
+     * @throws RegraVioladaException no campo {@code horario}, se outro modelo do ministério já usa o dia e horário
+     */
     @Transactional
     public ModeloEvento alterar(Long ministerioId, Long id, DadosDoModelo dados) {
         var modelo = buscar(ministerioId, id);
+        exigirHorarioLivre(ministerioId, id, dados);
         modelo.alterar(dados.nome(), dados.diaDaSemana(), dados.horario(), dados.duracao(), dados.ativo());
         return modelo;
+    }
+
+    /** Um modelo por dia e horário no ministério; inativo também conta, porque basta reativá-lo. */
+    private void exigirHorarioLivre(Long ministerioId, Long id, DadosDoModelo dados) {
+        modelos.findByMinisterioIdAndDiaDaSemanaAndHorario(ministerioId, dados.diaDaSemana(), dados.horario())
+                .filter(outro -> !outro.getId().equals(id))
+                .ifPresent(outro -> {
+                    throw new RegraVioladaException(
+                            "horario",
+                            "O modelo " + outro.getNome() + " já é neste dia e horário."
+                                    + (outro.isAtivo() ? "" : " Ele está inativo: reative-o em vez de criar outro."));
+                });
     }
 }

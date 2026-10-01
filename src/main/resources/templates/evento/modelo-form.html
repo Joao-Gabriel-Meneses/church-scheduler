@@ -16,6 +16,7 @@
 
     <form th:action="${_acao}" th:object="${form}" method="post"
           class="rt-panel flex w-full max-w-md flex-col gap-4 p-6">
+        <th:block th:replace="~{componentes/formulario :: errosGerais}"></th:block>
         <div th:replace="~{componentes/formulario :: campoDoObjeto('Nome', 'nome')}"></div>
         <th:block th:with="vazio='Escolha o dia'">
             <div th:replace="~{componentes/formulario :: selecaoDoObjeto('Dia da semana', 'diaDaSemana', ${dias})}"></div>

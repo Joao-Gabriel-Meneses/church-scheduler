@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.igreja.escala.AcessoDeTeste;
 import br.igreja.escala.TesteDeRotaDoGerente;
 import br.igreja.escala.compartilhado.NaoEncontradoException;
+import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.evento.ExemplosDeEvento;
 import br.igreja.escala.evento.service.DadosDoModelo;
 import br.igreja.escala.evento.service.ModeloEventoService;
@@ -149,6 +150,15 @@ class ModeloEventoControllerTest {
                         1L,
                         300L,
                         new DadosDoModelo("Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(19, 0), 120, false));
+    }
+
+    @Test
+    void outroModeloNoMesmoDiaEHorarioApareceNoCampoHorario() throws Exception {
+        when(modelos.criar(anyLong(), any()))
+                .thenThrow(new RegraVioladaException("horario", "O modelo Culto de domingo já é neste dia e horário."));
+
+        assertThat(pagina(criar(1).with(user(GERENTE_DA_MIDIA)), "evento/modelo-form"))
+                .contains("id=\"horario-erro\"", "O modelo Culto de domingo já é neste dia e horário.");
     }
 
     @Test
