@@ -27,13 +27,7 @@ public class SenhaProvisoriaInterceptor implements HandlerInterceptor {
         if (caminho.equals(TROCA_DE_SENHA) || caminho.equals("/error")) {
             return true;
         }
-        String destino = requisicao.getContextPath() + TROCA_DE_SENHA;
-        // Numa requisição do htmx, um 302 só trocaria o fragmento; o HX-Redirect leva a página inteira.
-        if ("true".equals(requisicao.getHeader("HX-Request"))) {
-            resposta.setHeader("HX-Redirect", destino);
-        } else {
-            resposta.sendRedirect(destino);
-        }
+        PaginaInteira.redirecionar(requisicao, resposta, TROCA_DE_SENHA);
         return false;
     }
 

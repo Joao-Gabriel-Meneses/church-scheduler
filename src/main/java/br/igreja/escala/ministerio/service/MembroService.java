@@ -6,6 +6,7 @@ import br.igreja.escala.compartilhado.domain.AcaoAuditada;
 import br.igreja.escala.compartilhado.domain.RegistroDeAuditoria;
 import br.igreja.escala.compartilhado.service.AuditoriaService;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
+import br.igreja.escala.identidade.service.DadosDaConta;
 import br.igreja.escala.identidade.service.NovoUsuario;
 import br.igreja.escala.identidade.service.SenhaRecusadaException;
 import br.igreja.escala.identidade.service.UsuarioResumo;
@@ -23,10 +24,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Pessoas de um ministério: cadastro com senha provisória, saída, gerentes e redefinição de senha.
+ * Pessoas de um ministério: cadastro com senha provisória, saída, gerentes, dados da conta e redefinição de senha.
  *
  * <p>O gerente mexe só nos membros comuns. Contas de gerente e de admin, e a nomeação de gerentes, ficam com o admin:
- * senão um gerente poderia redefinir a senha de alguém com mais acesso que ele e entrar como essa pessoa.
+ * senão um gerente poderia redefinir a senha (ou trocar o e-mail, que é o login) de alguém com mais acesso que ele e
+ * entrar como essa pessoa. A própria conta ninguém muda por aqui: dados e senha ficam em /conta.
  */
 @Service
 public class MembroService {
@@ -120,12 +122,19 @@ public class MembroService {
     }
 
     /**
-     * @throws RegraVioladaException se o membro é gerente ou admin e quem pede não é admin, ou a senha não tem o
-     *     tamanho certo
+     * As sessões abertas do membro são encerradas (UsuarioService). A própria senha não se redefine por aqui: troca-se
+     * em /conta/senha, pedindo a atual.
+     *
+     * @throws RegraVioladaException se é a conta de quem pede, se o membro é gerente ou admin e quem pede não é admin,
+     *     ou se a senha não tem o tamanho certo
      */
     @Transactional
     public UsuarioResumo redefinirSenha(Long ministerioId, Long usuarioId, String senha, UsuarioAutenticado autor) {
         var membro = buscar(ministerioId, usuarioId);
+        if (autor.getId().equals(usuarioId)) {
+            throw RegraVioladaException.geral(
+                    "Sua senha não mudou: para trocar a sua própria senha, use Trocar senha no início.");
+        }
         if (!podeMexerNaConta(membro, autor)) {
             throw RegraVioladaException.geral("A senha de " + membro.nome()
                     + " não mudou: a senha de um gerente ou administrador só o" + " administrador redefine.");
@@ -145,6 +154,41 @@ public class MembroService {
     }
 
     /**
+     * O membro cuja conta quem pede pode editar (para abrir o formulário).
+     *
+     * @throws NaoEncontradoException se a pessoa não é deste ministério
+     * @throws RegraVioladaException se é a conta de quem pede, ou se o membro é gerente ou admin e quem pede não é admin
+     */
+    @Transactional(readOnly = true)
+    public MembroResumo buscarParaEditar(Long ministerioId, Long usuarioId, UsuarioAutenticado autor) {
+        var membro = buscar(ministerioId, usuarioId);
+        if (autor.getId().equals(usuarioId)) {
+            throw RegraVioladaException.geral("Para mudar os seus dados, use Minha conta no início.");
+        }
+        if (!podeMexerNaConta(membro, autor)) {
+            throw RegraVioladaException.geral("Os dados de " + membro.nome()
+                    + " não mudaram: a conta de um gerente ou administrador só o administrador edita.");
+        }
+        return membro;
+    }
+
+    /**
+     * Nome, e-mail e telefone de um membro. Registra na auditoria quais campos mudaram, sem os valores.
+     *
+     * @throws RegraVioladaException como em {@link #buscarParaEditar}, ou no campo {@code email} se o e-mail já é o
+     *     login de outra conta
+     */
+    @Transactional
+    public UsuarioResumo editarConta(Long ministerioId, Long usuarioId, DadosDaConta dados, UsuarioAutenticado autor) {
+        buscarParaEditar(ministerioId, usuarioId, autor);
+        var editada = usuarios.editar(usuarioId, dados);
+        if (editada.mudou()) {
+            registrar(AcaoAuditada.EDITAR_CONTA, autor, ministerioId, editada.conta(), "%s: " + editada.resumo());
+        }
+        return editada.conta();
+    }
+
+    /**
      * Tira a pessoa do ministério, com as habilitações dela aqui. A conta continua, e as outras membresias também.
      *
      * @throws RegraVioladaException se a pessoa é gerente e quem pede não é admin
@@ -161,6 +205,44 @@ public class MembroService {
         membresias.delete(membresia);
         registrar(AcaoAuditada.REMOVER_MEMBRO, autor, ministerioId, pessoa, "%s saiu do ministério");
         return pessoa;
+    }
+
+    /**
+     * Desativa a conta, que vale para todos os ministérios: a pessoa não entra mais e as sessões abertas dela caem
+     * (UsuarioService). Ela continua nos ministérios. Só o admin, e nunca na própria conta; a auditoria fica sem
+     * ministério.
+     *
+     * @throws RegraVioladaException se é a conta de quem pede ou se ela já está desativada
+     */
+    @Transactional
+    public UsuarioResumo desativarConta(Long ministerioId, Long usuarioId, UsuarioAutenticado autor) {
+        exigirAdmin(autor);
+        var pessoa = buscar(ministerioId, usuarioId).pessoa();
+        if (autor.getId().equals(usuarioId)) {
+            throw RegraVioladaException.geral(
+                    "Sua conta continua ativa: o administrador não desativa a própria conta.");
+        }
+        if (!pessoa.ativo()) {
+            throw RegraVioladaException.geral("A conta de " + pessoa.nome() + " já está desativada.");
+        }
+        var desativada = usuarios.desativar(usuarioId);
+        registrarNaConta(AcaoAuditada.DESATIVAR_CONTA, autor, desativada, "Conta de %s desativada.");
+        return desativada;
+    }
+
+    /**
+     * @throws RegraVioladaException se a conta já está ativa
+     */
+    @Transactional
+    public UsuarioResumo reativarConta(Long ministerioId, Long usuarioId, UsuarioAutenticado autor) {
+        exigirAdmin(autor);
+        var pessoa = buscar(ministerioId, usuarioId).pessoa();
+        if (pessoa.ativo()) {
+            throw RegraVioladaException.geral("A conta de " + pessoa.nome() + " já está ativa.");
+        }
+        var reativada = usuarios.reativar(usuarioId);
+        registrarNaConta(AcaoAuditada.REATIVAR_CONTA, autor, reativada, "Conta de %s reativada.");
+        return reativada;
     }
 
     @Transactional
@@ -197,7 +279,7 @@ public class MembroService {
     /** O controller já exige o perfil; aqui é a garantia para quem chamar o serviço por outro caminho. */
     private static void exigirAdmin(UsuarioAutenticado autor) {
         if (!autor.isAdmin()) {
-            throw new AccessDeniedException("Só o administrador nomeia e remove gerentes");
+            throw new AccessDeniedException("Só o administrador nomeia gerentes e desativa contas");
         }
     }
 
@@ -207,6 +289,12 @@ public class MembroService {
         String descricao = modelo.formatted(pessoa.nome()) + " ("
                 + ministerios.buscar(ministerioId).getNome() + ").";
         auditoria.registrar(new RegistroDeAuditoria(acao, autor.getId(), ministerioId, pessoa.id(), descricao));
+    }
+
+    /** Ação sobre a conta, que vale para todos os ministérios: a auditoria fica sem ministério. */
+    private void registrarNaConta(AcaoAuditada acao, UsuarioAutenticado autor, UsuarioResumo pessoa, String modelo) {
+        auditoria.registrar(
+                new RegistroDeAuditoria(acao, autor.getId(), null, pessoa.id(), modelo.formatted(pessoa.nome())));
     }
 
     private static String descrever(Habilitacao habilitacao) {

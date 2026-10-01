@@ -3,6 +3,7 @@ package br.igreja.escala.identidade.domain;
 import java.io.Serial;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -73,5 +74,19 @@ public final class UsuarioAutenticado implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;
+    }
+
+    /**
+     * A mesma pessoa, pelo id: o registro de sessões (SessoesAbertas) junta pelo principal as sessões de cada login,
+     * mesmo depois de o nome ou a marca de senha provisória mudarem.
+     */
+    @Override
+    public boolean equals(Object outro) {
+        return outro instanceof UsuarioAutenticado usuario && Objects.equals(id, usuario.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
     }
 }

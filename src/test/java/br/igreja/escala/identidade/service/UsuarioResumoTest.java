@@ -21,6 +21,6 @@ class UsuarioResumoTest {
     }
 
     private static UsuarioResumo resumo(String nome) {
-        return new UsuarioResumo(1L, nome, "x@x.com", null, false, false);
+        return new UsuarioResumo(1L, nome, "x@x.com", null, false, false, true);
     }
 }

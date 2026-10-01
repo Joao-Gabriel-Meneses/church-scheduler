@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class UsuarioAutenticadoTest {
 
@@ -46,5 +47,20 @@ class UsuarioAutenticadoTest {
                 .isTrue();
         assertThat(new UsuarioAutenticado(Usuario.membro("Ana", "ana@x.com", "hash")).isAdmin())
                 .isFalse();
+    }
+
+    @Test
+    void eAMesmaPessoaPeloIdMesmoComOutrosDados() {
+        var noLogin = new UsuarioAutenticado(comId(Usuario.comSenhaProvisoria("Ana", "ana@x.com", null, "hash"), 1L));
+        var depoisDaTroca = new UsuarioAutenticado(comId(Usuario.membro("Ana Souza", "ana@x.com", "outro"), 1L));
+        var outra = new UsuarioAutenticado(comId(Usuario.membro("Ana", "ana@x.com", "hash"), 2L));
+
+        assertThat(noLogin).isEqualTo(depoisDaTroca).hasSameHashCodeAs(depoisDaTroca);
+        assertThat(noLogin).isNotEqualTo(outra).isNotEqualTo("ana@x.com");
+    }
+
+    private static Usuario comId(Usuario usuario, long id) {
+        ReflectionTestUtils.setField(usuario, "id", id);
+        return usuario;
     }
 }

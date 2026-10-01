@@ -71,6 +71,15 @@ class LoginControllerTest {
     }
 
     @Test
+    void sessaoEncerradaExplicaOMotivo() throws Exception {
+        mvc.perform(get("/login").param("expirou", ""))
+                .andExpect(content().string(Matchers.containsString("class=\"rt-alert\" role=\"alert\"")))
+                .andExpect(content().string(Matchers.containsString("Sua sessão foi encerrada.")))
+                .andExpect(content().string(Matchers.containsString("Entre de novo.")))
+                .andExpect(content().string(Matchers.not(Matchers.containsString("E-mail ou senha inválidos."))));
+    }
+
+    @Test
     void depoisDoErroMantemOEmailDigitadoESenhaVazia() throws Exception {
         when(usuarios.loadUserByUsername("ana.souza@exemplo.com"))
                 .thenThrow(new UsernameNotFoundException("não existe"));

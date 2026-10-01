@@ -88,7 +88,7 @@ class MinisterioServiceTest {
         gerente.tornarGerente();
         when(membresias.findByGerenteTrue()).thenReturn(List.of(gerente));
         when(usuarios.resumosPorId(anyCollection()))
-                .thenReturn(Map.of(10L, new UsuarioResumo(10L, "Ana Souza", "ana@x.com", null, false, false)));
+                .thenReturn(Map.of(10L, new UsuarioResumo(10L, "Ana Souza", "ana@x.com", null, false, false, true)));
 
         var resumos = servico.resumos();
 

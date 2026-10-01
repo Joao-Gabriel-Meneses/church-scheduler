@@ -1,15 +1,19 @@
 package br.igreja.escala.identidade.service;
 
+import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.identidade.domain.Usuario;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
 import br.igreja.escala.identidade.repository.UsuarioRepository;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,10 +24,12 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarios;
     private final PasswordEncoder passwordEncoder;
+    private final ApplicationEventPublisher eventos;
 
-    UsuarioService(UsuarioRepository usuarios, PasswordEncoder passwordEncoder) {
+    UsuarioService(UsuarioRepository usuarios, PasswordEncoder passwordEncoder, ApplicationEventPublisher eventos) {
         this.usuarios = usuarios;
         this.passwordEncoder = passwordEncoder;
+        this.eventos = eventos;
     }
 
     /**
@@ -59,8 +65,9 @@ public class UsuarioService {
     }
 
     /**
-     * Senha provisória definida por um gerente ou admin; o usuário volta a ter de trocá-la no próximo acesso. Quem
-     * pode redefinir a senha de quem é regra de quem chama (o módulo ministerio).
+     * Senha provisória definida por um gerente ou admin; o usuário volta a ter de trocá-la no próximo acesso, e as
+     * sessões abertas dele são encerradas ({@link AcessoRevogado}). Quem pode redefinir a senha de quem é regra de quem
+     * chama (o módulo ministerio).
      *
      * @throws SenhaRecusadaException no campo {@code senha}, se a senha não tem o tamanho certo
      */
@@ -68,6 +75,77 @@ public class UsuarioService {
     public void redefinirSenhaProvisoria(Long usuarioId, String senha) {
         exigirTamanho(senha, "senha");
         usuarios.findById(usuarioId).orElseThrow().definirSenhaProvisoria(passwordEncoder.encode(senha));
+        eventos.publishEvent(new AcessoRevogado(usuarioId));
+    }
+
+    /**
+     * Nome, e-mail e telefone editados por quem gerencia a conta. Quem pode editar a conta de quem é regra de quem chama
+     * (o módulo ministerio).
+     *
+     * @throws RegraVioladaException no campo {@code email}, se o e-mail já é o login de outra conta
+     */
+    @Transactional
+    public ContaEditada editar(Long usuarioId, DadosDaConta dados) {
+        var usuario = usuarios.findById(usuarioId).orElseThrow();
+        var alterados = aplicar(usuario, dados);
+        return new ContaEditada(UsuarioResumo.de(usuario), alterados);
+    }
+
+    /**
+     * Nome, e-mail e telefone editados pelo próprio usuário.
+     *
+     * @return o usuário da sessão atualizado, com o nome e o e-mail novos
+     * @throws RegraVioladaException no campo {@code email}, se o e-mail já é o login de outra conta
+     */
+    @Transactional
+    public UsuarioAutenticado editarPropriaConta(Long usuarioId, DadosDaConta dados) {
+        var usuario = usuarios.findById(usuarioId).orElseThrow();
+        aplicar(usuario, dados);
+        return new UsuarioAutenticado(usuario);
+    }
+
+    private List<String> aplicar(Usuario usuario, DadosDaConta dados) {
+        String email = Usuario.normalizarEmail(dados.email());
+        if (usuarios.findByEmail(email)
+                .filter(outra -> !outra.getId().equals(usuario.getId()))
+                .isPresent()) {
+            throw new RegraVioladaException("email", "O e-mail " + email + " já é o login de outra conta.");
+        }
+        String nome = usuario.getNome();
+        String emailAnterior = usuario.getEmail();
+        String telefone = usuario.getTelefone();
+        usuario.editarDados(dados.nome(), email, dados.telefone());
+        var alterados = new ArrayList<String>();
+        if (!nome.equals(usuario.getNome())) {
+            alterados.add("nome");
+        }
+        if (!emailAnterior.equals(usuario.getEmail())) {
+            alterados.add("e-mail");
+        }
+        if (!Objects.equals(telefone, usuario.getTelefone())) {
+            alterados.add("telefone");
+        }
+        return List.copyOf(alterados);
+    }
+
+    /**
+     * A pessoa deixa de entrar, em todos os ministérios, e as sessões abertas dela são encerradas
+     * ({@link AcessoRevogado}). Quem pode desativar é regra de quem chama (o módulo ministerio).
+     */
+    @Transactional
+    public UsuarioResumo desativar(Long usuarioId) {
+        var usuario = usuarios.findById(usuarioId).orElseThrow();
+        usuario.desativar();
+        eventos.publishEvent(new AcessoRevogado(usuarioId));
+        return UsuarioResumo.de(usuario);
+    }
+
+    /** A pessoa volta a entrar, com a mesma senha. */
+    @Transactional
+    public UsuarioResumo reativar(Long usuarioId) {
+        var usuario = usuarios.findById(usuarioId).orElseThrow();
+        usuario.reativar();
+        return UsuarioResumo.de(usuario);
     }
 
     /** Usuários pelos ids, em ordem de nome. Ids que não existem ficam de fora. */

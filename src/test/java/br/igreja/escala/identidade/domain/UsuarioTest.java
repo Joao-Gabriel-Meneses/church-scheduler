@@ -87,4 +87,39 @@ class UsuarioTest {
         assertThat(usuario.getSenhaHash()).isEqualTo("hash-da-ana");
         assertThatIllegalArgumentException().isThrownBy(() -> usuario.definirSenha(" "));
     }
+
+    @Test
+    void editaNomeEmailETelefoneNormalizados() {
+        var usuario = Usuario.comSenhaProvisoria("Ana", "ana@x.com", "(11) 98888-7777", "hash");
+
+        usuario.editarDados(" Ana Souza ", " Ana.Souza@X.com ", " ");
+
+        assertThat(usuario.getNome()).isEqualTo("Ana Souza");
+        assertThat(usuario.getEmail()).isEqualTo("ana.souza@x.com");
+        assertThat(usuario.getTelefone()).isNull();
+        assertThat(usuario.isSenhaProvisoria()).isTrue();
+        assertThat(usuario.getSenhaHash()).isEqualTo("hash");
+    }
+
+    @Test
+    void editarExigeNomeEEmail() {
+        var usuario = Usuario.membro("Ana", "ana@x.com", "hash");
+
+        assertThatIllegalArgumentException().isThrownBy(() -> usuario.editarDados(" ", "ana@x.com", null));
+        assertThatIllegalArgumentException().isThrownBy(() -> usuario.editarDados("Ana", null, null));
+        assertThatIllegalArgumentException().isThrownBy(() -> usuario.editarDados("Ana", "ana@x.com", "1".repeat(21)));
+    }
+
+    @Test
+    void contaDesativadaNaoEntraAteSerReativada() {
+        var usuario = Usuario.membro("Ana", "ana@x.com", "hash");
+
+        usuario.desativar();
+        assertThat(usuario.isAtivo()).isFalse();
+        assertThat(new UsuarioAutenticado(usuario).isEnabled()).isFalse();
+
+        usuario.reativar();
+        assertThat(new UsuarioAutenticado(usuario).isEnabled()).isTrue();
+        assertThat(usuario.getSenhaHash()).isEqualTo("hash");
+    }
 }
