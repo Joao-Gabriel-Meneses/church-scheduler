@@ -67,9 +67,13 @@ br.igreja.escala       # pacote provisório (ver "Em aberto")
 
 Gerente e admin também servem e aparecem na escala. Um usuário pode estar em vários ministérios e em várias funções em cada um.
 
-- **Acesso do membro:** o gerente cadastra o membro com uma **senha provisória** e a passa para a pessoa. Enquanto a senha for provisória, o `SenhaProvisoriaInterceptor` só deixa abrir `/conta/senha`. "Redefinir senha" do gerente gera outra provisória e é a recuperação de senha até existir e-mail.
-- O gerente mexe só em membros comuns. **Conta de gerente ou admin só o admin redefine ou remove**, e só o admin nomeia gerentes (senão um gerente entraria como alguém com mais acesso).
-- Cadastrar um e-mail que já tem conta só cria a membresia; a conta não muda.
+- **Acesso do membro:** o login é o **e-mail**. O gerente cadastra o membro com uma **senha provisória** e a passa para a pessoa. Enquanto a senha for provisória, o `SenhaProvisoriaInterceptor` só deixa abrir `/conta/senha`. "Redefinir senha" do gerente gera outra provisória e é a recuperação de senha até existir e-mail.
+- O gerente mexe só em membros comuns: redefine a senha e edita nome, e-mail e telefone. **Conta de gerente ou admin só o admin redefine, edita ou remove**, e só o admin nomeia gerentes (senão um gerente entraria como alguém com mais acesso). A regra fica no `MembroService.podeMexerNaConta`.
+- **A própria conta não se muda pela rota do gerente**, nem pelo admin: dados em `/conta`, senha em `/conta/senha`.
+- **Desativar e reativar conta é só do admin**, e ele não desativa a própria. A conta vale para todos os ministérios; o gerente só remove do ministério dele. Conta desativada não entra, continua nos ministérios e aparece com Badge. Pendente: conta que saiu de todos os ministérios ainda não tem tela para o admin editar ou desativar.
+- **Sessões:** redefinir a senha de alguém ou desativar a conta encerra na hora todas as sessões abertas da pessoa, inclusive o "continuar conectado" (`SessoesAbertas`, depois do commit). Trocar a própria senha encerra as outras sessões e mantém a atual.
+- Editar a conta de outra pessoa, redefinir a senha, desativar e reativar registram `Auditoria`. A edição guarda só quais campos mudaram, sem os valores; desativar e reativar ficam sem ministério.
+- Cadastrar um e-mail que já tem conta só cria a membresia; a conta não muda (se estiver desativada, o gerente é avisado).
 - **Navegação do gerente (desde a Fase 1):** Eventos (mês e modelos), Membros (e habilitações) e Funções (funções e níveis), mais Ministérios para o admin. O design prevê Escalas, Disponibilidade, Membros e Regras; a navegação é revista quando essas páginas existirem.
 
 ## Modelo de dados (resumo)
