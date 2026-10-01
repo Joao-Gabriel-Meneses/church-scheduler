@@ -26,6 +26,8 @@ import br.igreja.escala.compartilhado.domain.AcaoAuditada;
 import br.igreja.escala.compartilhado.domain.RegistroDeAuditoria;
 import br.igreja.escala.compartilhado.service.AuditoriaService;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
+import br.igreja.escala.identidade.service.ContaEditada;
+import br.igreja.escala.identidade.service.DadosDaConta;
 import br.igreja.escala.identidade.service.NovoUsuario;
 import br.igreja.escala.identidade.service.SenhaRecusadaException;
 import br.igreja.escala.identidade.service.UsuarioResumo;
@@ -50,6 +52,7 @@ class MembroServiceTest {
 
     private static final UsuarioResumo ANA = new UsuarioResumo(30L, "Ana Souza", "ana@x.com", null, false, false);
     private static final UsuarioResumo BRUNO = new UsuarioResumo(31L, "bruno Lima", "bruno@x.com", null, false, true);
+    private static final DadosDaConta DADOS_NOVOS = new DadosDaConta("Ana Souza", "ana.souza@x.com", null);
 
     private final MembresiaRepository membresias = mock(MembresiaRepository.class);
     private final HabilitacaoRepository habilitacoes = mock(HabilitacaoRepository.class);
@@ -266,6 +269,78 @@ class MembroServiceTest {
         assertThatThrownBy(() -> servico.removerGerente(1L, 30L, GERENTE)).isInstanceOf(AccessDeniedException.class);
         servico.removerGerente(1L, 30L, ADMIN);
         assertThat(membresia.isGerente()).isFalse();
+    }
+
+    @Test
+    void gerenteEditaOsDadosDeUmMembroComumEAuditoriaGuardaSoOsCampos() {
+        when(membresias.findByUsuarioIdAndMinisterioId(30L, 1L)).thenReturn(Optional.of(new Membresia(30L, midia)));
+        var editada = new UsuarioResumo(30L, "Ana Souza", "ana.souza@x.com", null, false, false);
+        when(usuarios.editar(30L, DADOS_NOVOS)).thenReturn(new ContaEditada(editada, List.of("e-mail")));
+
+        assertThat(servico.editarConta(1L, 30L, DADOS_NOVOS, GERENTE)).isEqualTo(editada);
+
+        assertThat(auditado())
+                .isEqualTo(new RegistroDeAuditoria(
+                        AcaoAuditada.EDITAR_CONTA, 10L, 1L, 30L, "Ana Souza: e-mail alterado (Mídia)."));
+    }
+
+    @Test
+    void edicaoSemMudancaNaoVaiParaAAuditoria() {
+        when(membresias.findByUsuarioIdAndMinisterioId(30L, 1L)).thenReturn(Optional.of(new Membresia(30L, midia)));
+        when(usuarios.editar(30L, DADOS_NOVOS)).thenReturn(new ContaEditada(ANA, List.of()));
+
+        servico.editarConta(1L, 30L, DADOS_NOVOS, GERENTE);
+
+        verifyNoInteractions(auditoria);
+    }
+
+    @Test
+    void gerenteNaoEditaContaDeGerenteNemDeAdminEOAdminEdita() {
+        when(membresias.findByUsuarioIdAndMinisterioId(30L, 1L)).thenReturn(Optional.of(new Membresia(30L, midia)));
+        when(membresias.existsByUsuarioIdAndGerenteTrue(30L)).thenReturn(true);
+
+        assertThatThrownBy(() -> servico.buscarParaEditar(1L, 30L, GERENTE))
+                .hasMessage("Os dados de Ana Souza não mudaram: a conta de um gerente ou administrador só o"
+                        + " administrador edita.");
+        assertThatThrownBy(() -> servico.editarConta(1L, 30L, DADOS_NOVOS, GERENTE))
+                .isInstanceOf(RegraVioladaException.class);
+        when(membresias.existsByUsuarioIdAndGerenteTrue(30L)).thenReturn(false);
+        when(usuarios.buscar(30L)).thenReturn(new UsuarioResumo(30L, "Ana Souza", "ana@x.com", null, true, false));
+        assertThatThrownBy(() -> servico.editarConta(1L, 30L, DADOS_NOVOS, GERENTE))
+                .isInstanceOf(RegraVioladaException.class);
+        verify(usuarios, never()).editar(anyLong(), any());
+
+        when(usuarios.editar(30L, DADOS_NOVOS)).thenReturn(new ContaEditada(ANA, List.of("nome")));
+        servico.editarConta(1L, 30L, DADOS_NOVOS, ADMIN);
+        verify(usuarios).editar(30L, DADOS_NOVOS);
+    }
+
+    @Test
+    void ninguemEditaAPropriaContaPorAqui() {
+        when(membresias.findByUsuarioIdAndMinisterioId(1L, 1L)).thenReturn(Optional.of(new Membresia(1L, midia)));
+        when(usuarios.buscar(1L)).thenReturn(new UsuarioResumo(1L, "Admin", "admin@x.com", null, true, false));
+
+        assertThatThrownBy(() -> servico.editarConta(1L, 1L, DADOS_NOVOS, ADMIN))
+                .isInstanceOfSatisfying(RegraVioladaException.class, recusa -> {
+                    assertThat(recusa.campo()).isNull();
+                    assertThat(recusa.getMessage()).isEqualTo("Para mudar os seus dados, use Minha conta no início.");
+                });
+        verify(usuarios, never()).editar(anyLong(), any());
+        verifyNoInteractions(auditoria);
+    }
+
+    @Test
+    void editarPessoaDeOutroMinisterioNaoEncontraEEmailRepetidoVoltaNoCampo() {
+        assertThatThrownBy(() -> servico.editarConta(1L, 30L, DADOS_NOVOS, ADMIN))
+                .isInstanceOf(NaoEncontradoException.class);
+
+        when(membresias.findByUsuarioIdAndMinisterioId(30L, 1L)).thenReturn(Optional.of(new Membresia(30L, midia)));
+        when(usuarios.editar(30L, DADOS_NOVOS)).thenThrow(new RegraVioladaException("email", "Já é de outra conta."));
+        assertThatThrownBy(() -> servico.editarConta(1L, 30L, DADOS_NOVOS, GERENTE))
+                .isInstanceOfSatisfying(
+                        RegraVioladaException.class,
+                        recusa -> assertThat(recusa.campo()).isEqualTo("email"));
+        verifyNoInteractions(auditoria);
     }
 
     @Test

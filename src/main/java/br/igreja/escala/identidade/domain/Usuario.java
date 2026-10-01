@@ -24,6 +24,9 @@ public class Usuario {
 
     public static final int TAMANHO_TELEFONE = 20;
 
+    /** Vazio, ou de 8 a 20 entre números, espaços, parênteses, + e - (validação dos formulários). */
+    public static final String FORMATO_TELEFONE = "^$|^[0-9()+\\-\\s]{8," + TAMANHO_TELEFONE + "}$";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -92,6 +95,16 @@ public class Usuario {
     public void definirSenha(String senhaHash) {
         this.senhaHash = exigirTexto(senhaHash, "senhaHash");
         this.senhaProvisoria = false;
+    }
+
+    /**
+     * Nome, e-mail e telefone, pelo próprio usuário ou por quem gerencia a conta. O e-mail continua sendo o login; quem
+     * chama confere antes se ele já é de outra conta.
+     */
+    public void editarDados(String nome, String email, String telefone) {
+        this.nome = exigirTexto(nome, "nome").strip();
+        this.email = normalizarEmail(email);
+        this.telefone = telefoneOpcional(telefone);
     }
 
     /** E-mail é a identidade de login: comparado sem diferenciar maiúsculas e sem espaços nas pontas. */

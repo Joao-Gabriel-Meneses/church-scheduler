@@ -19,7 +19,7 @@ public record DadosDoMembro(
         @NotBlank(message = "Informe o e-mail.") @Email(message = "Informe um e-mail válido, como ana@exemplo.com.") @Size(max = 254, message = "Use no máximo {max} caracteres.") String email,
 
         @Pattern(
-                regexp = "^$|^[0-9()+\\-\\s]{8," + Usuario.TAMANHO_TELEFONE + "}$",
+                regexp = Usuario.FORMATO_TELEFONE,
                 message = "Use só números, espaços, parênteses, + e -, como (11) 98888-7777.")
         String telefone,
 

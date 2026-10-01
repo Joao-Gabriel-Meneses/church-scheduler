@@ -4,8 +4,10 @@ import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.compartilhado.web.Formularios;
 import br.igreja.escala.compartilhado.web.Opcao;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
+import br.igreja.escala.identidade.service.DadosDaConta;
 import br.igreja.escala.ministerio.service.DadosDoMembro;
 import br.igreja.escala.ministerio.service.HabilitacaoService;
+import br.igreja.escala.ministerio.service.MembroResumo;
 import br.igreja.escala.ministerio.service.MembroService;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import br.igreja.escala.ministerio.service.NivelService;
@@ -28,8 +30,8 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
- * Membros do ministério: lista, cadastro com senha provisória e a página de cada um. Nomear e remover gerente é do
- * admin: o {@code @PreAuthorize} do método vale no lugar do {@link GerenteDoMinisterio} da classe.
+ * Membros do ministério: lista, cadastro com senha provisória, a página de cada um e os dados da conta. Nomear e remover
+ * gerente é do admin: o {@code @PreAuthorize} do método vale no lugar do {@link GerenteDoMinisterio} da classe.
  */
 @Controller
 @GerenteDoMinisterio
@@ -39,6 +41,7 @@ class MembroController {
     static final String LISTA = "ministerio/membros";
     static final String PAGINA_DO_MEMBRO = "ministerio/membro";
     private static final String FORMULARIO = "ministerio/membro-form";
+    static final String DADOS_DA_CONTA = "ministerio/membro-conta";
 
     private final MinisterioService ministerios;
     private final MembroService membros;
@@ -148,6 +151,49 @@ class MembroController {
         }
     }
 
+    @GetMapping("/{usuarioId}/editar")
+    String editarConta(
+            @PathVariable Long ministerioId,
+            @PathVariable Long usuarioId,
+            @AuthenticationPrincipal UsuarioAutenticado autor,
+            Model model,
+            RedirectAttributes redirecionamento) {
+        try {
+            var membro = membros.buscarParaEditar(ministerioId, usuarioId, autor);
+            model.addAttribute("form", DadosDaConta.de(membro.pessoa()));
+            return dadosDaConta(ministerioId, membro, model);
+        } catch (RegraVioladaException recusa) {
+            redirecionamento.addFlashAttribute("recusa", recusa.getMessage());
+            return paraOMembro(ministerioId, usuarioId);
+        }
+    }
+
+    @PostMapping("/{usuarioId}/editar")
+    String salvarConta(
+            @PathVariable Long ministerioId,
+            @PathVariable Long usuarioId,
+            @Valid @ModelAttribute("form") DadosDaConta form,
+            BindingResult erros,
+            @AuthenticationPrincipal UsuarioAutenticado autor,
+            Model model,
+            RedirectAttributes redirecionamento) {
+        try {
+            if (erros.hasErrors()) {
+                return dadosDaConta(ministerioId, membros.buscarParaEditar(ministerioId, usuarioId, autor), model);
+            }
+            var conta = membros.editarConta(ministerioId, usuarioId, form, autor);
+            redirecionamento.addFlashAttribute("sucesso", "Dados de " + conta.nome() + " salvos");
+            return paraOMembro(ministerioId, usuarioId);
+        } catch (RegraVioladaException recusa) {
+            if (recusa.campo() == null) {
+                redirecionamento.addFlashAttribute("recusa", recusa.getMessage());
+                return paraOMembro(ministerioId, usuarioId);
+            }
+            Formularios.rejeitar(erros, recusa);
+            return dadosDaConta(ministerioId, membros.buscar(ministerioId, usuarioId), model);
+        }
+    }
+
     @PostMapping("/{usuarioId}/senha")
     String redefinirSenha(
             @PathVariable Long ministerioId,
@@ -202,6 +248,12 @@ class MembroController {
         var pessoa = membros.removerGerente(ministerioId, usuarioId, autor);
         redirecionamento.addFlashAttribute("sucesso", pessoa.nome() + " deixou de ser gerente");
         return paraOMembro(ministerioId, usuarioId);
+    }
+
+    private String dadosDaConta(Long ministerioId, MembroResumo membro, Model model) {
+        model.addAttribute("ministerio", ministerios.buscar(ministerioId));
+        model.addAttribute("membro", membro);
+        return DADOS_DA_CONTA;
     }
 
     private String formulario(Long ministerioId, Model model) {

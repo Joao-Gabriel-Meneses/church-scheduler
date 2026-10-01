@@ -24,6 +24,7 @@ import br.igreja.escala.AcessoDeTeste;
 import br.igreja.escala.TesteDeRotaDoGerente;
 import br.igreja.escala.compartilhado.NaoEncontradoException;
 import br.igreja.escala.compartilhado.RegraVioladaException;
+import br.igreja.escala.identidade.service.DadosDaConta;
 import br.igreja.escala.identidade.service.UsuarioResumo;
 import br.igreja.escala.ministerio.Exemplos;
 import br.igreja.escala.ministerio.domain.Icone;
@@ -90,6 +91,9 @@ class MembroControllerTest {
                 .andExpect(status().isForbidden());
         mvc.perform(post("/ministerios/1/membros/30/remover").with(user(MEMBRO)).with(csrf()))
                 .andExpect(status().isForbidden());
+        mvc.perform(get("/ministerios/1/membros/30/editar").with(user(MEMBRO))).andExpect(status().isForbidden());
+        mvc.perform(editar(1).with(user(MEMBRO))).andExpect(status().isForbidden());
+        verify(membros, never()).editarConta(anyLong(), anyLong(), any(), any());
         verify(membros, never()).cadastrar(anyLong(), any());
         verify(membros, never()).redefinirSenha(anyLong(), anyLong(), anyString(), any());
         verify(membros, never()).remover(anyLong(), anyLong(), any());
@@ -108,6 +112,10 @@ class MembroControllerTest {
                         .with(user(GERENTE_DA_MIDIA))
                         .with(csrf()))
                 .andExpect(status().isForbidden());
+        mvc.perform(get("/ministerios/2/membros/30/editar").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(status().isForbidden());
+        mvc.perform(editar(2).with(user(GERENTE_DA_MIDIA))).andExpect(status().isForbidden());
+        verify(membros, never()).editarConta(anyLong(), anyLong(), any(), any());
         verify(membros, never()).cadastrar(anyLong(), any());
         verify(membros, never()).redefinirSenha(anyLong(), anyLong(), anyString(), any());
         verify(membros, never()).remover(anyLong(), anyLong(), any());
@@ -227,6 +235,7 @@ class MembroControllerTest {
                 .contains("popovertarget=\"redefinir-senha\"", "action=\"/ministerios/1/membros/30/senha\"")
                 .contains("minlength=\"8\"", "maxlength=\"64\"")
                 .contains("popovertarget=\"remover-membro\"", "action=\"/ministerios/1/membros/30/remover\"")
+                .contains("href=\"/ministerios/1/membros/30/editar\"", "Editar dados")
                 .doesNotContain("Tornar gerente");
     }
 
@@ -245,8 +254,8 @@ class MembroControllerTest {
         assertThat(pagina(
                         get("/ministerios/1/membros/30").with(user(GERENTE_DA_MIDIA)),
                         MembroController.PAGINA_DO_MEMBRO))
-                .contains("só o administrador redefine")
-                .doesNotContain("id=\"redefinir-senha\"", "id=\"remover-membro\"");
+                .contains("Os dados e a senha de gerentes e administradores só o administrador muda.")
+                .doesNotContain("id=\"redefinir-senha\"", "id=\"remover-membro\"", "/membros/30/editar");
     }
 
     @Test
@@ -261,8 +270,8 @@ class MembroControllerTest {
         assertThat(pagina(
                         get("/ministerios/1/membros/10").with(user(GERENTE_DA_MIDIA)),
                         MembroController.PAGINA_DO_MEMBRO))
-                .contains("Esta é a sua conta.")
-                .doesNotContain("id=\"redefinir-senha\"", "id=\"remover-membro\"");
+                .contains("Esta é a sua conta.", "use Minha conta ou Trocar senha no início")
+                .doesNotContain("id=\"redefinir-senha\"", "id=\"remover-membro\"", "/membros/10/editar");
     }
 
     @Test
@@ -390,9 +399,97 @@ class MembroControllerTest {
     @Test
     void pessoaDeOutroMinisterioE404() throws Exception {
         when(membros.buscar(1L, 99L)).thenThrow(new NaoEncontradoException("Usuário 99"));
+        when(membros.buscarParaEditar(eq(1L), eq(99L), any())).thenThrow(new NaoEncontradoException("Usuário 99"));
+        when(membros.editarConta(eq(1L), eq(99L), any(), any())).thenThrow(new NaoEncontradoException("Usuário 99"));
 
         mvc.perform(get("/ministerios/1/membros/99").with(user(GERENTE_DA_MIDIA)))
                 .andExpect(status().isNotFound());
+        mvc.perform(get("/ministerios/1/membros/99/editar").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/ministerios/1/membros/99/editar")
+                        .with(user(GERENTE_DA_MIDIA))
+                        .with(csrf())
+                        .param("nome", "Ana Souza")
+                        .param("email", "ana@x.com"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void formularioDosDadosVemPreenchidoEAvisaQueOEmailEOLogin() throws Exception {
+        when(membros.buscarParaEditar(1L, 30L, GERENTE_DA_MIDIA)).thenReturn(ANA_NA_MIDIA);
+
+        assertThat(pagina(
+                        get("/ministerios/1/membros/30/editar").with(user(GERENTE_DA_MIDIA)),
+                        MembroController.DADOS_DA_CONTA))
+                .contains("<h1 class=\"text-title\">Editar dados</h1>", "Mídia · Membros · Ana Souza")
+                .contains("action=\"/ministerios/1/membros/30/editar\"")
+                .contains("value=\"Ana Souza\"", "value=\"ana@x.com\"", "value=\"(11) 98888-7777\"")
+                .contains("É o login da pessoa. Se mudar, avise: ela passa a entrar com o novo e-mail.")
+                .contains("href=\"/ministerios/1/membros/30\"");
+    }
+
+    @Test
+    void salvaOsDadosEVoltaParaOMembroComToast() throws Exception {
+        var dados = new DadosDaConta("Ana Souza", "ana.souza@x.com", "(11) 98888-7777");
+        when(membros.editarConta(1L, 30L, dados, GERENTE_DA_MIDIA)).thenReturn(ANA);
+
+        mvc.perform(editar(1).with(user(GERENTE_DA_MIDIA)))
+                .andExpect(redirectedUrl("/ministerios/1/membros/30"))
+                .andExpect(flash().attribute("sucesso", "Dados de Ana Souza salvos"));
+    }
+
+    @Test
+    void dadosInvalidosVoltamComOsErrosNosCampos() throws Exception {
+        when(membros.buscarParaEditar(1L, 30L, GERENTE_DA_MIDIA)).thenReturn(ANA_NA_MIDIA);
+
+        String html = pagina(
+                post("/ministerios/1/membros/30/editar")
+                        .with(user(GERENTE_DA_MIDIA))
+                        .with(csrf())
+                        .param("nome", "")
+                        .param("email", "sem-arroba")
+                        .param("telefone", "abc"),
+                MembroController.DADOS_DA_CONTA);
+
+        assertThat(html)
+                .contains("Informe o nome.", "Informe um e-mail válido", "Use só números")
+                .contains("value=\"sem-arroba\"");
+        verify(membros, never()).editarConta(anyLong(), anyLong(), any(), any());
+    }
+
+    @Test
+    void emailDeOutraContaApareceNoCampo() throws Exception {
+        when(membros.editarConta(eq(1L), eq(30L), any(), any()))
+                .thenThrow(new RegraVioladaException("email", "O e-mail bia@x.com já é o login de outra conta."));
+
+        assertThat(pagina(
+                        post("/ministerios/1/membros/30/editar")
+                                .with(user(GERENTE_DA_MIDIA))
+                                .with(csrf())
+                                .param("nome", "Ana Souza")
+                                .param("email", "bia@x.com"),
+                        MembroController.DADOS_DA_CONTA))
+                .contains("id=\"email-erro\"", "O e-mail bia@x.com já é o login de outra conta.");
+    }
+
+    @Test
+    void contaQueOGerenteNaoPodeEditarVoltaParaOMembroComOMotivo() throws Exception {
+        var recusa = RegraVioladaException.geral("Os dados de Ana Souza não mudaram.");
+        when(membros.buscarParaEditar(1L, 30L, GERENTE_DA_MIDIA)).thenThrow(recusa);
+        when(membros.editarConta(eq(1L), eq(30L), any(), any())).thenThrow(recusa);
+
+        mvc.perform(get("/ministerios/1/membros/30/editar").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(redirectedUrl("/ministerios/1/membros/30"))
+                .andExpect(flash().attribute("recusa", "Os dados de Ana Souza não mudaram."));
+        mvc.perform(editar(1).with(user(GERENTE_DA_MIDIA)))
+                .andExpect(redirectedUrl("/ministerios/1/membros/30"))
+                .andExpect(flash().attribute("recusa", "Os dados de Ana Souza não mudaram."));
+        mvc.perform(post("/ministerios/1/membros/30/editar")
+                        .with(user(GERENTE_DA_MIDIA))
+                        .with(csrf())
+                        .param("nome", ""))
+                .andExpect(redirectedUrl("/ministerios/1/membros/30"))
+                .andExpect(flash().attribute("recusa", "Os dados de Ana Souza não mudaram."));
     }
 
     @Test
@@ -405,6 +502,20 @@ class MembroControllerTest {
                 .andExpect(status().isForbidden());
         mvc.perform(post("/ministerios/1/membros/30/remover").with(user(GERENTE_DA_MIDIA)))
                 .andExpect(status().isForbidden());
+        mvc.perform(post("/ministerios/1/membros/30/editar")
+                        .with(user(GERENTE_DA_MIDIA))
+                        .param("nome", "Ana Souza")
+                        .param("email", "ana@x.com"))
+                .andExpect(status().isForbidden());
+        verify(membros, never()).editarConta(anyLong(), anyLong(), any(), any());
+    }
+
+    private static MockHttpServletRequestBuilder editar(long ministerioId) {
+        return post("/ministerios/{m}/membros/30/editar", ministerioId)
+                .with(csrf())
+                .param("nome", "Ana Souza")
+                .param("email", "ana.souza@x.com")
+                .param("telefone", "(11) 98888-7777");
     }
 
     private static MockHttpServletRequestBuilder cadastrar(long ministerioId) {

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!--/*
+    Dados da conta de um membro (gerente ou admin): nome, e-mail e telefone. O e-mail é o login da pessoa; a dica avisa.
+    A recusa de e-mail que já é de outra conta volta no campo (Formularios.rejeitar).
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title th:text="|Editar dados · ${membro.nome} · ${ministerio.nome} · Escala|">Editar dados · Ana Souza · Mídia · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-1">
+        <p class="text-ink-muted" th:text="|${ministerio.nome} · Membros · ${membro.nome}|">Mídia · Membros · Ana Souza</p>
+        <h1 class="text-title">Editar dados</h1>
+    </header>
+
+    <form th:action="@{/ministerios/{m}/membros/{u}/editar(m=${ministerio.id}, u=${membro.id})}" th:object="${form}"
+          method="post" class="rt-panel flex w-full max-w-md flex-col gap-4 p-6">
+        <th:block th:replace="~{componentes/formulario :: errosGerais}"></th:block>
+        <th:block th:with="autocomplete='off'">
+            <div th:replace="~{componentes/formulario :: campoDoObjeto('Nome', 'nome')}"></div>
+        </th:block>
+        <th:block th:with="tipo='email', autocomplete='off',
+                           dica='É o login da pessoa. Se mudar, avise: ela passa a entrar com o novo e-mail.'">
+            <div th:replace="~{componentes/formulario :: campoDoObjeto('E-mail', 'email')}"></div>
+        </th:block>
+        <th:block th:with="tipo='tel', inputmode='tel', autocomplete='off', dica='Opcional.'">
+            <div th:replace="~{componentes/formulario :: campoDoObjeto('Telefone', 'telefone')}"></div>
+        </th:block>
+        <div class="flex flex-wrap gap-2">
+            <button th:replace="~{componentes/botao :: botao(texto='Salvar', variante=null, icone=null, classe=null,
+                    tipo=null)}"></button>
+            <a th:replace="~{componentes/botao :: botao(texto='Cancelar', variante='secondary',
+                    href=@{/ministerios/{m}/membros/{u}(m=${ministerio.id}, u=${membro.id})}, icone=null,
+                    classe=null)}"></a>
+        </div>
+    </form>
+</main>
+</body>
+</html>

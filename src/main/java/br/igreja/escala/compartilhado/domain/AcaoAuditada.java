@@ -5,5 +5,6 @@ public enum AcaoAuditada {
     NOMEAR_GERENTE,
     REMOVER_GERENTE,
     REDEFINIR_SENHA,
-    REMOVER_MEMBRO
+    REMOVER_MEMBRO,
+    EDITAR_CONTA
 }

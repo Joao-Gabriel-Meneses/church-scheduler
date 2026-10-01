@@ -11,8 +11,12 @@
     <p sec:authorize="hasRole('ADMIN')">
         <span th:replace="~{componentes/badge :: badge('Administrador')}"></span>
     </p>
-    <p><a th:replace="~{componentes/botao :: botao(texto='Trocar senha', variante='outline', href=@{/conta/senha},
-            icone='lock', classe=null)}"></a></p>
+    <p class="flex flex-wrap gap-2">
+        <a th:replace="~{componentes/botao :: botao(texto='Minha conta', variante='outline', href=@{/conta},
+                icone='user', classe=null)}"></a>
+        <a th:replace="~{componentes/botao :: botao(texto='Trocar senha', variante='outline', href=@{/conta/senha},
+                icone='lock', classe=null)}"></a>
+    </p>
 </main>
 </body>
 </html>

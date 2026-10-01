@@ -6,6 +6,7 @@ import br.igreja.escala.compartilhado.domain.AcaoAuditada;
 import br.igreja.escala.compartilhado.domain.RegistroDeAuditoria;
 import br.igreja.escala.compartilhado.service.AuditoriaService;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
+import br.igreja.escala.identidade.service.DadosDaConta;
 import br.igreja.escala.identidade.service.NovoUsuario;
 import br.igreja.escala.identidade.service.SenhaRecusadaException;
 import br.igreja.escala.identidade.service.UsuarioResumo;
@@ -23,10 +24,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Pessoas de um ministério: cadastro com senha provisória, saída, gerentes e redefinição de senha.
+ * Pessoas de um ministério: cadastro com senha provisória, saída, gerentes, dados da conta e redefinição de senha.
  *
  * <p>O gerente mexe só nos membros comuns. Contas de gerente e de admin, e a nomeação de gerentes, ficam com o admin:
- * senão um gerente poderia redefinir a senha de alguém com mais acesso que ele e entrar como essa pessoa.
+ * senão um gerente poderia redefinir a senha (ou trocar o e-mail, que é o login) de alguém com mais acesso que ele e
+ * entrar como essa pessoa. A própria conta ninguém muda por aqui: dados e senha ficam em /conta.
  */
 @Service
 public class MembroService {
@@ -149,6 +151,41 @@ public class MembroService {
                 membro.pessoa(),
                 "Senha provisória de %s redefinida");
         return membro.pessoa();
+    }
+
+    /**
+     * O membro cuja conta quem pede pode editar (para abrir o formulário).
+     *
+     * @throws NaoEncontradoException se a pessoa não é deste ministério
+     * @throws RegraVioladaException se é a conta de quem pede, ou se o membro é gerente ou admin e quem pede não é admin
+     */
+    @Transactional(readOnly = true)
+    public MembroResumo buscarParaEditar(Long ministerioId, Long usuarioId, UsuarioAutenticado autor) {
+        var membro = buscar(ministerioId, usuarioId);
+        if (autor.getId().equals(usuarioId)) {
+            throw RegraVioladaException.geral("Para mudar os seus dados, use Minha conta no início.");
+        }
+        if (!podeMexerNaConta(membro, autor)) {
+            throw RegraVioladaException.geral("Os dados de " + membro.nome()
+                    + " não mudaram: a conta de um gerente ou administrador só o administrador edita.");
+        }
+        return membro;
+    }
+
+    /**
+     * Nome, e-mail e telefone de um membro. Registra na auditoria quais campos mudaram, sem os valores.
+     *
+     * @throws RegraVioladaException como em {@link #buscarParaEditar}, ou no campo {@code email} se o e-mail já é o
+     *     login de outra conta
+     */
+    @Transactional
+    public UsuarioResumo editarConta(Long ministerioId, Long usuarioId, DadosDaConta dados, UsuarioAutenticado autor) {
+        buscarParaEditar(ministerioId, usuarioId, autor);
+        var editada = usuarios.editar(usuarioId, dados);
+        if (editada.mudou()) {
+            registrar(AcaoAuditada.EDITAR_CONTA, autor, ministerioId, editada.conta(), "%s: " + editada.resumo());
+        }
+        return editada.conta();
     }
 
     /**

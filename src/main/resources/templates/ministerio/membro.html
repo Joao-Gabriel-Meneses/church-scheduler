@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <!--/*
     Página de um membro do ministério (gerente): contato, habilitações e o acesso dele.
-    - Redefinir senha: Sheet com a nova senha provisória; some para contas de gerente e admin, que só o admin
-      redefine (${podeMexerNaConta}).
+    - Editar dados (nome, e-mail, telefone) e Redefinir senha: somem para contas de gerente e admin, que só o admin
+      muda (${podeMexerNaConta}), e na própria conta, que se muda em /conta (${ehVoce}).
+    - Redefinir senha: Sheet com a nova senha provisória.
     - Remover do ministério: Sheet de confirmação; um gerente só o admin remove (${podeRemover}).
     - Tornar ou deixar de ser gerente: só para o admin (${ehAdmin}).
     - Habilitações: um select de nível por função (${linhas}, ${niveis}); "Salvar habilitações" é o primário.
@@ -32,7 +33,12 @@
             regra=null, acaoTexto=null, icone=null)}"></div></th:block>
 
     <section class="rt-panel flex flex-col gap-3 p-6" aria-labelledby="titulo-contato">
-        <h2 id="titulo-contato" class="text-heading">Contato</h2>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="titulo-contato" class="text-heading">Contato</h2>
+            <th:block th:if="${podeMexerNaConta and !ehVoce}"><a th:replace="~{componentes/botao :: botao(
+                    texto='Editar dados', variante='secondary', tamanho='sm', icone='pencil',
+                    href=${_base + '/editar'}, classe=null)}"></a></th:block>
+        </div>
         <dl class="grid gap-3 md:grid-cols-2">
             <div class="flex flex-col"><dt class="text-label text-ink-muted">E-mail</dt>
                 <dd th:text="${membro.pessoa.email}">ana@exemplo.com</dd></div>
@@ -84,10 +90,10 @@
             <th:block th:if="${podeRemover and !ehVoce}"><button th:replace="~{componentes/sheet :: abrir(
                     alvo='remover-membro', texto='Remover do ministério', icone='user-minus')}"></button></th:block>
         </div>
-        <p th:unless="${podeMexerNaConta}" class="text-label text-ink-muted">A senha de gerentes e administradores
-            só o administrador redefine.</p>
-        <p th:if="${ehVoce}" class="text-label text-ink-muted">Esta é a sua conta. Para mudar sua senha, use Trocar
-            senha no início.</p>
+        <p th:unless="${podeMexerNaConta}" class="text-label text-ink-muted">Os dados e a senha de gerentes e
+            administradores só o administrador muda.</p>
+        <p th:if="${ehVoce}" class="text-label text-ink-muted">Esta é a sua conta. Para mudar seus dados ou sua senha,
+            use Minha conta ou Trocar senha no início.</p>
     </section>
 
     <th:block th:if="${podeMexerNaConta and !ehVoce}">

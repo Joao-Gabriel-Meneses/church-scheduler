@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--/*
+    Minha conta: nome, e-mail e telefone da própria pessoa. O e-mail é o login; a dica avisa. A senha muda em
+    /conta/senha.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/simples :: pagina(~{::title}, ~{::main})}">
+<head>
+    <title>Minha conta · Escala</title>
+</head>
+<body>
+<main id="conteudo" class="flex flex-1 flex-col items-center justify-center p-4">
+    <div class="flex w-full max-w-sm flex-col gap-6">
+        <header class="flex flex-col gap-1 text-center">
+            <h1 class="text-title">Minha conta</h1>
+            <p class="text-ink-muted">Seu nome, e-mail e telefone. A senha você troca em Trocar senha.</p>
+        </header>
+
+        <form th:action="@{/conta}" th:object="${form}" method="post" class="rt-panel flex flex-col gap-4 p-6">
+            <th:block th:replace="~{componentes/formulario :: errosGerais}"></th:block>
+            <th:block th:with="autocomplete='name'">
+                <div th:replace="~{componentes/formulario :: campoDoObjeto('Nome', 'nome')}"></div>
+            </th:block>
+            <th:block th:with="tipo='email', autocomplete='email',
+                               dica='É com este e-mail que você entra. Se mudar, use o novo no próximo acesso.'">
+                <div th:replace="~{componentes/formulario :: campoDoObjeto('E-mail', 'email')}"></div>
+            </th:block>
+            <th:block th:with="tipo='tel', inputmode='tel', autocomplete='tel', dica='Opcional.'">
+                <div th:replace="~{componentes/formulario :: campoDoObjeto('Telefone', 'telefone')}"></div>
+            </th:block>
+            <button th:replace="~{componentes/botao :: botao(texto='Salvar', variante=null, icone=null,
+                    classe='w-full justify-center', tipo=null)}"></button>
+        </form>
+
+        <a th:replace="~{componentes/botao :: botao(texto='Voltar', variante='secondary', href=@{/},
+                classe='justify-center', icone=null)}"></a>
+    </div>
+</main>
+</body>
+</html>

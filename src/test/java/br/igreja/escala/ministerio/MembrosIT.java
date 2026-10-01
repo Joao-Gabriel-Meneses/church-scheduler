@@ -5,8 +5,10 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.authenticated;
+import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.unauthenticated;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -31,12 +33,15 @@ import br.igreja.escala.ministerio.repository.MembresiaRepository;
 import br.igreja.escala.ministerio.repository.MinisterioRepository;
 import br.igreja.escala.ministerio.repository.NivelRepository;
 import jakarta.persistence.EntityManager;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.RequestBuilder;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Membros ponta a ponta no Oracle: admin, gerente e membro, com tentativas cruzadas entre ministérios. */
@@ -216,6 +221,82 @@ class MembrosIT {
     }
 
     @Test
+    void gerenteEditaOsDadosDoMembroQueEntraComONovoEmail() throws Exception {
+        var midia = ministerio("Mídia Edição");
+        var gerente = gerenteDe(midia, "gerente.edicao@teste.local");
+        var ana = membroDe(midia, "ana.edicao@teste.local");
+
+        mvc.perform(post("/ministerios/{m}/membros/{u}/editar", midia.getId(), ana.getId())
+                        .with(user(gerente))
+                        .with(csrf())
+                        .param("nome", "Ana Edição")
+                        .param("email", "Ana.Nova@Teste.local")
+                        .param("telefone", ""))
+                .andExpect(flash().attribute("sucesso", "Dados de Ana Edição salvos"));
+
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(usuarios.findById(ana.getId()).orElseThrow().getEmail()).isEqualTo("ana.nova@teste.local");
+        assertThat(auditorias.findByMinisterioIdOrderByCriadoEmDesc(midia.getId()))
+                .singleElement()
+                .satisfies(registro -> {
+                    assertThat(registro.getAcao()).isEqualTo(AcaoAuditada.EDITAR_CONTA);
+                    assertThat(registro.getDescricao())
+                            .isEqualTo("Ana Edição: nome e e-mail alterados (Mídia Edição).");
+                });
+        mvc.perform(login("ana.nova@teste.local", "senha-original")).andExpect(authenticated());
+        mvc.perform(login("ana.edicao@teste.local", "senha-original")).andExpect(unauthenticated());
+    }
+
+    @Test
+    void edicaoRecusadaNaoMudaAConta() throws Exception {
+        var midia = ministerio("Mídia Recusas");
+        var louvor = ministerio("Louvor Recusas");
+        var gerente = gerenteDe(midia, "gerente.recusas@teste.local");
+        var ana = membroDe(midia, "ana.recusas@teste.local");
+        var outroGerente = gerenteDe(midia, "outro.recusas@teste.local");
+        var doLouvor = membroDe(louvor, "bruno.recusas@teste.local");
+        var gerenteDoLouvor = gerenteDe(louvor, "lia.recusas@teste.local");
+
+        mvc.perform(editar(gerente, midia, ana.getId(), "gerente.recusas@teste.local"))
+                .andExpect(status().isOk())
+                .andExpect(content()
+                        .string(Matchers.containsString(
+                                "O e-mail gerente.recusas@teste.local já é o login de outra conta.")));
+        mvc.perform(editar(gerente, midia, outroGerente.getId(), "invadido@teste.local"))
+                .andExpect(flash().attribute(
+                                "recusa",
+                                "Os dados de outro.recusas não mudaram: a conta de um gerente ou administrador só o"
+                                        + " administrador edita."));
+        mvc.perform(editar(gerente, midia, doLouvor.getId(), "invadido@teste.local"))
+                .andExpect(status().isNotFound());
+        mvc.perform(editar(gerenteDoLouvor, midia, ana.getId(), "invadido@teste.local"))
+                .andExpect(status().isForbidden());
+        mvc.perform(editar(gerente, louvor, doLouvor.getId(), "invadido@teste.local"))
+                .andExpect(status().isForbidden());
+
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(usuarios.findByEmail("invadido@teste.local")).isEmpty();
+        assertThat(usuarios.findById(ana.getId()).orElseThrow().getEmail()).isEqualTo("ana.recusas@teste.local");
+        assertThat(auditorias.findByMinisterioIdOrderByCriadoEmDesc(midia.getId()))
+                .isEmpty();
+    }
+
+    @Test
+    void adminEditaOsDadosDeUmGerente() throws Exception {
+        var midia = ministerio("Mídia Admin Edita");
+        var gerente = gerenteDe(midia, "gerente.admin.edita@teste.local");
+
+        mvc.perform(editar(admin, midia, gerente.getId(), "gerente.novo@teste.local"))
+                .andExpect(flash().attributeExists("sucesso"));
+
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(usuarios.findById(gerente.getId()).orElseThrow().getEmail()).isEqualTo("gerente.novo@teste.local");
+    }
+
+    @Test
     void removerTiraAsHabilitacoesDesteMinisterioEMantemAsDeOutro() throws Exception {
         var midia = ministerio("Mídia Remoção");
         var louvor = ministerio("Louvor Remoção");
@@ -296,6 +377,23 @@ class MembrosIT {
                 .get()
                 .extracting(habilitacao -> habilitacao.getNivel().getNome())
                 .isEqualTo("Experiente");
+    }
+
+    private static MockHttpServletRequestBuilder editar(
+            UsuarioAutenticado quem, Ministerio ministerio, Long usuarioId, String email) {
+        return post("/ministerios/{m}/membros/{u}/editar", ministerio.getId(), usuarioId)
+                .with(user(quem))
+                .with(csrf())
+                .param("nome", "Nome Novo")
+                .param("email", email);
+    }
+
+    private static RequestBuilder login(String email, String senha) {
+        return formLogin("/login")
+                .userParameter("email")
+                .passwordParam("senha")
+                .user(email)
+                .password(senha);
     }
 
     private long cadastrar(UsuarioAutenticado quem, Ministerio ministerio, String nome, String email, String senha)

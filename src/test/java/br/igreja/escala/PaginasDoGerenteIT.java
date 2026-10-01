@@ -161,9 +161,16 @@ class PaginasDoGerenteIT {
         abre("/ministerios/{m}/membros", ministerioId);
         abre("/ministerios/{m}/membros/{u}", ministerioId, membroId);
         abre("/ministerios/{m}/membros/novo", ministerioId);
+        abre("/ministerios/{m}/membros/{u}/editar", ministerioId, membroId);
         abre("/ministerios/{m}/funcoes", ministerioId);
         abre("/ministerios/{m}/funcoes/{f}", ministerioId, funcaoId);
         abre("/ministerios/{m}/funcoes/niveis/{n}", ministerioId, nivelId);
+    }
+
+    @Test
+    void paginasDaContaAbrem() throws Exception {
+        abre("/conta");
+        abre("/conta/senha");
     }
 
     @Test

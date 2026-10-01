@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.identidade.domain.Usuario;
 import br.igreja.escala.identidade.repository.UsuarioRepository;
 import java.util.List;
@@ -168,12 +169,57 @@ class UsuarioServiceTest {
         assertThat(usuarios.buscarPorEmail("ninguem@x.com")).isEmpty();
     }
 
+    @Test
+    void editarMudaOsDadosEDizQuaisCamposMudaram() {
+        var ana = cadastrada(Usuario.membro("Ana", "ana@x.com", "hash"));
+        when(repositorio.findByEmail("ana@x.com")).thenReturn(Optional.of(ana));
+
+        var semMudanca = usuarios.editar(1L, new DadosDaConta(" Ana ", "ANA@x.com", ""));
+        assertThat(semMudanca.mudou()).isFalse();
+
+        var editada = usuarios.editar(1L, new DadosDaConta("Ana Souza", "Ana.Souza@X.com", "(11) 98888-7777"));
+        assertThat(editada.camposAlterados()).containsExactly("nome", "e-mail", "telefone");
+        assertThat(editada.conta())
+                .isEqualTo(new UsuarioResumo(1L, "Ana Souza", "ana.souza@x.com", "(11) 98888-7777", false, false));
+        assertThat(ana.getEmail()).isEqualTo("ana.souza@x.com");
+    }
+
+    @Test
+    void emailQueJaEOLoginDeOutraContaVoltaNoCampo() {
+        var ana = cadastrada(Usuario.membro("Ana", "ana@x.com", "hash"));
+        when(repositorio.findByEmail("bia@x.com"))
+                .thenReturn(Optional.of(comId(Usuario.membro("Bia", "bia@x.com", "hash"), 2L)));
+
+        assertThatThrownBy(() -> usuarios.editar(1L, new DadosDaConta("Ana", " BIA@x.com", null)))
+                .isInstanceOfSatisfying(RegraVioladaException.class, recusa -> {
+                    assertThat(recusa.campo()).isEqualTo("email");
+                    assertThat(recusa.getMessage()).isEqualTo("O e-mail bia@x.com já é o login de outra conta.");
+                });
+        assertThatThrownBy(() -> usuarios.editarPropriaConta(1L, new DadosDaConta("Ana", "bia@x.com", null)))
+                .isInstanceOf(RegraVioladaException.class);
+        assertThat(ana.getEmail()).isEqualTo("ana@x.com");
+    }
+
+    @Test
+    void editarAPropriaContaDevolveASessaoComONomeEOEmailNovos() {
+        cadastrada(Usuario.comSenhaProvisoria("Ana", "ana@x.com", null, "hash"));
+
+        var sessao = usuarios.editarPropriaConta(1L, new DadosDaConta("Ana Souza", "ana.souza@x.com", null));
+
+        assertThat(sessao.getId()).isEqualTo(1L);
+        assertThat(sessao.getNome()).isEqualTo("Ana Souza");
+        assertThat(sessao.getUsername()).isEqualTo("ana.souza@x.com");
+        assertThat(sessao.isSenhaProvisoria()).isTrue();
+        verify(eventos, never()).publishEvent(any(Object.class));
+    }
+
     private static Usuario comId(Usuario usuario, Long id) {
         ReflectionTestUtils.setField(usuario, "id", id);
         return usuario;
     }
 
     private Usuario cadastrada(Usuario usuario) {
+        comId(usuario, 1L);
         when(repositorio.findById(1L)).thenReturn(Optional.of(usuario));
         return usuario;
     }
