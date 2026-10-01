@@ -120,12 +120,19 @@ public class MembroService {
     }
 
     /**
-     * @throws RegraVioladaException se o membro é gerente ou admin e quem pede não é admin, ou a senha não tem o
-     *     tamanho certo
+     * As sessões abertas do membro são encerradas (UsuarioService). A própria senha não se redefine por aqui: troca-se
+     * em /conta/senha, pedindo a atual.
+     *
+     * @throws RegraVioladaException se é a conta de quem pede, se o membro é gerente ou admin e quem pede não é admin,
+     *     ou se a senha não tem o tamanho certo
      */
     @Transactional
     public UsuarioResumo redefinirSenha(Long ministerioId, Long usuarioId, String senha, UsuarioAutenticado autor) {
         var membro = buscar(ministerioId, usuarioId);
+        if (autor.getId().equals(usuarioId)) {
+            throw RegraVioladaException.geral(
+                    "Sua senha não mudou: para trocar a sua própria senha, use Trocar senha no início.");
+        }
         if (!podeMexerNaConta(membro, autor)) {
             throw RegraVioladaException.geral("A senha de " + membro.nome()
                     + " não mudou: a senha de um gerente ou administrador só o" + " administrador redefine.");

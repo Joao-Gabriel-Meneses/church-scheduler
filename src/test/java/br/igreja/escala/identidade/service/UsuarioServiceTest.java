@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -24,7 +25,8 @@ class UsuarioServiceTest {
     private final PasswordEncoder encoder = new BCryptPasswordEncoder(4);
 
     private final UsuarioRepository repositorio = mock(UsuarioRepository.class);
-    private final UsuarioService usuarios = new UsuarioService(repositorio, encoder);
+    private final ApplicationEventPublisher eventos = mock(ApplicationEventPublisher.class);
+    private final UsuarioService usuarios = new UsuarioService(repositorio, encoder, eventos);
 
     @Test
     void comSenhaProvisoriaTrocaSemPedirAAtual() {
@@ -130,6 +132,27 @@ class UsuarioServiceTest {
                 .isInstanceOfSatisfying(
                         SenhaRecusadaException.class,
                         recusa -> assertThat(recusa.campo()).isEqualTo("senha"));
+    }
+
+    @Test
+    void redefinirEncerraAsSessoesSoQuandoASenhaMuda() {
+        cadastrada(Usuario.membro("Ana", "ana@x.com", encoder.encode("senha-da-ana")));
+
+        assertThatThrownBy(() -> usuarios.redefinirSenhaProvisoria(1L, "curta"))
+                .isInstanceOf(SenhaRecusadaException.class);
+        verify(eventos, never()).publishEvent(any(Object.class));
+
+        usuarios.redefinirSenhaProvisoria(1L, "nova-provisoria");
+        verify(eventos).publishEvent(new AcessoRevogado(1L));
+    }
+
+    @Test
+    void trocarAPropriaSenhaNaoRevogaOAcesso() {
+        cadastrada(Usuario.comSenhaProvisoria("Ana", "ana@x.com", null, encoder.encode("provisoria1")));
+
+        usuarios.trocarSenha(1L, null, "senha-da-ana");
+
+        verify(eventos, never()).publishEvent(any(Object.class));
     }
 
     @Test

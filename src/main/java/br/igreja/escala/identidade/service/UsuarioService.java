@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,10 +21,12 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarios;
     private final PasswordEncoder passwordEncoder;
+    private final ApplicationEventPublisher eventos;
 
-    UsuarioService(UsuarioRepository usuarios, PasswordEncoder passwordEncoder) {
+    UsuarioService(UsuarioRepository usuarios, PasswordEncoder passwordEncoder, ApplicationEventPublisher eventos) {
         this.usuarios = usuarios;
         this.passwordEncoder = passwordEncoder;
+        this.eventos = eventos;
     }
 
     /**
@@ -59,8 +62,9 @@ public class UsuarioService {
     }
 
     /**
-     * Senha provisória definida por um gerente ou admin; o usuário volta a ter de trocá-la no próximo acesso. Quem
-     * pode redefinir a senha de quem é regra de quem chama (o módulo ministerio).
+     * Senha provisória definida por um gerente ou admin; o usuário volta a ter de trocá-la no próximo acesso, e as
+     * sessões abertas dele são encerradas ({@link AcessoRevogado}). Quem pode redefinir a senha de quem é regra de quem
+     * chama (o módulo ministerio).
      *
      * @throws SenhaRecusadaException no campo {@code senha}, se a senha não tem o tamanho certo
      */
@@ -68,6 +72,7 @@ public class UsuarioService {
     public void redefinirSenhaProvisoria(Long usuarioId, String senha) {
         exigirTamanho(senha, "senha");
         usuarios.findById(usuarioId).orElseThrow().definirSenhaProvisoria(passwordEncoder.encode(senha));
+        eventos.publishEvent(new AcessoRevogado(usuarioId));
     }
 
     /** Usuários pelos ids, em ordem de nome. Ids que não existem ficam de fora. */

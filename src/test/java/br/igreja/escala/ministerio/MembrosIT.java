@@ -193,6 +193,29 @@ class MembrosIT {
     }
 
     @Test
+    void adminNaoRedefineAPropriaSenhaPorPostDireto() throws Exception {
+        var midia = ministerio("Mídia Própria");
+        membresias.save(new Membresia(admin.getId(), midia));
+
+        mvc.perform(post("/ministerios/{m}/membros/{u}/senha", midia.getId(), admin.getId())
+                        .with(user(admin))
+                        .with(csrf())
+                        .param("senha", "provisoria-123"))
+                .andExpect(redirectedUrl("/ministerios/" + midia.getId() + "/membros/" + admin.getId()))
+                .andExpect(flash().attribute(
+                                "recusa",
+                                "Sua senha não mudou: para trocar a sua própria senha, use Trocar senha no início."));
+
+        entityManager.flush();
+        entityManager.clear();
+        var conta = usuarios.findById(admin.getId()).orElseThrow();
+        assertThat(conta.getSenhaHash()).isEqualTo("{noop}x");
+        assertThat(conta.isSenhaProvisoria()).isFalse();
+        assertThat(auditorias.findByMinisterioIdOrderByCriadoEmDesc(midia.getId()))
+                .isEmpty();
+    }
+
+    @Test
     void removerTiraAsHabilitacoesDesteMinisterioEMantemAsDeOutro() throws Exception {
         var midia = ministerio("Mídia Remoção");
         var louvor = ministerio("Louvor Remoção");

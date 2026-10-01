@@ -21,7 +21,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-/** Troca da própria senha: obrigatória enquanto a senha for provisória (SenhaProvisoriaInterceptor). */
+/**
+ * Troca da própria senha: obrigatória enquanto a senha for provisória (SenhaProvisoriaInterceptor). As outras sessões
+ * da pessoa (outro celular, outro navegador) são encerradas; a desta requisição continua.
+ */
 @Controller
 @RequestMapping(SenhaProvisoriaInterceptor.TROCA_DE_SENHA)
 class ContaController {
@@ -29,10 +32,12 @@ class ContaController {
     private static final String VISAO = "identidade/senha";
 
     private final UsuarioService usuarios;
+    private final SessoesAbertas sessoesAbertas;
     private final SecurityContextRepository sessoes = new HttpSessionSecurityContextRepository();
 
-    ContaController(UsuarioService usuarios) {
+    ContaController(UsuarioService usuarios, SessoesAbertas sessoesAbertas) {
         this.usuarios = usuarios;
+        this.sessoesAbertas = sessoesAbertas;
     }
 
     @GetMapping
@@ -61,6 +66,8 @@ class ContaController {
         try {
             var atualizado = usuarios.trocarSenha(usuario.getId(), form.senhaAtual(), form.novaSenha());
             atualizarSessao(atualizado, requisicao, resposta);
+            sessoesAbertas.encerrarOutras(
+                    usuario.getId(), requisicao.getSession().getId());
         } catch (SenhaRecusadaException recusa) {
             erros.rejectValue(recusa.campo(), "Recusada", recusa.getMessage());
             return VISAO;

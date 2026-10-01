@@ -11,6 +11,11 @@
             <p class="text-ink-muted">Entre para marcar sua disponibilidade e ver suas escalas.</p>
         </header>
 
+        <!--/* SessoesAbertas encerrou a sessão: a senha foi redefinida, trocada em outro aparelho ou a conta desativada. */-->
+        <th:block th:if="${param.expirou}">
+            <div th:replace="~{componentes/alerta :: alerta(titulo='Sua sessão foi encerrada.',
+                    corpo='A senha ou o acesso da sua conta mudou. Entre de novo.')}"></div>
+        </th:block>
         <th:block th:if="${param.erro}">
             <div th:replace="~{componentes/alerta :: alerta(titulo='E-mail ou senha inválidos.',
                     corpo='Confira os dois e tente de novo.')}"></div>

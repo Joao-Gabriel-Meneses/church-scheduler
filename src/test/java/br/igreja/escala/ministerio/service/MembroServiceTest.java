@@ -195,6 +195,27 @@ class MembroServiceTest {
     }
 
     @Test
+    void ninguemRedefineAPropriaSenhaPelaRotaDoGerenteNemOAdmin() {
+        when(membresias.findByUsuarioIdAndMinisterioId(1L, 1L)).thenReturn(Optional.of(new Membresia(1L, midia)));
+        when(usuarios.buscar(1L)).thenReturn(new UsuarioResumo(1L, "Admin", "admin@x.com", null, true, false));
+        when(membresias.findByUsuarioIdAndMinisterioId(10L, 1L)).thenReturn(Optional.of(gerente(10L)));
+        when(usuarios.buscar(10L)).thenReturn(new UsuarioResumo(10L, "Gerente", "g@x.com", null, false, false));
+
+        assertThatThrownBy(() -> servico.redefinirSenha(1L, 1L, "nova-provisoria", ADMIN))
+                .isInstanceOfSatisfying(RegraVioladaException.class, recusa -> {
+                    assertThat(recusa.campo()).isNull();
+                    assertThat(recusa.getMessage())
+                            .isEqualTo("Sua senha não mudou: para trocar a sua própria senha, use Trocar senha no"
+                                    + " início.");
+                });
+        assertThatThrownBy(() -> servico.redefinirSenha(1L, 10L, "nova-provisoria", GERENTE))
+                .hasMessageStartingWith("Sua senha não mudou");
+
+        verify(usuarios, never()).redefinirSenhaProvisoria(anyLong(), anyString());
+        verifyNoInteractions(auditoria);
+    }
+
+    @Test
     void senhaCurtaNaRedefinicaoNaoMudaNada() {
         when(membresias.findByUsuarioIdAndMinisterioId(30L, 1L)).thenReturn(Optional.of(new Membresia(30L, midia)));
         doThrow(new SenhaRecusadaException("senha", "A senha precisa ter de 8 a 64 caracteres."))

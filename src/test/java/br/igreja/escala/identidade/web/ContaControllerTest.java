@@ -2,6 +2,8 @@ package br.igreja.escala.identidade.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,6 +24,7 @@ import br.igreja.escala.identidade.service.UsuarioDetailsService;
 import br.igreja.escala.identidade.service.UsuarioService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
@@ -38,6 +41,9 @@ class ContaControllerTest {
 
     @MockitoBean
     UsuarioService usuarios;
+
+    @MockitoBean
+    SessoesAbertas sessoesAbertas;
 
     private final UsuarioAutenticado comProvisoria =
             autenticado(Usuario.comSenhaProvisoria("Ana", "ana@x.com", null, "hash"));
@@ -75,6 +81,23 @@ class ContaControllerTest {
                         .param("confirmacao", "senha-da-ana"))
                 .andExpect(redirectedUrl("/"))
                 .andExpect(flash().attribute("sucesso", "Senha salva"));
+    }
+
+    @Test
+    void salvarEncerraAsOutrasSessoesEMantemEsta() throws Exception {
+        when(usuarios.trocarSenha(2L, "senha-antiga", "senha-nova-1")).thenReturn(semProvisoria);
+
+        mvc.perform(post("/conta/senha")
+                        .session(new MockHttpSession(null, "sessao-atual"))
+                        .with(user(semProvisoria))
+                        .with(csrf())
+                        .param("senhaAtual", "senha-antiga")
+                        .param("novaSenha", "senha-nova-1")
+                        .param("confirmacao", "senha-nova-1"))
+                .andExpect(redirectedUrl("/"));
+
+        verify(sessoesAbertas).encerrarOutras(2L, "sessao-atual");
+        verify(sessoesAbertas, never()).encerrarTodas(anyLong());
     }
 
     @Test
@@ -128,6 +151,7 @@ class ContaControllerTest {
                 .param("confirmacao", "senha-nova-1"));
 
         assertThat(html).contains("id=\"senhaAtual-erro\"", "A senha atual não confere.");
+        verify(sessoesAbertas, never()).encerrarOutras(anyLong(), anyString());
     }
 
     @Test
