@@ -108,7 +108,8 @@ Existe um **catálogo fixo de tipos de regra**. Cada tipo é implementado uma ú
 | `DISPONIBILIDADE` | Só escala quem marcou PODE (hard) |
 | `UMA_FUNCAO_POR_EVENTO` | Hard |
 | `MAX_POR_NIVEL_NO_EVENTO` | Máx. 1 Iniciante por evento, ou seja, nunca dois iniciantes juntos (hard) |
-| `LIMITE_POR_PERIODO` | Máx. 3 escalas por mês por pessoa (hard; o gerente pode forçar mais) |
+| `LIMITE_POR_PERIODO` | Máx. de escalas por mês por pessoa, **editável pelo gerente** (padrão 3). Conta **eventos**: dois cultos no mesmo domingo contam 2 (hard; o gerente pode forçar mais, com justificativa) |
+| `SEM_SOBREPOSICAO` | Sempre ativa (hard): ninguém em dois eventos com horários sobrepostos, **nem em ministérios diferentes** |
 | `EQUILIBRIO_DE_CARGA` | Distribuir o serviço igualmente (soft) |
 | `PRIORIDADE_POR_DATA` | Preencher primeiro os eventos mais próximos (medium) |
 | `PREFERENCIA` | Evitar PREFERE_NAO (soft, futuro) |
@@ -121,8 +122,20 @@ Outras regras:
 - **Sem solução válida:** a vaga fica **vazia** e o gerente é alertado com o motivo. O solver nunca viola uma regra hard sem avisar.
 - **Forçar uma alocação** que viola regra exige justificativa e gera registro de auditoria.
 - **Desistência:** esvazia a vaga **na hora, sem aprovação**. A escala do mês **não é regerada nem reorganizada**; o buraco fica e o gerente recebe um alerta. O membro pode indicar opcionalmente um substituto habilitado, que não pode violar regras hard.
-- **Eventos:** modelos recorrentes (domingo e quinta) têm horário padrão editável no modelo ou em um evento específico. Editar um evento não altera o modelo. Eventos avulsos podem ser criados a qualquer momento.
+- **Eventos:** modelos recorrentes (domingo e quinta) têm horário e **duração** padrão, editáveis no modelo ou em um evento específico. Editar um evento não altera o modelo. Eventos avulsos podem ser criados a qualquer momento.
+  - Um modelo por ministério, dia da semana e horário (`uk_modelo_evento_horario`); dois modelos no mesmo dia em horários diferentes valem (culto da manhã e da noite).
+  - O evento de um modelo é único por data (`uk_evento_modelo_data`); avulsos não têm esse limite, nem no mesmo dia e horário.
 - **Lembrete:** e-mail **24 h** antes do evento.
+
+### Decidido para a Fase 3
+
+- **Sem sobreposição de horários** (`SEM_SOBREPOSICAO`): a mesma pessoa não serve em dois eventos que se sobrepõem, contando início e duração (`Evento.getInicio()` e `getFim()`, que pode cair no dia seguinte), **inclusive entre ministérios diferentes**.
+  - As vagas já preenchidas em outros ministérios entram na geração como fatos fixos (problem facts), não como variáveis: gerar a escala da Mídia não mexe na do Louvor.
+  - Eventos colados (um termina às 11h00 e o outro começa às 11h00) não se sobrepõem. Evento cancelado não conta.
+- **Limite mensal** (`LIMITE_POR_PERIODO`): o gerente edita o limite do ministério na página de regras; o padrão é 3.
+  - Conta **por evento**: cada evento do ministério no mês em que a pessoa serve conta 1, mesmo que dois caiam no mesmo dia. Uma pessoa tem no máximo uma vaga por evento (`UMA_FUNCAO_POR_EVENTO`).
+  - O gerente pode **forçar** acima do limite, com justificativa e registro em `Auditoria`, como qualquer alocação forçada.
+- **Funções exigidas por evento: adiado para a Fase 3.** Hoje todo evento pede todas as funções do ministério, com o `qtd_min` e o `qtd_max` de cada função. Escolher quais funções cada evento ou modelo exige (ex.: a quinta sem Transmissão) entra junto com as vagas.
 
 ## Solver (Timefold)
 
@@ -257,7 +270,7 @@ docker compose up -d            # produção (Caddy + app)
 1. **Fase 0 — Fundação:** repositório, Spring Boot + Flyway + Oracle, CI, login e perfis, VM Oracle (São Paulo), imagens arm64, deploy com HTTPS.
 2. **Fase 1 — Cadastros:** ministérios, funções, níveis, membros, habilitações, modelos de evento.
 3. **Fase 2 — Disponibilidade:** tela mobile de marcação, trava do período, painel de quem não respondeu.
-4. **Fase 3 — Escala automática:** domínio Timefold, catálogo de regras, geração, alertas, ajuste manual, forçar com justificativa, publicação.
+4. **Fase 3 — Escala automática:** domínio Timefold, catálogo de regras, geração, alertas, ajuste manual, forçar com justificativa, publicação (ver "Decidido para a Fase 3").
 5. **Fase 4 — Pós-publicação:** desistência, alertas ao líder, e-mails de publicação e lembrete de 24 h, texto para WhatsApp, PDF. **Aqui o MVP entra em uso.**
 6. **Fase 5 — Refinos:** preferências, relatórios, auditoria completa.
 7. **Fase 6 — Expansão:** louvor, criando só os tipos de regra que faltarem.
