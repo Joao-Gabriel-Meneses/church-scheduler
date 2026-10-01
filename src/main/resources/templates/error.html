@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<!--/* Qualquer outro erro (500, 400...). Os de acesso e de página inexistente têm páginas próprias em error/. */-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/simples :: pagina(~{::title}, ~{::main})}">
+<head>
+    <title>Algo deu errado · Escala</title>
+</head>
+<body>
+<main id="conteudo" class="flex flex-1 flex-col items-center justify-center p-4">
+    <div class="flex w-full max-w-sm flex-col gap-6 text-center">
+        <header class="flex flex-col gap-1">
+            <h1 class="text-title">Algo deu errado aqui</h1>
+            <p class="text-ink-muted">Não foi culpa sua: o sistema não conseguiu terminar o pedido. Tente de novo em
+                instantes; se continuar, avise o administrador.</p>
+        </header>
+        <a th:replace="~{componentes/botao :: botao(texto='Voltar ao início', href=@{/}, icone=null,
+                classe='justify-center')}"></a>
+    </div>
+</main>
+</body>
+</html>
