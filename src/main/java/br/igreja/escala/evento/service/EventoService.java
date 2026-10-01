@@ -9,6 +9,7 @@ import br.igreja.escala.evento.repository.EventoRepository;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
@@ -53,6 +54,22 @@ public class EventoService {
                 .orElse(List.of())
                 .stream()
                 .map(EventoResumo::de)
+                .toList();
+    }
+
+    /**
+     * Os eventos do mês que ainda não começaram, sem os cancelados, por data e horário: os que ainda dá para marcar
+     * disponibilidade. "Agora" vem do relógio de São Paulo.
+     */
+    @Transactional(readOnly = true)
+    public List<Evento> porVirDoMes(Long ministerioId, YearMonth mes) {
+        var agora = LocalDateTime.now(relogio);
+        return periodos
+                .doMes(ministerioId, mes)
+                .map(periodo -> eventos.findByPeriodoIdOrderByDataAscHorarioAsc(periodo.getId()))
+                .orElse(List.of())
+                .stream()
+                .filter(evento -> !evento.isCancelado() && evento.getInicio().isAfter(agora))
                 .toList();
     }
 

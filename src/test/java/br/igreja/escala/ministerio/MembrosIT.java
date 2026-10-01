@@ -1,6 +1,7 @@
 package br.igreja.escala.ministerio;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -14,12 +15,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.igreja.escala.TesteDeIntegracao;
+import br.igreja.escala.compartilhado.NaoEncontradoException;
 import br.igreja.escala.compartilhado.domain.AcaoAuditada;
 import br.igreja.escala.compartilhado.domain.Auditoria;
 import br.igreja.escala.compartilhado.repository.AuditoriaRepository;
 import br.igreja.escala.identidade.domain.Usuario;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
 import br.igreja.escala.identidade.repository.UsuarioRepository;
+import br.igreja.escala.identidade.service.UsuarioResumo;
 import br.igreja.escala.ministerio.domain.CorDoMinisterio;
 import br.igreja.escala.ministerio.domain.Funcao;
 import br.igreja.escala.ministerio.domain.Habilitacao;
@@ -32,6 +35,7 @@ import br.igreja.escala.ministerio.repository.HabilitacaoRepository;
 import br.igreja.escala.ministerio.repository.MembresiaRepository;
 import br.igreja.escala.ministerio.repository.MinisterioRepository;
 import br.igreja.escala.ministerio.repository.NivelRepository;
+import br.igreja.escala.ministerio.service.MembroService;
 import jakarta.persistence.EntityManager;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,6 +82,9 @@ class MembrosIT {
 
     @Autowired
     EntityManager entityManager;
+
+    @Autowired
+    MembroService membroService;
 
     private UsuarioAutenticado admin;
 
@@ -366,6 +373,39 @@ class MembrosIT {
         assertThat(auditorias.findByMinisterioIdOrderByCriadoEmDesc(midia.getId()))
                 .extracting(Auditoria::getAcao)
                 .containsExactly(AcaoAuditada.REMOVER_MEMBRO);
+    }
+
+    @Test
+    void servemNoMinisterioSoOsMembrosAtivosComHabilitacao() {
+        var midia = ministerio("Mídia Servem");
+        var louvor = ministerio("Louvor Servem");
+        var projecao = funcoes.save(new Funcao(midia, "Projeção", Icone.MONITOR, 1, 1));
+        var transmissao = funcoes.save(new Funcao(midia, "Transmissão", Icone.VIDEO, 1, 1));
+        var iniciante = niveis.save(new Nivel(midia, "Iniciante", 1));
+        var ana = membroDe(midia, "ana.servem@teste.local");
+        var bia = membroDe(midia, "bia.servem@teste.local");
+        var caio = membroDe(midia, "caio.servem@teste.local");
+        habilitacoes.save(new Habilitacao(ana.getId(), projecao, iniciante));
+        habilitacoes.save(new Habilitacao(ana.getId(), transmissao, iniciante));
+        habilitacoes.save(new Habilitacao(bia.getId(), projecao, iniciante));
+        bia.desativar();
+        membresias.save(new Membresia(ana.getId(), louvor));
+        habilitar(ana, louvor);
+        entityManager.flush();
+
+        assertThat(membroService.queServem(midia.getId()))
+                .as("Bia está desativada e Caio não tem habilitação")
+                .extracting(UsuarioResumo::id)
+                .containsExactly(ana.getId());
+        assertThat(membroService.ministeriosEmQueServe(ana.getId()))
+                .extracting(Ministerio::getNome)
+                .containsExactly("Louvor Servem", "Mídia Servem");
+        assertThat(membroService.buscarQueServe(midia.getId(), ana.getId()).id())
+                .isEqualTo(ana.getId());
+        assertThatThrownBy(() -> membroService.buscarQueServe(midia.getId(), caio.getId()))
+                .isInstanceOf(NaoEncontradoException.class);
+        assertThatThrownBy(() -> membroService.buscarQueServe(midia.getId(), bia.getId()))
+                .isInstanceOf(NaoEncontradoException.class);
     }
 
     @Test

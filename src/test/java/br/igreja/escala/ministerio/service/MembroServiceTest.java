@@ -32,6 +32,7 @@ import br.igreja.escala.identidade.service.NovoUsuario;
 import br.igreja.escala.identidade.service.SenhaRecusadaException;
 import br.igreja.escala.identidade.service.UsuarioResumo;
 import br.igreja.escala.identidade.service.UsuarioService;
+import br.igreja.escala.ministerio.Exemplos;
 import br.igreja.escala.ministerio.domain.Habilitacao;
 import br.igreja.escala.ministerio.domain.Membresia;
 import br.igreja.escala.ministerio.domain.Ministerio;
@@ -68,6 +69,46 @@ class MembroServiceTest {
     void prepara() {
         when(ministerios.buscar(1L)).thenReturn(midia);
         when(usuarios.buscar(30L)).thenReturn(ANA);
+    }
+
+    @Test
+    void servemOsMembrosAtivosComHabilitacaoEmOrdemDeNome() {
+        var desativada = new UsuarioResumo(32L, "Bia Rocha", "bia@x.com", null, false, false, false);
+        when(membresias.findByMinisterioId(1L))
+                .thenReturn(List.of(
+                        new Membresia(30L, midia),
+                        new Membresia(31L, midia),
+                        new Membresia(32L, midia),
+                        new Membresia(33L, midia)));
+        // 33 é membro sem habilitação; 99 tem habilitação, mas saiu do ministério.
+        when(habilitacoes.usuariosHabilitados(1L)).thenReturn(List.of(31L, 30L, 32L, 99L));
+        when(usuarios.resumos(List.of(31L, 30L, 32L))).thenReturn(List.of(ANA, desativada, BRUNO));
+
+        assertThat(servico.queServem(1L)).containsExactly(ANA, BRUNO);
+    }
+
+    @Test
+    void buscarQuemServeE404ParaQuemNaoEMembroNaoTemHabilitacaoOuEstaDesativado() {
+        when(membresias.existsByUsuarioIdAndMinisterioId(30L, 1L)).thenReturn(true);
+        when(habilitacoes.existsByUsuarioIdAndFuncaoMinisterioId(30L, 1L)).thenReturn(true);
+        when(membresias.existsByUsuarioIdAndMinisterioId(31L, 1L)).thenReturn(true);
+        when(membresias.existsByUsuarioIdAndMinisterioId(32L, 1L)).thenReturn(true);
+        when(habilitacoes.existsByUsuarioIdAndFuncaoMinisterioId(32L, 1L)).thenReturn(true);
+        when(usuarios.buscar(32L))
+                .thenReturn(new UsuarioResumo(32L, "Bia Rocha", "bia@x.com", null, false, false, false));
+
+        assertThat(servico.buscarQueServe(1L, 30L)).isEqualTo(ANA);
+        assertThatThrownBy(() -> servico.buscarQueServe(2L, 30L)).isInstanceOf(NaoEncontradoException.class);
+        assertThatThrownBy(() -> servico.buscarQueServe(1L, 31L)).isInstanceOf(NaoEncontradoException.class);
+        assertThatThrownBy(() -> servico.buscarQueServe(1L, 32L)).isInstanceOf(NaoEncontradoException.class);
+    }
+
+    @Test
+    void ministeriosEmQueServeEmOrdemDeNome() {
+        var louvor = Exemplos.louvor();
+        when(habilitacoes.ministeriosDe(30L)).thenReturn(List.of(midia, louvor));
+
+        assertThat(servico.ministeriosEmQueServe(30L)).containsExactly(louvor, midia);
     }
 
     @Test

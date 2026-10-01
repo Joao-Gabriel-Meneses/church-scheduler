@@ -13,11 +13,13 @@ import br.igreja.escala.identidade.service.UsuarioResumo;
 import br.igreja.escala.identidade.service.UsuarioService;
 import br.igreja.escala.ministerio.domain.Habilitacao;
 import br.igreja.escala.ministerio.domain.Membresia;
+import br.igreja.escala.ministerio.domain.Ministerio;
 import br.igreja.escala.ministerio.repository.HabilitacaoRepository;
 import br.igreja.escala.ministerio.repository.MembresiaRepository;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -84,6 +86,48 @@ public class MembroService {
                 .map(MembroService::descrever)
                 .toList();
         return new MembroResumo(usuarios.buscar(usuarioId), membresia.isGerente(), habilitacoesDaPessoa);
+    }
+
+    /**
+     * Quem serve no ministério, e por isso marca disponibilidade e entra na escala: contas ativas com habilitação em
+     * alguma função daqui. Em ordem de nome.
+     */
+    @Transactional(readOnly = true)
+    public List<UsuarioResumo> queServem(Long ministerioId) {
+        Set<Long> doMinisterio = membresias.findByMinisterioId(ministerioId).stream()
+                .map(Membresia::getUsuarioId)
+                .collect(Collectors.toSet());
+        var habilitados = habilitacoes.usuariosHabilitados(ministerioId).stream()
+                .filter(doMinisterio::contains)
+                .toList();
+        return usuarios.resumos(habilitados).stream()
+                .filter(UsuarioResumo::ativo)
+                .toList();
+    }
+
+    /**
+     * @throws NaoEncontradoException se a pessoa não serve neste ministério: não é membro, não tem habilitação ou está
+     *     com a conta desativada
+     */
+    @Transactional(readOnly = true)
+    public UsuarioResumo buscarQueServe(Long ministerioId, Long usuarioId) {
+        if (!membresias.existsByUsuarioIdAndMinisterioId(usuarioId, ministerioId)
+                || !habilitacoes.existsByUsuarioIdAndFuncaoMinisterioId(usuarioId, ministerioId)) {
+            throw new NaoEncontradoException("Quem serve " + usuarioId + " no ministério " + ministerioId);
+        }
+        var pessoa = usuarios.buscar(usuarioId);
+        if (!pessoa.ativo()) {
+            throw new NaoEncontradoException("Conta desativada " + usuarioId + " no ministério " + ministerioId);
+        }
+        return pessoa;
+    }
+
+    /** Ministérios em que a pessoa tem habilitação, em ordem de nome. */
+    @Transactional(readOnly = true)
+    public List<Ministerio> ministeriosEmQueServe(Long usuarioId) {
+        return habilitacoes.ministeriosDe(usuarioId).stream()
+                .sorted(Comparator.comparing(Ministerio::getNome, String.CASE_INSENSITIVE_ORDER))
+                .toList();
     }
 
     /** Se o gerente que está logado pode redefinir a senha deste membro (para mostrar ou não o botão). */

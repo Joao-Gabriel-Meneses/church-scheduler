@@ -202,6 +202,30 @@ class EventoServiceTest {
         assertThat(servico.doMes(1L, OUTUBRO)).isEmpty();
     }
 
+    @Test
+    void porVirDoMesSaoOsQueAindaNaoComecaramSemOsCancelados() {
+        when(periodos.doMes(1L, OUTUBRO)).thenReturn(Optional.of(outubro));
+        var domingoPassado = avulso("Domingo passado", LocalDate.of(2026, 10, 4), LocalTime.of(18, 0));
+        var comecouAs9 = avulso("Reunião das 9h", LocalDate.of(2026, 10, 7), LocalTime.of(9, 0));
+        var comecaAgora = avulso("Reunião das 10h", LocalDate.of(2026, 10, 7), LocalTime.of(10, 0));
+        var hojeANoite = avulso("Culto de hoje", LocalDate.of(2026, 10, 7), LocalTime.of(19, 30));
+        var cancelado = avulso("Cancelado", LocalDate.of(2026, 10, 11), LocalTime.of(9, 30));
+        cancelado.cancelar();
+        var domingo = avulso("Culto de domingo", LocalDate.of(2026, 10, 11), LocalTime.of(18, 0));
+        when(eventos.findByPeriodoIdOrderByDataAscHorarioAsc(400L))
+                .thenReturn(List.of(domingoPassado, comecouAs9, comecaAgora, hojeANoite, cancelado, domingo));
+        when(periodos.doMes(1L, NOVEMBRO)).thenReturn(Optional.empty());
+
+        assertThat(servico.porVirDoMes(1L, OUTUBRO))
+                .extracting(Evento::getNome)
+                .containsExactly("Culto de hoje", "Culto de domingo");
+        assertThat(servico.porVirDoMes(1L, NOVEMBRO)).isEmpty();
+    }
+
+    private Evento avulso(String nome, LocalDate data, LocalTime horario) {
+        return Evento.avulso(outubro, nome, data, horario, DUAS_HORAS);
+    }
+
     private List<Evento> gravados() {
         var gravado = ArgumentCaptor.forClass(Evento.class);
         verify(eventos, atLeastOnce()).save(gravado.capture());
