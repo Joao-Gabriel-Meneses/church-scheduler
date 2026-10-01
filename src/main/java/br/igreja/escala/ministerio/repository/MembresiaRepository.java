@@ -21,6 +21,22 @@ public interface MembresiaRepository extends JpaRepository<Membresia, Long> {
 
     boolean existsByUsuarioIdAndGerenteTrue(Long usuarioId);
 
+    List<Membresia> findByGerenteTrue();
+
+    @Query("""
+            select m.ministerio.id as ministerioId, count(m) as total
+              from Membresia m
+             group by m.ministerio.id
+            """)
+    List<MembrosPorMinisterio> contarMembrosPorMinisterio();
+
+    interface MembrosPorMinisterio {
+
+        Long getMinisterioId();
+
+        long getTotal();
+    }
+
     @Query("""
             select m.ministerio from Membresia m
              where m.usuarioId = :usuarioId and m.gerente = true

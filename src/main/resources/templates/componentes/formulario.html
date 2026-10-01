@@ -18,6 +18,9 @@
     caixaDeSelecao(rotulo, nome) / caixaDeSelecaoDoObjeto(rotulo, nome): checkbox com alvo de 44px.
       Opções: marcada | valor | campoId. A versão do objeto manda "_nome" para o Spring gravar false quando desmarcada.
 
+    errosGerais: dentro de um <form th:object>, cada erro que não é de um campo (Formularios.rejeitar) vira um
+        AlertBanner. Ponha antes dos campos.
+
     Opção omitida herda a variável de mesmo nome do contexto: não use esses nomes em variáveis de página.
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
@@ -64,6 +67,11 @@
                    _erro=${#fields.hasErrors(nome)} ? ${#strings.listJoin(#fields.errors(nome), ' ')} : null">
     <div th:replace="~{componentes/formulario :: selecao(rotulo=${rotulo}, nome=${nome}, opcoes=${opcoes},
             valor=${_valor}, erro=${_erro})}"></div>
+</th:block>
+
+<th:block th:fragment="errosGerais">
+    <th:block th:each="_erroGeral : ${#fields.globalErrors()}"><div th:replace="~{componentes/alerta :: alerta(
+            titulo=${_erroGeral}, corpo=null, regra=null, acaoTexto=null, icone=null)}"></div></th:block>
 </th:block>
 
 <th:block th:fragment="mensagensDoCampo">

@@ -16,6 +16,7 @@
         </div>
 
     pessoa(nome, iniciais): avatar com iniciais (decorativo) e nome.
+    comIcone(texto, icone): tile de ícone (decorativo) e texto, para ministérios e funções.
     duasLinhas(valor, complemento): valor em body e complemento em caption; complemento pode ser null.
     estado(texto): ponto + texto. Opção variante: ok (padrão, ponto azul) | vazio (ponto vazado) | alerta (Badge
     --alert com ícone, para o que precisa de ação).
@@ -26,6 +27,11 @@
 <div th:fragment="pessoa(nome, iniciais)" class="rt-route">
     <span class="rt-avatar" aria-hidden="true" th:text="${iniciais}">AS</span>
     <span th:text="${nome}">Ana Souza</span>
+</div>
+
+<div th:fragment="comIcone(texto, icone)" class="rt-route">
+    <span class="rt-route__thumb" aria-hidden="true"><svg th:replace="~{componentes/icone :: icone(${icone})}"></svg></span>
+    <span class="rt-route__main" th:text="${texto}">Projeção</span>
 </div>
 
 <div th:fragment="duasLinhas(valor, complemento)" class="rt-cell-2">

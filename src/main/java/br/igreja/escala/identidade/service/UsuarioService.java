@@ -3,6 +3,12 @@ package br.igreja.escala.identidade.service;
 import br.igreja.escala.identidade.domain.Usuario;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
 import br.igreja.escala.identidade.repository.UsuarioRepository;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +23,21 @@ public class UsuarioService {
     UsuarioService(UsuarioRepository usuarios, PasswordEncoder passwordEncoder) {
         this.usuarios = usuarios;
         this.passwordEncoder = passwordEncoder;
+    }
+
+    /** Usuários pelos ids, em ordem de nome. Ids que não existem ficam de fora. */
+    @Transactional(readOnly = true)
+    public List<UsuarioResumo> resumos(Collection<Long> ids) {
+        return usuarios.findAllById(ids).stream()
+                .map(UsuarioResumo::de)
+                .sorted(Comparator.comparing(UsuarioResumo::nome, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
+    /** Os mesmos de {@link #resumos(Collection)}, por id. */
+    @Transactional(readOnly = true)
+    public Map<Long, UsuarioResumo> resumosPorId(Collection<Long> ids) {
+        return resumos(ids).stream().collect(Collectors.toMap(UsuarioResumo::id, Function.identity()));
     }
 
     /**

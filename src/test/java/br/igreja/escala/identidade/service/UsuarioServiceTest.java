@@ -7,10 +7,12 @@ import static org.mockito.Mockito.when;
 
 import br.igreja.escala.identidade.domain.Usuario;
 import br.igreja.escala.identidade.repository.UsuarioRepository;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class UsuarioServiceTest {
 
@@ -68,6 +70,24 @@ class UsuarioServiceTest {
         assertThatThrownBy(() -> usuarios.trocarSenha(1L, null, "x".repeat(Usuario.TAMANHO_MAXIMO_SENHA + 1)))
                 .isInstanceOf(SenhaRecusadaException.class);
         assertThatThrownBy(() -> usuarios.trocarSenha(1L, null, null)).isInstanceOf(SenhaRecusadaException.class);
+    }
+
+    @Test
+    void resumosVemEmOrdemDeNomeSemASenha() {
+        var bia = comId(Usuario.membro("bia Lima", "bia@x.com", "hash"), 2L);
+        var ana = comId(Usuario.admin("Ana Souza", "ana@x.com", "hash"), 1L);
+        when(repositorio.findAllById(List.of(1L, 2L))).thenReturn(List.of(bia, ana));
+
+        assertThat(usuarios.resumos(List.of(1L, 2L)))
+                .containsExactly(
+                        new UsuarioResumo(1L, "Ana Souza", "ana@x.com", null, true, false),
+                        new UsuarioResumo(2L, "bia Lima", "bia@x.com", null, false, false));
+        assertThat(usuarios.resumosPorId(List.of(1L, 2L))).containsOnlyKeys(1L, 2L);
+    }
+
+    private static Usuario comId(Usuario usuario, Long id) {
+        ReflectionTestUtils.setField(usuario, "id", id);
+        return usuario;
     }
 
     private Usuario cadastrada(Usuario usuario) {

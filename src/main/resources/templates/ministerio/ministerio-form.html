@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<!--/* Criar ou alterar um ministério (admin). ${ministerioId} nulo = novo. */-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title th:text="|${cabecalho} · Escala|">Criar ministério · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-1">
+        <h1 class="text-title" th:text="${cabecalho}">Criar ministério</h1>
+        <p class="text-ink-muted">A cor marca o ministério nas etiquetas; o ícone aparece na barra lateral.</p>
+    </header>
+
+    <form th:action="${ministerioId == null} ? @{/admin/ministerios} : @{/admin/ministerios/{id}(id=${ministerioId})}"
+          th:object="${form}" method="post" class="rt-panel flex w-full max-w-md flex-col gap-4 p-6">
+        <th:block th:replace="~{componentes/formulario :: errosGerais}"></th:block>
+        <div th:replace="~{componentes/formulario :: campoDoObjeto('Nome', 'nome')}"></div>
+        <th:block th:with="vazio='Escolha a cor'">
+            <div th:replace="~{componentes/formulario :: selecaoDoObjeto('Cor da etiqueta', 'cor', ${cores})}"></div>
+        </th:block>
+        <th:block th:with="vazio='Escolha o ícone'">
+            <div th:replace="~{componentes/formulario :: selecaoDoObjeto('Ícone', 'icone', ${icones})}"></div>
+        </th:block>
+        <div class="flex flex-wrap gap-2">
+            <button th:replace="~{componentes/botao :: botao(texto='Salvar', variante=null, icone=null, classe=null)}"></button>
+            <a th:replace="~{componentes/botao :: botao(texto='Cancelar', variante='secondary', href=@{/admin/ministerios},
+                    icone=null, classe=null)}"></a>
+        </div>
+    </form>
+</main>
+</body>
+</html>

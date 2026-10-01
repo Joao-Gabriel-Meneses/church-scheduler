@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!--/* Ministérios (admin): ListRow no celular e DataTable no desktop. O primário é "Criar ministério". */-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title>Ministérios · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6">
+    <header class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-col gap-1">
+            <h1 class="text-title">Ministérios</h1>
+            <p class="text-ink-muted">Crie os ministérios e, na página de cada membro, nomeie quem gerencia.</p>
+        </div>
+        <a th:replace="~{componentes/botao :: botao(texto='Criar ministério', icone='plus',
+                href=@{/admin/ministerios/novo}, variante=null, classe=null)}"></a>
+    </header>
+
+    <p th:if="${ministerios.isEmpty()}" class="rt-panel p-6 text-ink-muted">Nenhum ministério ainda. Crie o primeiro
+        para cadastrar os membros dele.</p>
+
+    <th:block th:unless="${ministerios.isEmpty()}">
+        <ul class="rt-list md:hidden">
+            <li th:each="item : ${ministerios}"><a th:replace="~{componentes/lista :: linha(titulo=${item.nome},
+                    sub=${item.descricao()}, icone=${item.icone.lucide()},
+                    href=@{/admin/ministerios/{id}(id=${item.id})}, selecionada=false)}"></a></li>
+        </ul>
+        <div class="rt-panel hidden overflow-x-auto md:block">
+            <table class="rt-table">
+                <thead>
+                <tr>
+                    <th scope="col">Ministério</th>
+                    <th scope="col">Etiqueta</th>
+                    <th scope="col">Gerentes</th>
+                    <th scope="col">Membros</th>
+                    <th scope="col"><span class="sr-only">Ações</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${ministerios}">
+                    <td><div th:replace="~{componentes/tabela :: comIcone(${item.nome}, ${item.icone.lucide()})}"></div></td>
+                    <td><span th:replace="~{componentes/badge :: badge(texto=${item.nome}, tint=${item.cor.tint()},
+                            variante=null, icone=null, classe=null)}"></span></td>
+                    <td>
+                        <th:block th:if="${item.gerentes.isEmpty()}"><th:block th:replace="~{componentes/tabela ::
+                                estado(texto='Sem gerente', variante='alerta')}"></th:block></th:block>
+                        <th:block th:unless="${item.gerentes.isEmpty()}"
+                                  th:text="${#strings.listJoin(item.gerentes, ', ')}">Ana Souza</th:block>
+                    </td>
+                    <td th:text="${item.membros}">18</td>
+                    <td class="text-right"><a th:replace="~{componentes/botao :: botaoIcone(icone='pencil',
+                            rotulo=${'Editar ' + item.nome}, href=@{/admin/ministerios/{id}(id=${item.id})},
+                            tamanho='sm', variante=null, classe=null)}"></a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </th:block>
+</main>
+</body>
+</html>

@@ -116,6 +116,9 @@ class ComponentesTest {
         assertThat(entre("<td id=\"estado-alerta\">", "</td>"))
                 .contains("rt-badge--alert", "#triangle-alert\"", "Sem resposta")
                 .doesNotContain("rt-dot");
+        assertThat(entre("<td id=\"com-icone\">", "</td>"))
+                .contains("<span class=\"rt-route__thumb\" aria-hidden=\"true\">", "#monitor\"")
+                .contains("<span class=\"rt-route__main\">Projeção</span>");
     }
 
     @Test
