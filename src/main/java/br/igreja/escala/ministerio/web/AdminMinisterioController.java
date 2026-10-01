@@ -32,9 +32,10 @@ class AdminMinisterioController {
         this.ministerios = ministerios;
     }
 
+    /** "cadastrados", e não "ministerios": esse nome é da SideRail do layout (NavegacaoAdvice). */
     @GetMapping
     String lista(Model model) {
-        model.addAttribute("ministerios", ministerios.resumos());
+        model.addAttribute("cadastrados", ministerios.resumos());
         return LISTA;
     }
 

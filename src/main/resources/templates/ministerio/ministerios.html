@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<!--/* Ministérios (admin): ListRow no celular e DataTable no desktop. O primário é "Criar ministério". */-->
+<!--/*
+    Ministérios (admin): ListRow no celular e DataTable no desktop. O primário é "Criar ministério".
+    A lista vem em ${cadastrados}: ${ministerios} é a SideRail do layout.
+*/-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
 <head>
@@ -16,12 +19,12 @@
                 href=@{/admin/ministerios/novo}, variante=null, classe=null)}"></a>
     </header>
 
-    <p th:if="${ministerios.isEmpty()}" class="rt-panel p-6 text-ink-muted">Nenhum ministério ainda. Crie o primeiro
+    <p th:if="${cadastrados.isEmpty()}" class="rt-panel p-6 text-ink-muted">Nenhum ministério ainda. Crie o primeiro
         para cadastrar os membros dele.</p>
 
-    <th:block th:unless="${ministerios.isEmpty()}">
+    <th:block th:unless="${cadastrados.isEmpty()}">
         <ul class="rt-list md:hidden">
-            <li th:each="item : ${ministerios}"><a th:replace="~{componentes/lista :: linha(titulo=${item.nome},
+            <li th:each="item : ${cadastrados}"><a th:replace="~{componentes/lista :: linha(titulo=${item.nome},
                     sub=${item.descricao()}, icone=${item.icone.lucide()},
                     href=@{/admin/ministerios/{id}(id=${item.id})}, selecionada=false)}"></a></li>
         </ul>
@@ -37,7 +40,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="item : ${ministerios}">
+                <tr th:each="item : ${cadastrados}">
                     <td><div th:replace="~{componentes/tabela :: comIcone(${item.nome}, ${item.icone.lucide()})}"></div></td>
                     <td><span th:replace="~{componentes/badge :: badge(texto=${item.nome}, tint=${item.cor.tint()},
                             variante=null, icone=null, classe=null)}"></span></td>

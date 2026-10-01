@@ -79,6 +79,19 @@ class AdminMinisterioControllerTest {
                 .contains("aria-label=\"Editar Mídia\"", "Criar ministério");
     }
 
+    /** O layout usa ${ministerios} para a SideRail; a lista da página não pode ocupar esse nome. */
+    @Test
+    void listaComVariosMinisteriosNaoSeConfundeComASideRail() throws Exception {
+        when(ministerios.resumos())
+                .thenReturn(List.of(
+                        new MinisterioResumo(2L, "Louvor", CorDoMinisterio.ROSE, Icone.MUSIC, List.of(), 0),
+                        new MinisterioResumo(1L, "Mídia", CorDoMinisterio.MINT, Icone.MONITOR, List.of(), 3)));
+
+        assertThat(pagina(get("/admin/ministerios").with(user(ADMIN)), "ministerio/ministerios"))
+                .contains("Louvor", "Mídia", "Sem gerente · 0 membros")
+                .doesNotContain("aria-label=\"Ministérios\"");
+    }
+
     @Test
     void listaVaziaConvidaACriarOPrimeiro() throws Exception {
         when(ministerios.resumos()).thenReturn(List.of());
