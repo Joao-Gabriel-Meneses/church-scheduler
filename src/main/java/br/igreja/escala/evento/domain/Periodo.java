@@ -54,6 +54,30 @@ public class Periodo {
         return YearMonth.from(data).equals(getMes());
     }
 
+    /**
+     * Fecha a disponibilidade do mês: o membro não muda mais as respostas (o gerente ainda marca em nome dele).
+     *
+     * @return se travou agora; falso se já estava travada
+     */
+    public boolean travarDisponibilidade() {
+        if (disponibilidadeTravada) {
+            return false;
+        }
+        disponibilidadeTravada = true;
+        return true;
+    }
+
+    /**
+     * @return se destravou agora; falso se já estava aberta
+     */
+    public boolean destravarDisponibilidade() {
+        if (!disponibilidadeTravada) {
+            return false;
+        }
+        disponibilidadeTravada = false;
+        return true;
+    }
+
     public Long getId() {
         return id;
     }
