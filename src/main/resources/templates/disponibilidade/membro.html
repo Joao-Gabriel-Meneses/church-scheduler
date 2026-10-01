@@ -12,7 +12,7 @@
 <main class="flex flex-col gap-6">
     <header class="flex flex-col gap-3">
         <h1 class="text-title" th:text="${tela.titulo()}">Mídia — Novembro</h1>
-        <div class="flex items-center justify-between gap-2">
+        <div class="flex max-w-md items-center justify-between gap-2">
             <div class="rt-toolbar"><div th:replace="~{componentes/toolbar :: seletorDePeriodo(${mesPorExtenso},
                     ${mesCurto}, @{/disponibilidade(mes=${mesAnterior})}, @{/disponibilidade(mes=${proximoMes})})}"></div></div>
             <p th:replace="~{disponibilidade/fragments/grupo :: total(${tela}, false)}"></p>

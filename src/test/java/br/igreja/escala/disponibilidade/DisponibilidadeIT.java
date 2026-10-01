@@ -211,7 +211,7 @@ class DisponibilidadeIT {
 
         mvc.perform(marcar(midia.getId(), ensaio.getId(), "NAO_PODE").header("HX-Request", "true"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(Matchers.containsString("rt-avail rt-avail--locked")))
+                .andExpect(content().string(Matchers.containsString("rt-avail max-w-none rt-avail--locked")))
                 .andExpect(content().string(Matchers.containsString("o gerente travou a disponibilidade")));
         mvc.perform(marcar(midia.getId(), ensaio.getId(), "NAO_PODE")).andExpect(status().is3xxRedirection());
         entityManager.clear();

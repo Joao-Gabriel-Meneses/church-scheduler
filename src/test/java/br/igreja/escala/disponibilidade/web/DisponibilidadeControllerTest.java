@@ -102,7 +102,7 @@ class DisponibilidadeControllerTest {
                 .doesNotContain("PREFERE_NAO", "Prefiro não", "hx-swap-oob");
         String louvor = html.substring(html.indexOf("<section id=\"grupo-2\""));
         assertThat(louvor)
-                .contains("class=\"rt-avail rt-avail--locked\"", "Disponibilidade travada")
+                .contains("class=\"rt-avail max-w-none rt-avail--locked\"", "Disponibilidade travada")
                 .contains("O gerente travou a disponibilidade deste mês.")
                 .contains("disabled=\"disabled\"");
         String midia = html.substring(html.indexOf("<section id=\"grupo-1\""), html.indexOf("<section id=\"grupo-2\""));
@@ -193,7 +193,10 @@ class DisponibilidadeControllerTest {
 
         assertThat(html)
                 .contains("<div class=\"rt-alert\" role=\"alert\">", motivo)
-                .contains("class=\"rt-avail rt-avail--locked\"", "Disponibilidade travada", "disabled=\"disabled\"");
+                .contains(
+                        "class=\"rt-avail max-w-none rt-avail--locked\"",
+                        "Disponibilidade travada",
+                        "disabled=\"disabled\"");
     }
 
     @Test

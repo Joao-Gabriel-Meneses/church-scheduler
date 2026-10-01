@@ -15,7 +15,7 @@
 <body>
 
 <section th:fragment="grupo(grupo, pessoaId, mostrarMinisterio, recusa)" th:id="|grupo-${grupo.ministerioId}|"
-         class="flex flex-col gap-3" th:aria-label="|Eventos de ${grupo.ministerio}|">
+         class="flex max-w-md flex-col gap-3" th:aria-label="|Eventos de ${grupo.ministerio}|">
     <div class="flex flex-wrap items-center gap-2">
         <th:block th:if="${mostrarMinisterio}"><span th:replace="~{componentes/badge :: badge(texto=${grupo.ministerio},
                 tint=${grupo.tint}, variante=null, icone=null, classe=null)}"></span></th:block>
@@ -30,7 +30,8 @@
             regra=null, acaoTexto=null, icone=null)}"></div></th:block>
     <p th:if="${grupo.linhas.isEmpty()}" class="rt-panel p-4 text-ink-muted" th:text="${grupo.semEventos()}">Nenhum
         evento por vir em novembro.</p>
-    <div th:unless="${grupo.linhas.isEmpty()}" class="rt-avail" th:classappend="${grupo.editavel} ? '' : 'rt-avail--locked'">
+    <div th:unless="${grupo.linhas.isEmpty()}" class="rt-avail max-w-none"
+         th:classappend="${grupo.editavel} ? '' : 'rt-avail--locked'">
         <th:block th:each="linha : ${grupo.linhas}"><div th:replace="~{componentes/disponibilidade :: linha(
                 linha=${linha},
                 acao=${pessoaId == null}

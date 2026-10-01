@@ -101,7 +101,8 @@
                 </ul>
             </div>
 
-            <div class="rt-panel hidden overflow-x-auto md:block">
+            <!--/* relative: os textos sr-only (position absolute) ficam presos à rolagem e não alargam a página. */-->
+            <div class="rt-panel relative hidden overflow-x-auto md:block">
                 <table class="rt-table rt-sched">
                     <caption class="sr-only" th:text="|Respostas de cada membro aos eventos por vir de ${painel.nomeDoMes()}|">
                         Respostas de cada membro aos eventos por vir de novembro</caption>
@@ -109,7 +110,8 @@
                     <tr>
                         <th scope="col">Membro</th>
                         <th scope="col">Estado</th>
-                        <th th:each="evento : ${painel.eventos}" scope="col" th:title="${evento.nome}"><div
+                        <th th:each="evento : ${painel.eventos}" scope="col" class="whitespace-nowrap"
+                            th:title="${evento.nome}"><div
                                 th:replace="~{componentes/tabela :: duasLinhas(${evento.dia}, ${evento.horario})}"></div><span
                                 class="sr-only" th:text="${evento.nome}">Culto de domingo</span></th>
                         <th scope="col"><span class="sr-only">Ações</span></th>
@@ -117,8 +119,9 @@
                     </thead>
                     <tbody>
                     <tr th:each="membro : ${painel.membros}" th:classappend="${membro.respondeuTudo()} ? '' : 'is-alert'">
-                        <td><div th:replace="~{componentes/tabela :: pessoa(${membro.pessoa.nome}, ${membro.pessoa.iniciais()})}"></div></td>
-                        <td><th:block th:replace="~{componentes/tabela :: estado(texto=${membro.estado()},
+                        <td class="whitespace-nowrap"><div th:replace="~{componentes/tabela :: pessoa(${membro.pessoa.nome},
+                                ${membro.pessoa.iniciais()})}"></div></td>
+                        <td class="whitespace-nowrap"><th:block th:replace="~{componentes/tabela :: estado(texto=${membro.estado()},
                                 variante=${membro.varianteDoEstado()})}"></th:block></td>
                         <td th:each="resposta : ${membro.respostas}">
                             <th:block th:switch="${resposta?.name()}">
