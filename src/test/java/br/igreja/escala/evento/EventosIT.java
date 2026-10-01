@@ -2,25 +2,45 @@ package br.igreja.escala.evento;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.igreja.escala.TesteDeIntegracao;
+import br.igreja.escala.compartilhado.Datas;
+import br.igreja.escala.compartilhado.Fuso;
+import br.igreja.escala.evento.domain.Evento;
 import br.igreja.escala.evento.domain.ModeloEvento;
 import br.igreja.escala.evento.domain.Periodo;
+import br.igreja.escala.evento.repository.EventoRepository;
 import br.igreja.escala.evento.repository.ModeloEventoRepository;
 import br.igreja.escala.evento.repository.PeriodoRepository;
+import br.igreja.escala.identidade.domain.Usuario;
+import br.igreja.escala.identidade.domain.UsuarioAutenticado;
+import br.igreja.escala.identidade.repository.UsuarioRepository;
 import br.igreja.escala.ministerio.domain.CorDoMinisterio;
 import br.igreja.escala.ministerio.domain.Icone;
+import br.igreja.escala.ministerio.domain.Membresia;
 import br.igreja.escala.ministerio.domain.Ministerio;
+import br.igreja.escala.ministerio.repository.MembresiaRepository;
 import br.igreja.escala.ministerio.repository.MinisterioRepository;
 import jakarta.persistence.EntityManager;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
+import java.util.List;
+import java.util.Locale;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Modelos, períodos e eventos no Oracle: mapeamento de dia, horário e data, e as constraints. */
@@ -36,6 +56,18 @@ class EventosIT {
 
     @Autowired
     PeriodoRepository periodos;
+
+    @Autowired
+    EventoRepository eventos;
+
+    @Autowired
+    UsuarioRepository usuarios;
+
+    @Autowired
+    MembresiaRepository membresias;
+
+    @Autowired
+    MockMvc mvc;
 
     @Autowired
     EntityManager entityManager;
@@ -78,5 +110,126 @@ class EventosIT {
                 .isEqualTo(YearMonth.of(2026, 10));
         assertThatThrownBy(() -> periodos.saveAndFlush(new Periodo(midia.getId(), YearMonth.of(2026, 10))))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    /** Daqui a dois meses: todas as datas são futuras, qualquer que seja o dia em que o teste roda. */
+    private static final YearMonth MES = YearMonth.now(Fuso.SAO_PAULO).plusMonths(2);
+
+    @Test
+    void gerarOMesDeNovoNaoDuplicaNemRecriaOCancelado() throws Exception {
+        var gerente = gerenteDaMidia();
+        modelos.save(new ModeloEvento(midia.getId(), "Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0)));
+        modelos.save(new ModeloEvento(midia.getId(), "Culto de quinta", DayOfWeek.THURSDAY, LocalTime.of(19, 30)));
+
+        mvc.perform(gerar(gerente)).andExpect(flash().attributeExists("sucesso"));
+        var doMes = eventosDoMes();
+        long esperados = MES.atDay(1)
+                .datesUntil(MES.plusMonths(1).atDay(1))
+                .filter(data -> data.getDayOfWeek() == DayOfWeek.SUNDAY || data.getDayOfWeek() == DayOfWeek.THURSDAY)
+                .count();
+        assertThat(doMes).hasSize((int) esperados);
+
+        var primeiro = doMes.get(0);
+        mvc.perform(post("/ministerios/{m}/eventos/{e}/cancelar", midia.getId(), primeiro.getId())
+                        .with(user(gerente))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection());
+        mvc.perform(gerar(gerente))
+                .andExpect(flash().attribute(
+                                "sucesso",
+                                "Nenhum evento novo em " + Datas.nomeDoMes(MES).toLowerCase(Locale.ROOT)
+                                        + ": os dos modelos já existem"));
+
+        assertThat(eventosDoMes()).hasSize((int) esperados);
+        assertThat(eventos.findById(primeiro.getId()))
+                .get()
+                .extracting(Evento::isCancelado)
+                .isEqualTo(true);
+        mvc.perform(get("/ministerios/{m}/eventos", midia.getId())
+                        .param("mes", MES.toString())
+                        .with(user(gerente)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void doisAvulsosNoMesmoDiaPodemMasOModeloSoUmaVezPorData() {
+        var periodo = periodos.save(new Periodo(midia.getId(), MES));
+        var data = MES.atDay(10);
+        eventos.save(Evento.avulso(periodo, "Ensaio", data, LocalTime.of(9, 0)));
+        eventos.saveAndFlush(Evento.avulso(periodo, "Reunião", data, LocalTime.of(20, 0)));
+        var modelo = modelos.save(new ModeloEvento(midia.getId(), "Culto", data.getDayOfWeek(), LocalTime.of(18, 0)));
+        eventos.saveAndFlush(Evento.doModelo(modelo, periodo, data));
+
+        assertThat(eventos.existsByModeloIdAndData(modelo.getId(), data)).isTrue();
+        assertThatThrownBy(() -> eventos.saveAndFlush(Evento.doModelo(modelo, periodo, data)))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void eventoDeOutroMinisterioNaRotaDoProprioE404() throws Exception {
+        var gerente = gerenteDaMidia();
+        var louvor = ministerios.save(new Ministerio("Louvor Eventos", CorDoMinisterio.ROSE, Icone.MUSIC));
+        var periodoDoLouvor = periodos.save(new Periodo(louvor.getId(), MES));
+        var ensaio = eventos.save(Evento.avulso(periodoDoLouvor, "Ensaio do louvor", MES.atDay(5), LocalTime.NOON));
+
+        mvc.perform(get("/ministerios/{m}/eventos/{e}", midia.getId(), ensaio.getId())
+                        .with(user(gerente)))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/ministerios/{m}/eventos/{e}/cancelar", midia.getId(), ensaio.getId())
+                        .with(user(gerente))
+                        .with(csrf()))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/ministerios/{m}/eventos/{e}/cancelar", louvor.getId(), ensaio.getId())
+                        .with(user(gerente))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+
+        assertThat(eventos.findById(ensaio.getId()))
+                .get()
+                .extracting(Evento::isCancelado)
+                .isEqualTo(false);
+    }
+
+    @Test
+    void avulsoCriadoPeloFormularioGuardaDataEHorario() throws Exception {
+        var gerente = gerenteDaMidia();
+        LocalDate data = MES.atDay(12);
+
+        mvc.perform(post("/ministerios/{m}/eventos", midia.getId())
+                        .with(user(gerente))
+                        .with(csrf())
+                        .param("nome", "Conferência de jovens")
+                        .param("data", data.toString())
+                        .param("horario", "15:30"))
+                .andExpect(status().is3xxRedirection());
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(eventosDoMes()).singleElement().satisfies(evento -> {
+            assertThat(evento.getData()).isEqualTo(data);
+            assertThat(evento.getHorario()).isEqualTo(LocalTime.of(15, 30));
+            assertThat(evento.isAvulso()).isTrue();
+        });
+    }
+
+    private List<Evento> eventosDoMes() {
+        return periodos.findByMinisterioIdAndAnoAndMes(midia.getId(), MES.getYear(), MES.getMonthValue())
+                .map(periodo -> eventos.findByPeriodoIdOrderByDataAscHorarioAsc(periodo.getId()))
+                .orElse(List.of());
+    }
+
+    private MockHttpServletRequestBuilder gerar(UsuarioAutenticado gerente) {
+        return post("/ministerios/{m}/eventos/gerar", midia.getId())
+                .with(user(gerente))
+                .with(csrf())
+                .param("mes", MES.toString());
+    }
+
+    private UsuarioAutenticado gerenteDaMidia() {
+        var gerente = usuarios.save(Usuario.membro("Gerente Eventos", "gerente.eventos@teste.local", "{noop}x"));
+        var membresia = new Membresia(gerente.getId(), midia);
+        membresia.tornarGerente();
+        membresias.save(membresia);
+        return new UsuarioAutenticado(gerente);
     }
 }

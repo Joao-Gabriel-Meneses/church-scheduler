@@ -15,6 +15,7 @@ class DatasTest {
         assertThat(Datas.dataCurta(LocalDate.of(2026, 10, 4))).isEqualTo("04/10 · Dom");
         assertThat(Datas.dataCurta(LocalDate.of(2026, 10, 10))).isEqualTo("10/10 · Sáb");
         assertThat(Datas.dia(LocalDate.of(2026, 10, 4))).isEqualTo("04");
+        assertThat(Datas.diaEMes(LocalDate.of(2026, 1, 9))).isEqualTo("09/01");
     }
 
     @Test

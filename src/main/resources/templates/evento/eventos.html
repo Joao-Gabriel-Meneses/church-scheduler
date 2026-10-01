@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<!--/*
+    Eventos do mês (gerente). A Toolbar troca o mês e mostra a trava da disponibilidade. O primário é "Criar eventos
+    do mês" (dos modelos ativos; pode repetir sem duplicar). ListRow no celular e DataTable no desktop.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{::#barra}, ~{::main})}">
+<head>
+    <title th:text="|${ministerio.nome} — ${nomeDoMes} · Escala|">Mídia — Outubro · Escala</title>
+</head>
+<body>
+<div id="barra" th:replace="~{componentes/toolbar :: toolbar(periodo=${mesPorExtenso}, periodoCurto=${mesCurto},
+        anteriorHref=@{/ministerios/{m}/eventos(m=${ministerio.id}, mes=${mesAnterior})},
+        proximoHref=@{/ministerios/{m}/eventos(m=${ministerio.id}, mes=${proximoMes})},
+        travada=${disponibilidadeTravada}, regrasHref=null, acaoTexto=null)}"></div>
+
+<main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-1">
+        <h1 class="text-title" th:text="|${ministerio.nome} — ${nomeDoMes}|">Mídia — Outubro</h1>
+        <p class="text-ink-muted">Os eventos do mês. Crie os dos modelos e acrescente os avulsos; o horário de cada um
+            pode mudar sem mudar o modelo.</p>
+    </header>
+
+    <th:block th:if="${recusa != null}"><div th:replace="~{componentes/alerta :: alerta(titulo=${recusa}, corpo=null,
+            regra=null, acaoTexto=null, icone=null)}"></div></th:block>
+    <th:block th:unless="${temModelosAtivos}"><div th:replace="~{componentes/alerta :: alerta(
+            titulo='Nenhum modelo de evento ativo',
+            corpo='Sem modelos, os eventos do mês não são criados sozinhos. Crie os eventos de toda semana, como Culto de domingo às 18h00.',
+            regra=null, acaoTexto='Criar modelo', acaoHref=@{/ministerios/{m}/eventos/modelos/novo(m=${ministerio.id})},
+            icone=null)}"></div></th:block>
+
+    <div class="flex flex-wrap gap-2">
+        <form th:if="${temModelosAtivos}" th:action="@{/ministerios/{m}/eventos/gerar(m=${ministerio.id})}"
+              method="post">
+            <input type="hidden" name="mes" th:value="${mes}">
+            <button th:replace="~{componentes/botao :: botao(texto='Criar eventos do mês', icone='calendar-plus',
+                    variante=null, classe=null, tipo=null)}"></button>
+        </form>
+        <a th:replace="~{componentes/botao :: botao(texto='Criar evento avulso', icone='plus', variante='secondary',
+                href=@{/ministerios/{m}/eventos/novo(m=${ministerio.id})}, classe=null)}"></a>
+        <a th:replace="~{componentes/botao :: botao(texto='Modelos de evento', icone=null, variante='outline',
+                href=@{/ministerios/{m}/eventos/modelos(m=${ministerio.id})}, classe=null)}"></a>
+    </div>
+
+    <p th:if="${eventos.isEmpty()}" class="rt-panel p-6 text-ink-muted"
+       th:text="|Nenhum evento em ${#strings.toLowerCase(nomeDoMes)} ainda.|">Nenhum evento em outubro ainda.</p>
+
+    <th:block th:unless="${eventos.isEmpty()}">
+        <ul class="rt-list md:hidden">
+            <li th:each="evento : ${eventos}"><a th:replace="~{componentes/lista :: linha(titulo=${evento.nome},
+                    sub=${evento.descricao()}, icone=${evento.cancelado} ? 'calendar-x' : 'calendar',
+                    href=@{/ministerios/{m}/eventos/{e}(m=${ministerio.id}, e=${evento.id})},
+                    selecionada=false)}"></a></li>
+        </ul>
+        <div class="rt-panel hidden overflow-x-auto md:block">
+            <table class="rt-table">
+                <thead>
+                <tr>
+                    <th scope="col">Data</th>
+                    <th scope="col">Evento</th>
+                    <th scope="col">Horário</th>
+                    <th scope="col">Origem</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col"><span class="sr-only">Ações</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="evento : ${eventos}">
+                    <td><div th:replace="~{componentes/tabela :: duasLinhas(${evento.dia}, ${evento.diaDaSemana})}"></div></td>
+                    <td th:text="${evento.nome}">Culto de domingo</td>
+                    <td th:text="${evento.horario}">18h00</td>
+                    <td th:text="${evento.avulso} ? 'Avulso' : 'Modelo'">Modelo</td>
+                    <td>
+                        <th:block th:if="${evento.cancelado}"><th:block th:replace="~{componentes/tabela ::
+                                estado(texto='Cancelado', variante='vazio')}"></th:block></th:block>
+                        <th:block th:unless="${evento.cancelado}"><th:block th:replace="~{componentes/tabela ::
+                                estado(texto='Confirmado', variante=null)}"></th:block></th:block>
+                    </td>
+                    <td class="text-right"><a th:replace="~{componentes/botao :: botaoIcone(icone='pencil',
+                            rotulo=|Editar ${evento.nome} de ${evento.data}|,
+                            href=@{/ministerios/{m}/eventos/{e}(m=${ministerio.id}, e=${evento.id})},
+                            tamanho='sm', variante=null, classe=null)}"></a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </th:block>
+</main>
+</body>
+</html>

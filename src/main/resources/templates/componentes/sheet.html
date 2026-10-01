@@ -4,7 +4,8 @@
 
     confirmacao(id, titulo, texto, acao, confirmar): confirma uma ação que não se desfaz (excluir, remover do
     ministério) antes de enviar o POST para ${acao}. "Cancelar" fecha; o botão de confirmar é escuro e fica por
-    último, perto do polegar. No desktop a folha fica centralizada e estreita.
+    último, perto do polegar. No desktop a folha fica centralizada e estreita. Opção: voltar (texto do botão que fecha,
+    padrão "Cancelar"; troque quando a ação também for cancelar algo, ex.: "Manter evento").
         <button th:replace="~{componentes/sheet :: abrir(alvo='excluir-funcao', texto='Excluir função',
             icone='trash-2')}"></button>
         <div th:replace="~{componentes/sheet :: confirmacao(id='excluir-funcao', titulo='Excluir Projeção?',
@@ -32,7 +33,7 @@
     <p class="text-ink-muted" th:text="${texto}">Os eventos deixam de pedir esta função.</p>
     <form th:action="${acao}" method="post" class="flex flex-col gap-2">
         <button type="button" class="rt-btn rt-btn--secondary w-full justify-center" th:attr="popovertarget=${id}"
-                popovertargetaction="hide">Cancelar</button>
+                popovertargetaction="hide" th:text="${voltar ?: 'Cancelar'}">Cancelar</button>
         <button type="submit" class="rt-btn rt-btn--dark w-full justify-center" th:text="${confirmar}">Excluir</button>
     </form>
 </div>

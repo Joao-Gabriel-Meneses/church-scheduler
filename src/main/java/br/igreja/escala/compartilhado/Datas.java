@@ -38,7 +38,12 @@ public final class Datas {
 
     /** "12/10 · Dom". */
     public static String dataCurta(LocalDate data) {
-        return data.format(DIA_E_MES) + " · " + diaDaSemanaCurto(data.getDayOfWeek());
+        return diaEMes(data) + " · " + diaDaSemanaCurto(data.getDayOfWeek());
+    }
+
+    /** "12/10". */
+    public static String diaEMes(LocalDate data) {
+        return data.format(DIA_E_MES);
     }
 
     /** "05", o dia com dois dígitos (AvailabilityPicker, ScheduleGrid). */
