@@ -4,9 +4,13 @@ import br.igreja.escala.identidade.domain.Usuario;
 import java.util.Arrays;
 import java.util.Locale;
 
-/** O que os outros módulos enxergam de um usuário. Nunca leva a senha. */
+/**
+ * O que os outros módulos enxergam de um usuário. Nunca leva a senha.
+ *
+ * @param ativo falso se o admin desativou a conta: a pessoa não entra em nenhum ministério
+ */
 public record UsuarioResumo(
-        Long id, String nome, String email, String telefone, boolean admin, boolean senhaProvisoria) {
+        Long id, String nome, String email, String telefone, boolean admin, boolean senhaProvisoria, boolean ativo) {
 
     static UsuarioResumo de(Usuario usuario) {
         return new UsuarioResumo(
@@ -15,7 +19,8 @@ public record UsuarioResumo(
                 usuario.getEmail(),
                 usuario.getTelefone(),
                 usuario.isAdmin(),
-                usuario.isSenhaProvisoria());
+                usuario.isSenhaProvisoria(),
+                usuario.isAtivo());
     }
 
     /** Iniciais do avatar (DataTable): a primeira letra do primeiro e do último nome ("Ana Souza" → "AS"). */

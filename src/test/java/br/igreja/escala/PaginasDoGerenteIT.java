@@ -89,6 +89,7 @@ class PaginasDoGerenteIT {
     private UsuarioAutenticado gerente;
     private UsuarioAutenticado admin;
     private Long membroId;
+    private Long desativadaId;
     private Long funcaoId;
     private Long nivelId;
     private Long modeloId;
@@ -102,12 +103,16 @@ class PaginasDoGerenteIT {
             ministerioId = midia.getId();
             var paula = usuarios.save(Usuario.membro("Paula Páginas", "paula.paginas@teste.local", "{noop}x"));
             var ana = usuarios.save(Usuario.membro("Ana Páginas", "ana.paginas@teste.local", "{noop}x"));
+            var bia = Usuario.membro("Bia Páginas", "bia.paginas@teste.local", "{noop}x");
+            bia.desativar();
+            desativadaId = usuarios.save(bia).getId();
             admin = new UsuarioAutenticado(
                     usuarios.save(Usuario.admin("Admin Páginas", "admin.paginas@teste.local", "{noop}x")));
             var membresia = new Membresia(paula.getId(), midia);
             membresia.tornarGerente();
             membresias.save(membresia);
             membresias.save(new Membresia(ana.getId(), midia));
+            membresias.save(new Membresia(desativadaId, midia));
             var projecao = funcoes.save(new Funcao(midia, "Projeção", Icone.MONITOR, 1, 1));
             var iniciante = niveis.save(new Nivel(midia, "Iniciante", 1));
             habilitacoes.save(new Habilitacao(ana.getId(), projecao, iniciante));
@@ -162,6 +167,7 @@ class PaginasDoGerenteIT {
         abre("/ministerios/{m}/membros/{u}", ministerioId, membroId);
         abre("/ministerios/{m}/membros/novo", ministerioId);
         abre("/ministerios/{m}/membros/{u}/editar", ministerioId, membroId);
+        abre("/ministerios/{m}/membros/{u}", ministerioId, desativadaId);
         abre("/ministerios/{m}/funcoes", ministerioId);
         abre("/ministerios/{m}/funcoes/{f}", ministerioId, funcaoId);
         abre("/ministerios/{m}/funcoes/niveis/{n}", ministerioId, nivelId);
@@ -179,6 +185,11 @@ class PaginasDoGerenteIT {
         mvc.perform(get("/admin/ministerios/{id}", ministerioId).with(user(admin)))
                 .andExpect(status().isOk());
         mvc.perform(get("/ministerios/{m}/membros", ministerioId).with(user(admin)))
+                .andExpect(status().isOk());
+        mvc.perform(get("/ministerios/{m}/membros/{u}", ministerioId, membroId).with(user(admin)))
+                .andExpect(status().isOk());
+        mvc.perform(get("/ministerios/{m}/membros/{u}", ministerioId, desativadaId)
+                        .with(user(admin)))
                 .andExpect(status().isOk());
     }
 

@@ -6,6 +6,8 @@
     - Redefinir senha: Sheet com a nova senha provisória.
     - Remover do ministério: Sheet de confirmação; um gerente só o admin remove (${podeRemover}).
     - Tornar ou deixar de ser gerente: só para o admin (${ehAdmin}).
+    - Desativar a conta (Sheet de confirmação) e reativar: só para o admin, e nunca na própria conta. Conta desativada
+      leva o Badge "Conta desativada".
     - Habilitações: um select de nível por função (${linhas}, ${niveis}); "Salvar habilitações" é o primário.
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
@@ -24,6 +26,8 @@
                     variante=null, icone='shield-check', tint=null, classe=null)}"></span></th:block>
             <th:block th:if="${membro.pessoa.admin}"><span th:replace="~{componentes/badge :: badge(
                     texto='Administrador', variante=null, icone=null, tint=null, classe=null)}"></span></th:block>
+            <th:block th:unless="${membro.pessoa.ativo}"><span th:replace="~{componentes/badge :: badge(
+                    texto='Conta desativada', variante='locked', icone=null, tint=null, classe=null)}"></span></th:block>
             <th:block th:if="${membro.pessoa.senhaProvisoria}"><span th:replace="~{componentes/badge :: badge(
                     texto='Ainda com a senha provisória', variante='draft', icone=null, tint=null, classe=null)}"></span></th:block>
         </div>
@@ -89,7 +93,16 @@
             </th:block>
             <th:block th:if="${podeRemover and !ehVoce}"><button th:replace="~{componentes/sheet :: abrir(
                     alvo='remover-membro', texto='Remover do ministério', icone='user-minus')}"></button></th:block>
+            <th:block th:if="${ehAdmin and !ehVoce and membro.pessoa.ativo}"><button th:replace="~{componentes/sheet ::
+                    abrir(alvo='desativar-conta', texto='Desativar conta', icone='lock')}"></button></th:block>
+            <th:block th:if="${ehAdmin and !membro.pessoa.ativo}">
+                <form th:action="${_base + '/reativar'}" method="post"><button th:replace="~{componentes/botao ::
+                        botao(texto='Reativar conta', variante='secondary', icone='rotate-ccw', classe=null,
+                        tipo=null)}"></button></form>
+            </th:block>
         </div>
+        <p th:unless="${membro.pessoa.ativo}" class="text-label text-ink-muted">Conta desativada: a pessoa não entra
+            no sistema, em nenhum ministério. Só o administrador reativa.</p>
         <p th:unless="${podeMexerNaConta}" class="text-label text-ink-muted">Os dados e a senha de gerentes e
             administradores só o administrador muda.</p>
         <p th:if="${ehVoce}" class="text-label text-ink-muted">Esta é a sua conta. Para mudar seus dados ou sua senha,
@@ -109,6 +122,12 @@
                         classe='w-full justify-center', tipo=null)}"></button>
             </form>
         </div>
+    </th:block>
+    <th:block th:if="${ehAdmin and !ehVoce and membro.pessoa.ativo}">
+        <div th:replace="~{componentes/sheet :: confirmacao(id='desativar-conta',
+                titulo=|Desativar a conta de ${membro.nome}?|,
+                texto='A pessoa deixa de entrar no sistema, em todos os ministérios, e as sessões abertas dela são encerradas. Ela continua nos ministérios, e você pode reativar a conta depois.',
+                acao=${_base + '/desativar'}, confirmar='Desativar conta')}"></div>
     </th:block>
     <th:block th:if="${podeRemover and !ehVoce}">
         <div th:replace="~{componentes/sheet :: confirmacao(id='remover-membro',

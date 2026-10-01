@@ -297,6 +297,50 @@ class MembrosIT {
     }
 
     @Test
+    void soOAdminDesativaAContaDosOutrosERegistraSemMinisterio() throws Exception {
+        var midia = ministerio("Mídia Desativação");
+        var louvor = ministerio("Louvor Desativação");
+        var gerente = gerenteDe(midia, "gerente.desativacao@teste.local");
+        var ana = membroDe(midia, "ana.desativacao@teste.local");
+        var doLouvor = membroDe(louvor, "bruno.desativacao@teste.local");
+        membresias.save(new Membresia(admin.getId(), midia));
+
+        mvc.perform(post("/ministerios/{m}/membros/{u}/desativar", midia.getId(), ana.getId())
+                        .with(user(gerente))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/ministerios/{m}/membros/{u}/desativar", midia.getId(), doLouvor.getId())
+                        .with(user(admin))
+                        .with(csrf()))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/ministerios/{m}/membros/{u}/desativar", midia.getId(), admin.getId())
+                        .with(user(admin))
+                        .with(csrf()))
+                .andExpect(flash().attribute(
+                                "recusa", "Sua conta continua ativa: o administrador não desativa a própria conta."));
+        mvc.perform(post("/ministerios/{m}/membros/{u}/desativar", midia.getId(), ana.getId())
+                        .with(user(admin))
+                        .with(csrf()))
+                .andExpect(flash().attribute("sucesso", "Conta de ana.desativacao desativada"));
+
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(usuarios.findById(ana.getId()).orElseThrow().isAtivo()).isFalse();
+        assertThat(usuarios.findById(doLouvor.getId()).orElseThrow().isAtivo()).isTrue();
+        assertThat(usuarios.findById(admin.getId()).orElseThrow().isAtivo()).isTrue();
+        assertThat(auditorias.findAll())
+                .filteredOn(registro -> ana.getId().equals(registro.getAlvoUsuarioId()))
+                .singleElement()
+                .satisfies(registro -> {
+                    assertThat(registro.getAcao()).isEqualTo(AcaoAuditada.DESATIVAR_CONTA);
+                    assertThat(registro.getMinisterioId()).isNull();
+                    assertThat(registro.getDescricao()).isEqualTo("Conta de ana.desativacao desativada.");
+                });
+        mvc.perform(get("/ministerios/{m}/membros", midia.getId()).with(user(gerente)))
+                .andExpect(content().string(Matchers.containsString("ana.desativacao · Desativada")));
+    }
+
+    @Test
     void removerTiraAsHabilitacoesDesteMinisterioEMantemAsDeOutro() throws Exception {
         var midia = ministerio("Mídia Remoção");
         var louvor = ministerio("Louvor Remoção");

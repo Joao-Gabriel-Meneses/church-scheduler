@@ -128,6 +128,26 @@ public class UsuarioService {
         return List.copyOf(alterados);
     }
 
+    /**
+     * A pessoa deixa de entrar, em todos os ministérios, e as sessões abertas dela são encerradas
+     * ({@link AcessoRevogado}). Quem pode desativar é regra de quem chama (o módulo ministerio).
+     */
+    @Transactional
+    public UsuarioResumo desativar(Long usuarioId) {
+        var usuario = usuarios.findById(usuarioId).orElseThrow();
+        usuario.desativar();
+        eventos.publishEvent(new AcessoRevogado(usuarioId));
+        return UsuarioResumo.de(usuario);
+    }
+
+    /** A pessoa volta a entrar, com a mesma senha. */
+    @Transactional
+    public UsuarioResumo reativar(Long usuarioId) {
+        var usuario = usuarios.findById(usuarioId).orElseThrow();
+        usuario.reativar();
+        return UsuarioResumo.de(usuario);
+    }
+
     /** Usuários pelos ids, em ordem de nome. Ids que não existem ficam de fora. */
     @Transactional(readOnly = true)
     public List<UsuarioResumo> resumos(Collection<Long> ids) {

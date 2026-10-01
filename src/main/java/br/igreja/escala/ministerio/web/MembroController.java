@@ -11,6 +11,7 @@ import br.igreja.escala.ministerio.service.MembroResumo;
 import br.igreja.escala.ministerio.service.MembroService;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import br.igreja.escala.ministerio.service.NivelService;
+import br.igreja.escala.ministerio.service.ResultadoDoCadastro;
 import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,7 +32,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * Membros do ministério: lista, cadastro com senha provisória, a página de cada um e os dados da conta. Nomear e remover
- * gerente é do admin: o {@code @PreAuthorize} do método vale no lugar do {@link GerenteDoMinisterio} da classe.
+ * gerente, e desativar e reativar a conta, é do admin: o {@code @PreAuthorize} do método vale no lugar do
+ * {@link GerenteDoMinisterio} da classe.
  */
 @Controller
 @GerenteDoMinisterio
@@ -82,12 +84,7 @@ class MembroController {
         if (!erros.hasErrors()) {
             try {
                 var resultado = membros.cadastrar(ministerioId, form);
-                String nome = resultado.membro().nome();
-                redirecionamento.addFlashAttribute(
-                        "sucesso",
-                        resultado.jaTinhaConta()
-                                ? nome + " já tinha conta e entrou no ministério"
-                                : nome + " entrou no ministério com a senha provisória");
+                redirecionamento.addFlashAttribute("sucesso", mensagemDoCadastro(resultado));
                 return paraOMembro(ministerioId, resultado.membro().id());
             } catch (RegraVioladaException recusa) {
                 Formularios.rejeitar(erros, recusa);
@@ -226,6 +223,38 @@ class MembroController {
         }
     }
 
+    @PostMapping("/{usuarioId}/desativar")
+    @PreAuthorize("hasRole('ADMIN')")
+    String desativar(
+            @PathVariable Long ministerioId,
+            @PathVariable Long usuarioId,
+            @AuthenticationPrincipal UsuarioAutenticado autor,
+            RedirectAttributes redirecionamento) {
+        try {
+            var pessoa = membros.desativarConta(ministerioId, usuarioId, autor);
+            redirecionamento.addFlashAttribute("sucesso", "Conta de " + pessoa.nome() + " desativada");
+        } catch (RegraVioladaException recusa) {
+            redirecionamento.addFlashAttribute("recusa", recusa.getMessage());
+        }
+        return paraOMembro(ministerioId, usuarioId);
+    }
+
+    @PostMapping("/{usuarioId}/reativar")
+    @PreAuthorize("hasRole('ADMIN')")
+    String reativar(
+            @PathVariable Long ministerioId,
+            @PathVariable Long usuarioId,
+            @AuthenticationPrincipal UsuarioAutenticado autor,
+            RedirectAttributes redirecionamento) {
+        try {
+            var pessoa = membros.reativarConta(ministerioId, usuarioId, autor);
+            redirecionamento.addFlashAttribute("sucesso", "Conta de " + pessoa.nome() + " reativada");
+        } catch (RegraVioladaException recusa) {
+            redirecionamento.addFlashAttribute("recusa", recusa.getMessage());
+        }
+        return paraOMembro(ministerioId, usuarioId);
+    }
+
     @PostMapping("/{usuarioId}/gerente")
     @PreAuthorize("hasRole('ADMIN')")
     String tornarGerente(
@@ -248,6 +277,17 @@ class MembroController {
         var pessoa = membros.removerGerente(ministerioId, usuarioId, autor);
         redirecionamento.addFlashAttribute("sucesso", pessoa.nome() + " deixou de ser gerente");
         return paraOMembro(ministerioId, usuarioId);
+    }
+
+    /** A conta que já existia entra com a senha que tinha; se está desativada, o gerente fica sabendo. */
+    private static String mensagemDoCadastro(ResultadoDoCadastro resultado) {
+        String nome = resultado.membro().nome();
+        if (!resultado.jaTinhaConta()) {
+            return nome + " entrou no ministério com a senha provisória";
+        }
+        return resultado.membro().ativo()
+                ? nome + " já tinha conta e entrou no ministério"
+                : nome + " entrou no ministério, mas a conta está desativada: só o administrador reativa";
     }
 
     private String dadosDaConta(Long ministerioId, MembroResumo membro, Model model) {

@@ -109,4 +109,17 @@ class UsuarioTest {
         assertThatIllegalArgumentException().isThrownBy(() -> usuario.editarDados("Ana", null, null));
         assertThatIllegalArgumentException().isThrownBy(() -> usuario.editarDados("Ana", "ana@x.com", "1".repeat(21)));
     }
+
+    @Test
+    void contaDesativadaNaoEntraAteSerReativada() {
+        var usuario = Usuario.membro("Ana", "ana@x.com", "hash");
+
+        usuario.desativar();
+        assertThat(usuario.isAtivo()).isFalse();
+        assertThat(new UsuarioAutenticado(usuario).isEnabled()).isFalse();
+
+        usuario.reativar();
+        assertThat(new UsuarioAutenticado(usuario).isEnabled()).isTrue();
+        assertThat(usuario.getSenhaHash()).isEqualTo("hash");
+    }
 }

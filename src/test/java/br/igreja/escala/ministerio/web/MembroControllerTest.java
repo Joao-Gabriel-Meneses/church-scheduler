@@ -50,7 +50,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 class MembroControllerTest {
 
     private static final UsuarioResumo ANA =
-            new UsuarioResumo(30L, "Ana Souza", "ana@x.com", "(11) 98888-7777", false, true);
+            new UsuarioResumo(30L, "Ana Souza", "ana@x.com", "(11) 98888-7777", false, true, true);
     private static final MembroResumo ANA_NA_MIDIA = new MembroResumo(ANA, false, List.of("Projeção · Experiente"));
 
     @Autowired
@@ -93,6 +93,16 @@ class MembroControllerTest {
                 .andExpect(status().isForbidden());
         mvc.perform(get("/ministerios/1/membros/30/editar").with(user(MEMBRO))).andExpect(status().isForbidden());
         mvc.perform(editar(1).with(user(MEMBRO))).andExpect(status().isForbidden());
+        mvc.perform(post("/ministerios/1/membros/30/desativar")
+                        .with(user(MEMBRO))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/ministerios/1/membros/30/reativar")
+                        .with(user(MEMBRO))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+        verify(membros, never()).desativarConta(anyLong(), anyLong(), any());
+        verify(membros, never()).reativarConta(anyLong(), anyLong(), any());
         verify(membros, never()).editarConta(anyLong(), anyLong(), any(), any());
         verify(membros, never()).cadastrar(anyLong(), any());
         verify(membros, never()).redefinirSenha(anyLong(), anyLong(), anyString(), any());
@@ -115,6 +125,11 @@ class MembroControllerTest {
         mvc.perform(get("/ministerios/2/membros/30/editar").with(user(GERENTE_DA_MIDIA)))
                 .andExpect(status().isForbidden());
         mvc.perform(editar(2).with(user(GERENTE_DA_MIDIA))).andExpect(status().isForbidden());
+        mvc.perform(post("/ministerios/2/membros/30/desativar")
+                        .with(user(GERENTE_DA_MIDIA))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+        verify(membros, never()).desativarConta(anyLong(), anyLong(), any());
         verify(membros, never()).editarConta(anyLong(), anyLong(), any(), any());
         verify(membros, never()).cadastrar(anyLong(), any());
         verify(membros, never()).redefinirSenha(anyLong(), anyLong(), anyString(), any());
@@ -140,9 +155,106 @@ class MembroControllerTest {
     }
 
     @Test
+    void soOAdminDesativaEReativaContasMesmoNoMinisterioDoGerente() throws Exception {
+        mvc.perform(post("/ministerios/1/membros/30/desativar")
+                        .with(user(GERENTE_DA_MIDIA))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/ministerios/1/membros/30/reativar")
+                        .with(user(GERENTE_DA_MIDIA))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+        verify(membros, never()).desativarConta(anyLong(), anyLong(), any());
+        verify(membros, never()).reativarConta(anyLong(), anyLong(), any());
+
+        when(membros.desativarConta(1L, 30L, ADMIN)).thenReturn(ANA);
+        when(membros.reativarConta(1L, 30L, ADMIN)).thenReturn(ANA);
+        mvc.perform(post("/ministerios/1/membros/30/desativar")
+                        .with(user(ADMIN))
+                        .with(csrf()))
+                .andExpect(redirectedUrl("/ministerios/1/membros/30"))
+                .andExpect(flash().attribute("sucesso", "Conta de Ana Souza desativada"));
+        mvc.perform(post("/ministerios/1/membros/30/reativar").with(user(ADMIN)).with(csrf()))
+                .andExpect(redirectedUrl("/ministerios/1/membros/30"))
+                .andExpect(flash().attribute("sucesso", "Conta de Ana Souza reativada"));
+    }
+
+    @Test
+    void desativacaoRecusadaVoltaComOMotivoEOutroMinisterioE404() throws Exception {
+        when(membros.desativarConta(1L, 1L, ADMIN))
+                .thenThrow(RegraVioladaException.geral(
+                        "Sua conta continua ativa: o administrador não desativa a própria conta."));
+        when(membros.desativarConta(1L, 99L, ADMIN)).thenThrow(new NaoEncontradoException("Usuário 99"));
+
+        mvc.perform(post("/ministerios/1/membros/1/desativar").with(user(ADMIN)).with(csrf()))
+                .andExpect(redirectedUrl("/ministerios/1/membros/1"))
+                .andExpect(flash().attribute(
+                                "recusa", "Sua conta continua ativa: o administrador não desativa a própria conta."));
+        mvc.perform(post("/ministerios/1/membros/99/desativar")
+                        .with(user(ADMIN))
+                        .with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void adminVeDesativarComConfirmacaoEOGerenteNao() throws Exception {
+        assertThat(pagina(get("/ministerios/1/membros/30").with(user(ADMIN)), MembroController.PAGINA_DO_MEMBRO))
+                .contains("popovertarget=\"desativar-conta\"", "id=\"desativar-conta\"")
+                .contains("Desativar a conta de Ana Souza?", "action=\"/ministerios/1/membros/30/desativar\"")
+                .doesNotContain("Reativar conta", "Conta desativada");
+        assertThat(pagina(
+                        get("/ministerios/1/membros/30").with(user(GERENTE_DA_MIDIA)),
+                        MembroController.PAGINA_DO_MEMBRO))
+                .doesNotContain("desativar-conta", "/desativar");
+    }
+
+    @Test
+    void contaDesativadaApareceComBadgeEOAdminReativa() throws Exception {
+        var desativada = new MembroResumo(
+                new UsuarioResumo(30L, "Ana Souza", "ana@x.com", null, false, false, false), false, List.of());
+        when(membros.buscar(1L, 30L)).thenReturn(desativada);
+        when(membros.podeMexerNaConta(eq(desativada), any())).thenReturn(true);
+
+        assertThat(pagina(get("/ministerios/1/membros/30").with(user(ADMIN)), MembroController.PAGINA_DO_MEMBRO))
+                .contains("rt-badge rt-badge--locked", "Conta desativada", "Só o administrador reativa.")
+                .contains("action=\"/ministerios/1/membros/30/reativar\"", "Reativar conta")
+                .doesNotContain("id=\"desativar-conta\"");
+        assertThat(pagina(
+                        get("/ministerios/1/membros/30").with(user(GERENTE_DA_MIDIA)),
+                        MembroController.PAGINA_DO_MEMBRO))
+                .contains("Conta desativada")
+                .doesNotContain("Reativar conta");
+    }
+
+    @Test
+    void naPropriaPaginaOAdminNaoSeDesativa() throws Exception {
+        var proprio = new MembroResumo(
+                new UsuarioResumo(1L, "Admin", "admin@x.com", null, true, false, true), false, List.of());
+        when(membros.buscar(1L, 1L)).thenReturn(proprio);
+        when(membros.podeMexerNaConta(eq(proprio), any())).thenReturn(true);
+
+        assertThat(pagina(get("/ministerios/1/membros/1").with(user(ADMIN)), MembroController.PAGINA_DO_MEMBRO))
+                .doesNotContain("desativar-conta");
+    }
+
+    @Test
+    void listaMostraAContaDesativadaNoCelularENoDesktop() throws Exception {
+        var desativada = new MembroResumo(
+                new UsuarioResumo(31L, "Bruno Lima", "bruno@x.com", null, false, false, false), true, List.of());
+        when(membros.listar(1L)).thenReturn(List.of(ANA_NA_MIDIA, desativada));
+
+        String html = pagina(get("/ministerios/1/membros").with(user(GERENTE_DA_MIDIA)), MembroController.LISTA);
+
+        assertThat(html)
+                .contains("Bruno Lima · Gerente · Desativada")
+                .containsOnlyOnce("rt-badge rt-badge--locked")
+                .doesNotContain("Ana Souza · Desativada");
+    }
+
+    @Test
     void listaNoCelularENoDesktopComHabilitacoesEAcesso() throws Exception {
         var gerente = new MembroResumo(
-                new UsuarioResumo(10L, "Gerente da Mídia", "g@x.com", null, false, false), true, List.of());
+                new UsuarioResumo(10L, "Gerente da Mídia", "g@x.com", null, false, false, true), true, List.of());
         when(membros.listar(1L)).thenReturn(List.of(ANA_NA_MIDIA, gerente));
 
         String html = pagina(get("/ministerios/1/membros").with(user(GERENTE_DA_MIDIA)), MembroController.LISTA);
@@ -179,6 +291,18 @@ class MembroControllerTest {
 
         mvc.perform(cadastrar(1).with(user(GERENTE_DA_MIDIA)))
                 .andExpect(flash().attribute("sucesso", "Ana Souza já tinha conta e entrou no ministério"));
+    }
+
+    @Test
+    void cadastroDeContaDesativadaAvisaQueSoOAdminReativa() throws Exception {
+        var desativada = new UsuarioResumo(30L, "Ana Souza", "ana@x.com", null, false, false, false);
+        when(membros.cadastrar(anyLong(), any())).thenReturn(new ResultadoDoCadastro(desativada, true));
+
+        mvc.perform(cadastrar(1).with(user(GERENTE_DA_MIDIA)))
+                .andExpect(flash().attribute(
+                                "sucesso",
+                                "Ana Souza entrou no ministério, mas a conta está desativada: só o administrador"
+                                        + " reativa"));
     }
 
     @Test
@@ -261,7 +385,7 @@ class MembroControllerTest {
     @Test
     void naPropriaPaginaOGerenteNaoSeRemoveNemRedefineASenha() throws Exception {
         var proprio = new MembroResumo(
-                new UsuarioResumo(10L, "Gerente da Mídia", "g@x.com", null, false, false), true, List.of());
+                new UsuarioResumo(10L, "Gerente da Mídia", "g@x.com", null, false, false, true), true, List.of());
         when(membros.buscar(1L, 10L)).thenReturn(proprio);
         when(membros.podeMexerNaConta(eq(proprio), any())).thenReturn(true);
 
@@ -508,6 +632,9 @@ class MembroControllerTest {
                         .param("email", "ana@x.com"))
                 .andExpect(status().isForbidden());
         verify(membros, never()).editarConta(anyLong(), anyLong(), any(), any());
+        mvc.perform(post("/ministerios/1/membros/30/desativar").with(user(ADMIN)))
+                .andExpect(status().isForbidden());
+        verify(membros, never()).desativarConta(anyLong(), anyLong(), any());
     }
 
     private static MockHttpServletRequestBuilder editar(long ministerioId) {

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 class ContaEditadaTest {
 
-    private static final UsuarioResumo ANA = new UsuarioResumo(1L, "Ana", "ana@x.com", null, false, false);
+    private static final UsuarioResumo ANA = new UsuarioResumo(1L, "Ana", "ana@x.com", null, false, false, true);
 
     @Test
     void resumeOsCamposNoSingularENoPlural() {

@@ -107,6 +107,15 @@ public class Usuario {
         this.telefone = telefoneOpcional(telefone);
     }
 
+    /** Conta desativada pelo admin: não entra ({@link UsuarioAutenticado#isEnabled()}), em nenhum ministério. */
+    public void desativar() {
+        this.ativo = false;
+    }
+
+    public void reativar() {
+        this.ativo = true;
+    }
+
     /** E-mail é a identidade de login: comparado sem diferenciar maiúsculas e sem espaços nas pontas. */
     public static String normalizarEmail(String email) {
         return exigirTexto(email, "email").strip().toLowerCase(Locale.ROOT);

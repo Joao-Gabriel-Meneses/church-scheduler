@@ -207,6 +207,44 @@ public class MembroService {
         return pessoa;
     }
 
+    /**
+     * Desativa a conta, que vale para todos os ministérios: a pessoa não entra mais e as sessões abertas dela caem
+     * (UsuarioService). Ela continua nos ministérios. Só o admin, e nunca na própria conta; a auditoria fica sem
+     * ministério.
+     *
+     * @throws RegraVioladaException se é a conta de quem pede ou se ela já está desativada
+     */
+    @Transactional
+    public UsuarioResumo desativarConta(Long ministerioId, Long usuarioId, UsuarioAutenticado autor) {
+        exigirAdmin(autor);
+        var pessoa = buscar(ministerioId, usuarioId).pessoa();
+        if (autor.getId().equals(usuarioId)) {
+            throw RegraVioladaException.geral(
+                    "Sua conta continua ativa: o administrador não desativa a própria conta.");
+        }
+        if (!pessoa.ativo()) {
+            throw RegraVioladaException.geral("A conta de " + pessoa.nome() + " já está desativada.");
+        }
+        var desativada = usuarios.desativar(usuarioId);
+        registrarNaConta(AcaoAuditada.DESATIVAR_CONTA, autor, desativada, "Conta de %s desativada.");
+        return desativada;
+    }
+
+    /**
+     * @throws RegraVioladaException se a conta já está ativa
+     */
+    @Transactional
+    public UsuarioResumo reativarConta(Long ministerioId, Long usuarioId, UsuarioAutenticado autor) {
+        exigirAdmin(autor);
+        var pessoa = buscar(ministerioId, usuarioId).pessoa();
+        if (pessoa.ativo()) {
+            throw RegraVioladaException.geral("A conta de " + pessoa.nome() + " já está ativa.");
+        }
+        var reativada = usuarios.reativar(usuarioId);
+        registrarNaConta(AcaoAuditada.REATIVAR_CONTA, autor, reativada, "Conta de %s reativada.");
+        return reativada;
+    }
+
     @Transactional
     public UsuarioResumo tornarGerente(Long ministerioId, Long usuarioId, UsuarioAutenticado autor) {
         exigirAdmin(autor);
@@ -241,7 +279,7 @@ public class MembroService {
     /** O controller já exige o perfil; aqui é a garantia para quem chamar o serviço por outro caminho. */
     private static void exigirAdmin(UsuarioAutenticado autor) {
         if (!autor.isAdmin()) {
-            throw new AccessDeniedException("Só o administrador nomeia e remove gerentes");
+            throw new AccessDeniedException("Só o administrador nomeia gerentes e desativa contas");
         }
     }
 
@@ -251,6 +289,12 @@ public class MembroService {
         String descricao = modelo.formatted(pessoa.nome()) + " ("
                 + ministerios.buscar(ministerioId).getNome() + ").";
         auditoria.registrar(new RegistroDeAuditoria(acao, autor.getId(), ministerioId, pessoa.id(), descricao));
+    }
+
+    /** Ação sobre a conta, que vale para todos os ministérios: a auditoria fica sem ministério. */
+    private void registrarNaConta(AcaoAuditada acao, UsuarioAutenticado autor, UsuarioResumo pessoa, String modelo) {
+        auditoria.registrar(
+                new RegistroDeAuditoria(acao, autor.getId(), null, pessoa.id(), modelo.formatted(pessoa.nome())));
     }
 
     private static String descrever(Habilitacao habilitacao) {

@@ -64,7 +64,7 @@ class ContaControllerTest {
     @Test
     void meusDadosVemPreenchidosEAvisamQueOEmailEOLogin() throws Exception {
         when(usuarios.buscar(2L))
-                .thenReturn(new UsuarioResumo(2L, "Bia", "bia@x.com", "(11) 97777-0000", false, false));
+                .thenReturn(new UsuarioResumo(2L, "Bia", "bia@x.com", "(11) 97777-0000", false, false, true));
 
         String html = paginaDosDados(get("/conta").with(user(semProvisoria)));
 

@@ -50,8 +50,9 @@ class MembroServiceTest {
     private static final UsuarioAutenticado ADMIN = Pessoas.admin(1L, "Admin");
     private static final UsuarioAutenticado GERENTE = Pessoas.membro(10L, "Gerente");
 
-    private static final UsuarioResumo ANA = new UsuarioResumo(30L, "Ana Souza", "ana@x.com", null, false, false);
-    private static final UsuarioResumo BRUNO = new UsuarioResumo(31L, "bruno Lima", "bruno@x.com", null, false, true);
+    private static final UsuarioResumo ANA = new UsuarioResumo(30L, "Ana Souza", "ana@x.com", null, false, false, true);
+    private static final UsuarioResumo BRUNO =
+            new UsuarioResumo(31L, "bruno Lima", "bruno@x.com", null, false, true, true);
     private static final DadosDaConta DADOS_NOVOS = new DadosDaConta("Ana Souza", "ana.souza@x.com", null);
 
     private final MembresiaRepository membresias = mock(MembresiaRepository.class);
@@ -72,7 +73,7 @@ class MembroServiceTest {
     @Test
     void emailNovoCriaAContaComSenhaProvisoriaEAMembresia() {
         when(usuarios.buscarPorEmail("carla@x.com")).thenReturn(Optional.empty());
-        var carla = new UsuarioResumo(40L, "Carla Dias", "carla@x.com", null, false, true);
+        var carla = new UsuarioResumo(40L, "Carla Dias", "carla@x.com", null, false, true, true);
         when(usuarios.criarComSenhaProvisoria(new NovoUsuario("Carla Dias", "carla@x.com", null, "provisoria1")))
                 .thenReturn(carla);
 
@@ -179,7 +180,8 @@ class MembroServiceTest {
                 .hasMessageContaining("só o administrador redefine");
 
         when(membresias.existsByUsuarioIdAndGerenteTrue(30L)).thenReturn(false);
-        when(usuarios.buscar(30L)).thenReturn(new UsuarioResumo(30L, "Ana Souza", "ana@x.com", null, true, false));
+        when(usuarios.buscar(30L))
+                .thenReturn(new UsuarioResumo(30L, "Ana Souza", "ana@x.com", null, true, false, true));
         assertThatThrownBy(() -> servico.redefinirSenha(1L, 30L, "nova-provisoria", GERENTE))
                 .isInstanceOf(RegraVioladaException.class);
 
@@ -200,9 +202,9 @@ class MembroServiceTest {
     @Test
     void ninguemRedefineAPropriaSenhaPelaRotaDoGerenteNemOAdmin() {
         when(membresias.findByUsuarioIdAndMinisterioId(1L, 1L)).thenReturn(Optional.of(new Membresia(1L, midia)));
-        when(usuarios.buscar(1L)).thenReturn(new UsuarioResumo(1L, "Admin", "admin@x.com", null, true, false));
+        when(usuarios.buscar(1L)).thenReturn(new UsuarioResumo(1L, "Admin", "admin@x.com", null, true, false, true));
         when(membresias.findByUsuarioIdAndMinisterioId(10L, 1L)).thenReturn(Optional.of(gerente(10L)));
-        when(usuarios.buscar(10L)).thenReturn(new UsuarioResumo(10L, "Gerente", "g@x.com", null, false, false));
+        when(usuarios.buscar(10L)).thenReturn(new UsuarioResumo(10L, "Gerente", "g@x.com", null, false, false, true));
 
         assertThatThrownBy(() -> servico.redefinirSenha(1L, 1L, "nova-provisoria", ADMIN))
                 .isInstanceOfSatisfying(RegraVioladaException.class, recusa -> {
@@ -274,7 +276,7 @@ class MembroServiceTest {
     @Test
     void gerenteEditaOsDadosDeUmMembroComumEAuditoriaGuardaSoOsCampos() {
         when(membresias.findByUsuarioIdAndMinisterioId(30L, 1L)).thenReturn(Optional.of(new Membresia(30L, midia)));
-        var editada = new UsuarioResumo(30L, "Ana Souza", "ana.souza@x.com", null, false, false);
+        var editada = new UsuarioResumo(30L, "Ana Souza", "ana.souza@x.com", null, false, false, true);
         when(usuarios.editar(30L, DADOS_NOVOS)).thenReturn(new ContaEditada(editada, List.of("e-mail")));
 
         assertThat(servico.editarConta(1L, 30L, DADOS_NOVOS, GERENTE)).isEqualTo(editada);
@@ -305,7 +307,8 @@ class MembroServiceTest {
         assertThatThrownBy(() -> servico.editarConta(1L, 30L, DADOS_NOVOS, GERENTE))
                 .isInstanceOf(RegraVioladaException.class);
         when(membresias.existsByUsuarioIdAndGerenteTrue(30L)).thenReturn(false);
-        when(usuarios.buscar(30L)).thenReturn(new UsuarioResumo(30L, "Ana Souza", "ana@x.com", null, true, false));
+        when(usuarios.buscar(30L))
+                .thenReturn(new UsuarioResumo(30L, "Ana Souza", "ana@x.com", null, true, false, true));
         assertThatThrownBy(() -> servico.editarConta(1L, 30L, DADOS_NOVOS, GERENTE))
                 .isInstanceOf(RegraVioladaException.class);
         verify(usuarios, never()).editar(anyLong(), any());
@@ -318,7 +321,7 @@ class MembroServiceTest {
     @Test
     void ninguemEditaAPropriaContaPorAqui() {
         when(membresias.findByUsuarioIdAndMinisterioId(1L, 1L)).thenReturn(Optional.of(new Membresia(1L, midia)));
-        when(usuarios.buscar(1L)).thenReturn(new UsuarioResumo(1L, "Admin", "admin@x.com", null, true, false));
+        when(usuarios.buscar(1L)).thenReturn(new UsuarioResumo(1L, "Admin", "admin@x.com", null, true, false, true));
 
         assertThatThrownBy(() -> servico.editarConta(1L, 1L, DADOS_NOVOS, ADMIN))
                 .isInstanceOfSatisfying(RegraVioladaException.class, recusa -> {
@@ -344,9 +347,78 @@ class MembroServiceTest {
     }
 
     @Test
+    void adminDesativaEReativaAContaEAAuditoriaFicaSemMinisterio() {
+        when(membresias.findByUsuarioIdAndMinisterioId(30L, 1L)).thenReturn(Optional.of(new Membresia(30L, midia)));
+        var desativada = new UsuarioResumo(30L, "Ana Souza", "ana@x.com", null, false, false, false);
+        when(usuarios.desativar(30L)).thenReturn(desativada);
+
+        assertThat(servico.desativarConta(1L, 30L, ADMIN)).isEqualTo(desativada);
+        assertThat(auditado())
+                .isEqualTo(new RegistroDeAuditoria(
+                        AcaoAuditada.DESATIVAR_CONTA, 1L, null, 30L, "Conta de Ana Souza desativada."));
+
+        when(usuarios.buscar(30L)).thenReturn(desativada);
+        when(usuarios.reativar(30L)).thenReturn(ANA);
+        assertThat(servico.reativarConta(1L, 30L, ADMIN)).isEqualTo(ANA);
+        assertThat(auditado())
+                .isEqualTo(new RegistroDeAuditoria(
+                        AcaoAuditada.REATIVAR_CONTA, 1L, null, 30L, "Conta de Ana Souza reativada."));
+    }
+
+    @Test
+    void soOAdminDesativaEReativaContas() {
+        when(membresias.findByUsuarioIdAndMinisterioId(30L, 1L)).thenReturn(Optional.of(new Membresia(30L, midia)));
+
+        assertThatThrownBy(() -> servico.desativarConta(1L, 30L, GERENTE)).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> servico.reativarConta(1L, 30L, GERENTE)).isInstanceOf(AccessDeniedException.class);
+
+        verify(usuarios, never()).desativar(anyLong());
+        verify(usuarios, never()).reativar(anyLong());
+        verifyNoInteractions(auditoria);
+    }
+
+    @Test
+    void adminNaoDesativaAPropriaConta() {
+        when(membresias.findByUsuarioIdAndMinisterioId(1L, 1L)).thenReturn(Optional.of(new Membresia(1L, midia)));
+        when(usuarios.buscar(1L)).thenReturn(new UsuarioResumo(1L, "Admin", "admin@x.com", null, true, false, true));
+
+        assertThatThrownBy(() -> servico.desativarConta(1L, 1L, ADMIN))
+                .isInstanceOfSatisfying(
+                        RegraVioladaException.class,
+                        recusa -> assertThat(recusa.getMessage())
+                                .isEqualTo("Sua conta continua ativa: o administrador não desativa a própria conta."));
+        verify(usuarios, never()).desativar(anyLong());
+        verifyNoInteractions(auditoria);
+    }
+
+    @Test
+    void naoDesativaContaJaDesativadaNemReativaContaAtiva() {
+        when(membresias.findByUsuarioIdAndMinisterioId(30L, 1L)).thenReturn(Optional.of(new Membresia(30L, midia)));
+
+        assertThatThrownBy(() -> servico.reativarConta(1L, 30L, ADMIN))
+                .hasMessage("A conta de Ana Souza já está ativa.");
+        when(usuarios.buscar(30L))
+                .thenReturn(new UsuarioResumo(30L, "Ana Souza", "ana@x.com", null, false, false, false));
+        assertThatThrownBy(() -> servico.desativarConta(1L, 30L, ADMIN))
+                .hasMessage("A conta de Ana Souza já está desativada.");
+
+        verify(usuarios, never()).desativar(anyLong());
+        verify(usuarios, never()).reativar(anyLong());
+        verifyNoInteractions(auditoria);
+    }
+
+    @Test
+    void desativarPessoaDeOutroMinisterioNaoEncontra() {
+        assertThatThrownBy(() -> servico.desativarConta(1L, 30L, ADMIN)).isInstanceOf(NaoEncontradoException.class);
+        assertThatThrownBy(() -> servico.reativarConta(1L, 30L, ADMIN)).isInstanceOf(NaoEncontradoException.class);
+        verify(usuarios, never()).desativar(anyLong());
+    }
+
+    @Test
     void podeMexerNaContaDeMembroComumMasNaoNaDeGerenteOuAdminSalvoSeForAdmin() {
         var comum = new MembroResumo(ANA, false, List.of());
-        var admin = new MembroResumo(new UsuarioResumo(2L, "Admin 2", "a2@x.com", null, true, false), false, List.of());
+        var admin = new MembroResumo(
+                new UsuarioResumo(2L, "Admin 2", "a2@x.com", null, true, false, true), false, List.of());
         when(membresias.existsByUsuarioIdAndGerenteTrue(31L)).thenReturn(true);
         var gerenteDeOutro = new MembroResumo(BRUNO, false, List.of());
 

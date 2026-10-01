@@ -71,6 +71,7 @@ class SessoesIT {
     private Long ministerioId;
     private Long anaId;
     private UsuarioAutenticado gerente;
+    private UsuarioAutenticado admin;
 
     @BeforeEach
     void gravaOsDados() {
@@ -85,13 +86,19 @@ class SessoesIT {
             ministerioId = midia.getId();
             anaId = ana.getId();
             gerente = new UsuarioAutenticado(paula);
+            admin = new UsuarioAutenticado(
+                    usuarios.save(Usuario.admin("Admin Sessões", "admin.sessoes@teste.local", "{noop}x")));
         });
     }
 
     @AfterEach
     void apagaOsDados() {
         transacao.executeWithoutResult(status -> {
-            jdbc.update("delete from auditoria where ministerio_id = ?", ministerioId);
+            // Desativar e reativar ficam na auditoria sem ministério.
+            jdbc.update(
+                    "delete from auditoria where ministerio_id = ? or autor_id in"
+                            + " (select id from usuario where email like '%.sessoes@teste.local')",
+                    ministerioId);
             jdbc.update("delete from membresia where ministerio_id = ?", ministerioId);
             jdbc.update("delete from ministerio where id = ?", ministerioId);
             jdbc.update("delete from usuario where email like '%.sessoes@teste.local'");
@@ -157,6 +164,30 @@ class SessoesIT {
 
         mvc.perform(get("/").session(daAna)).andExpect(redirectedUrl("/login?expirou"));
         mvc.perform(get("/").session(daPaula)).andExpect(status().isOk());
+    }
+
+    @Test
+    void desativarAContaDerrubaAsSessoesENaoDeixaEntrarAteReativar() throws Exception {
+        var entrada = mvc.perform(login(ANA, SENHA_DA_ANA).param("lembrar", "on"))
+                .andExpect(authenticated())
+                .andReturn();
+        var sessao = (MockHttpSession) entrada.getRequest().getSession(false);
+        Cookie lembrar = entrada.getResponse().getCookie("remember-me");
+
+        mvc.perform(post("/ministerios/{m}/membros/{u}/desativar", ministerioId, anaId)
+                        .with(user(admin))
+                        .with(csrf()))
+                .andExpect(flash().attribute("sucesso", "Conta de Ana Sessões desativada"));
+
+        mvc.perform(get("/").session(sessao)).andExpect(redirectedUrl("/login?expirou"));
+        mvc.perform(get("/").cookie(lembrar)).andExpect(redirectedUrl("/login"));
+        mvc.perform(login(ANA, SENHA_DA_ANA)).andExpect(unauthenticated()).andExpect(redirectedUrl("/login?erro"));
+
+        mvc.perform(post("/ministerios/{m}/membros/{u}/reativar", ministerioId, anaId)
+                        .with(user(admin))
+                        .with(csrf()))
+                .andExpect(flash().attribute("sucesso", "Conta de Ana Sessões reativada"));
+        mvc.perform(login(ANA, SENHA_DA_ANA)).andExpect(authenticated());
     }
 
     private void redefinirASenhaDaAna(String senha) throws Exception {

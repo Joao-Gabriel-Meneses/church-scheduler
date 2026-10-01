@@ -87,8 +87,8 @@ class UsuarioServiceTest {
 
         assertThat(usuarios.resumos(List.of(1L, 2L)))
                 .containsExactly(
-                        new UsuarioResumo(1L, "Ana Souza", "ana@x.com", null, true, false),
-                        new UsuarioResumo(2L, "bia Lima", "bia@x.com", null, false, false));
+                        new UsuarioResumo(1L, "Ana Souza", "ana@x.com", null, true, false, true),
+                        new UsuarioResumo(2L, "bia Lima", "bia@x.com", null, false, false, true));
         assertThat(usuarios.resumosPorId(List.of(1L, 2L))).containsOnlyKeys(1L, 2L);
     }
 
@@ -180,7 +180,8 @@ class UsuarioServiceTest {
         var editada = usuarios.editar(1L, new DadosDaConta("Ana Souza", "Ana.Souza@X.com", "(11) 98888-7777"));
         assertThat(editada.camposAlterados()).containsExactly("nome", "e-mail", "telefone");
         assertThat(editada.conta())
-                .isEqualTo(new UsuarioResumo(1L, "Ana Souza", "ana.souza@x.com", "(11) 98888-7777", false, false));
+                .isEqualTo(
+                        new UsuarioResumo(1L, "Ana Souza", "ana.souza@x.com", "(11) 98888-7777", false, false, true));
         assertThat(ana.getEmail()).isEqualTo("ana.souza@x.com");
     }
 
@@ -211,6 +212,19 @@ class UsuarioServiceTest {
         assertThat(sessao.getUsername()).isEqualTo("ana.souza@x.com");
         assertThat(sessao.isSenhaProvisoria()).isTrue();
         verify(eventos, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    void desativarEncerraAsSessoesEReativarNao() {
+        var ana = cadastrada(Usuario.membro("Ana", "ana@x.com", "hash"));
+
+        assertThat(usuarios.desativar(1L).ativo()).isFalse();
+        assertThat(ana.isAtivo()).isFalse();
+        verify(eventos).publishEvent(new AcessoRevogado(1L));
+
+        assertThat(usuarios.reativar(1L).ativo()).isTrue();
+        assertThat(ana.isAtivo()).isTrue();
+        verify(eventos).publishEvent(any(Object.class));
     }
 
     private static Usuario comId(Usuario usuario, Long id) {

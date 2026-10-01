@@ -21,8 +21,9 @@
 
     <th:block th:unless="${membros.isEmpty()}">
         <ul class="rt-list md:hidden">
+            <!--/* O ListRow não tem lugar para Badge: gerente e conta desativada vão no título. */-->
             <li th:each="membro : ${membros}"><a th:replace="~{componentes/lista :: linha(
-                    titulo=${membro.gerente} ? |${membro.nome} · Gerente| : ${membro.nome},
+                    titulo=|${membro.nome}${membro.gerente ? ' · Gerente' : ''}${membro.pessoa.ativo ? '' : ' · Desativada'}|,
                     sub=${membro.descricaoDasHabilitacoes()}, icone='user',
                     href=@{/ministerios/{m}/membros/{u}(m=${ministerio.id}, u=${membro.id})},
                     selecionada=false)}"></a></li>
@@ -45,6 +46,8 @@
                             <div th:replace="~{componentes/tabela :: pessoa(${membro.nome}, ${membro.pessoa.iniciais()})}"></div>
                             <th:block th:if="${membro.gerente}"><span th:replace="~{componentes/badge ::
                                     badge(texto='Gerente', variante=null, icone=null, tint=null, classe=null)}"></span></th:block>
+                            <th:block th:unless="${membro.pessoa.ativo}"><span th:replace="~{componentes/badge ::
+                                    badge(texto='Desativada', variante='locked', icone=null, tint=null, classe=null)}"></span></th:block>
                         </div>
                     </td>
                     <td>
