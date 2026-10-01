@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @EnableConfigurationProperties(AdminInicialProperties.class)
 public class AdminInicialService implements ApplicationRunner {
 
-    static final int TAMANHO_MINIMO_SENHA = 8;
+    static final int TAMANHO_MINIMO_SENHA = Usuario.TAMANHO_MINIMO_SENHA;
 
     private static final Logger log = LoggerFactory.getLogger(AdminInicialService.class);
 

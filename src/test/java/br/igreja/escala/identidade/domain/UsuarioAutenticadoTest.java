@@ -30,4 +30,13 @@ class UsuarioAutenticadoTest {
                 .extracting(GrantedAuthority::getAuthority)
                 .containsExactlyInAnyOrder("ROLE_MEMBRO", "ROLE_ADMIN");
     }
+
+    @Test
+    void levaAMarcaDeSenhaProvisoriaParaASessao() {
+        var comProvisoria = Usuario.comSenhaProvisoria("Ana", "ana@x.com", null, "hash");
+
+        assertThat(new UsuarioAutenticado(comProvisoria).isSenhaProvisoria()).isTrue();
+        assertThat(new UsuarioAutenticado(Usuario.membro("Bia", "bia@x.com", "hash")).isSenhaProvisoria())
+                .isFalse();
+    }
 }
