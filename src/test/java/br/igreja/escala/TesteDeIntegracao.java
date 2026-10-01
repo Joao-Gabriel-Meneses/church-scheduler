@@ -38,6 +38,7 @@ import org.springframework.test.context.TestPropertySource;
             "escala.admin.nome=" + CredenciaisDeTeste.ADMIN_NOME,
             "escala.admin.email=" + CredenciaisDeTeste.ADMIN_EMAIL,
             "escala.admin.senha=" + CredenciaisDeTeste.ADMIN_SENHA,
+            "escala.url-base=" + CredenciaisDeTeste.URL_BASE,
             CredenciaisDeTeste.PROPRIEDADE_CHAVE_LEMBRAR_ME
         })
 public @interface TesteDeIntegracao {}

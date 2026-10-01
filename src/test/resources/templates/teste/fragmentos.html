@@ -60,6 +60,8 @@
 <section id="seletor"><details th:replace="~{componentes/navegacao :: seletorDeMinisterio(${ministerios})}"></details></section>
 <section id="botao-formulario"><button th:replace="~{componentes/botao :: botao(texto='Travar disponibilidade',
         variante='dark', icone='lock', formulario='travar-disponibilidade')}"></button></section>
+<section id="botao-copiar"><button th:replace="~{componentes/botao :: botao(texto='Copiar texto', variante='dark',
+        icone='copy', tipo='button', copiar='texto-do-lembrete')}"></button></section>
 <section id="estatistica"><div th:replace="~{componentes/estatistica :: cartao(rotulo='Sem resposta', valor=5,
         sub='de 20 membros', href='#respostas')}"></div></section>
 <section id="estatistica-simples"><div th:replace="~{componentes/estatistica :: cartao(rotulo='Eventos no mês', valor=9,

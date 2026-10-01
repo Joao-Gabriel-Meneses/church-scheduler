@@ -12,6 +12,9 @@
         href         vira <a> (navegação); sem href é <button>
         tipo         type do <button>: submit (padrão) | button
         formulario   id de um <form> da página que o <button> envia (atributo form), para um botão fora do form
+        copiar       id do elemento cujo texto o <button> copia (static/js/app.js). Use com tipo='button'. Se a página
+                     tiver um <template id="<id>-copiado"> com um Toast, ele aparece depois de copiar, e o Sheet em
+                     volta do botão fecha.
         classe       ajustes de layout do Tailwind, ex.: 'w-full justify-center'
 
     botaoIcone(icone, rotulo): botão circular. O rótulo vira aria-label e title, em pt-BR ("Travar disponibilidade").
@@ -28,7 +31,7 @@
     <a th:if="${href != null}" th:href="${href}" th:class="${_classes}"><th:block
             th:replace="~{componentes/botao :: conteudoDoBotao}"></th:block></a>
     <button th:unless="${href != null}" th:type="${tipo ?: 'submit'}" th:class="${_classes}"
-            th:form="${formulario}"><th:block
+            th:form="${formulario}" th:data-copiar="${copiar}"><th:block
             th:replace="~{componentes/botao :: conteudoDoBotao}"></th:block></button>
 </th:block>
 

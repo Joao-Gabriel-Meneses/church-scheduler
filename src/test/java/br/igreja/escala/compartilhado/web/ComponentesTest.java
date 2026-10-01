@@ -263,7 +263,14 @@ class ComponentesTest {
         assertThat(secao("botao-formulario"))
                 .contains("<button type=\"submit\" class=\"rt-btn rt-btn--dark\" form=\"travar-disponibilidade\">")
                 .contains("#lock\"", "Travar disponibilidade");
-        assertThat(secao("botao-padrao")).doesNotContain("form=");
+        assertThat(secao("botao-padrao")).doesNotContain("form=", "data-copiar");
+    }
+
+    @Test
+    void botaoDeCopiarIndicaOTextoQueCopia() {
+        assertThat(secao("botao-copiar"))
+                .contains("<button type=\"button\" class=\"rt-btn rt-btn--dark\" data-copiar=\"texto-do-lembrete\">")
+                .contains("#copy\"", "Copiar texto");
     }
 
     @Test

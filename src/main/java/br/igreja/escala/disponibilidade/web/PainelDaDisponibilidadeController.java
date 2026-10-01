@@ -5,6 +5,7 @@ import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.disponibilidade.domain.Resposta;
 import br.igreja.escala.disponibilidade.service.ConsultaDaDisponibilidade;
 import br.igreja.escala.disponibilidade.service.DisponibilidadeService;
+import br.igreja.escala.disponibilidade.service.LembreteDaDisponibilidade;
 import br.igreja.escala.evento.service.EventoService;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
 import br.igreja.escala.ministerio.service.MinisterioService;
@@ -38,29 +39,42 @@ class PainelDaDisponibilidadeController {
 
     private final ConsultaDaDisponibilidade consulta;
     private final DisponibilidadeService disponibilidades;
+    private final LembreteDaDisponibilidade lembretes;
     private final MinisterioService ministerios;
     private final EventoService eventos;
 
     PainelDaDisponibilidadeController(
             ConsultaDaDisponibilidade consulta,
             DisponibilidadeService disponibilidades,
+            LembreteDaDisponibilidade lembretes,
             MinisterioService ministerios,
             EventoService eventos) {
         this.consulta = consulta;
         this.disponibilidades = disponibilidades;
+        this.lembretes = lembretes;
         this.ministerios = ministerios;
         this.eventos = eventos;
     }
 
-    /** Sem {@code mes}, abre o mês seguinte, que é o que o gerente prepara. */
+    /**
+     * Sem {@code mes}, abre o mês seguinte, que é o que o gerente prepara. Com a disponibilidade aberta, traz o lembrete
+     * pronto para o WhatsApp.
+     */
     @GetMapping
     String painel(
             @PathVariable Long ministerioId,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth mes,
             Model model) {
         var doMes = mes == null ? eventos.proximoMes() : mes;
-        model.addAttribute("painel", consulta.painel(ministerioId, doMes));
+        var painel = consulta.painel(ministerioId, doMes);
         preencherMes(ministerioId, doMes, model);
+        model.addAttribute("painel", painel);
+        boolean lembrar = !painel.travado()
+                && !painel.eventos().isEmpty()
+                && !painel.membros().isEmpty();
+        model.addAttribute(
+                "lembrete",
+                lembrar ? lembretes.texto(ministerios.buscar(ministerioId).getNome(), painel) : null);
         return PAINEL;
     }
 

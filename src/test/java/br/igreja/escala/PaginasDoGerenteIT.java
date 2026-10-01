@@ -194,7 +194,9 @@ class PaginasDoGerenteIT {
                         .param("mes", mes.toString())
                         .with(user(gerente)))
                 .andExpect(status().isOk())
-                .andExpect(content().string(Matchers.containsString("Ana Páginas")));
+                .andExpect(content().string(Matchers.containsString("Ana Páginas")))
+                .andExpect(content()
+                        .string(Matchers.containsString(CredenciaisDeTeste.URL_BASE + "/disponibilidade?mes=" + mes)));
         abre("/ministerios/{m}/disponibilidade", ministerioId);
         mvc.perform(get("/ministerios/{m}/disponibilidade/membros/{u}", ministerioId, membroId)
                         .param("mes", mes.toString())

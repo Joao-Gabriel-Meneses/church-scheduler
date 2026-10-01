@@ -29,6 +29,7 @@ import br.igreja.escala.disponibilidade.service.DisponibilidadeDeUmMembro;
 import br.igreja.escala.disponibilidade.service.DisponibilidadeService;
 import br.igreja.escala.disponibilidade.service.EventoDoPainel;
 import br.igreja.escala.disponibilidade.service.GrupoDeDisponibilidade;
+import br.igreja.escala.disponibilidade.service.LembreteDaDisponibilidade;
 import br.igreja.escala.disponibilidade.service.LinhaDeDisponibilidade;
 import br.igreja.escala.disponibilidade.service.LinhaDoPainel;
 import br.igreja.escala.disponibilidade.service.PainelDaDisponibilidade;
@@ -66,6 +67,9 @@ class PainelDaDisponibilidadeControllerTest {
 
     @MockitoBean
     DisponibilidadeService disponibilidades;
+
+    @MockitoBean
+    LembreteDaDisponibilidade lembretes;
 
     @MockitoBean
     MinisterioService ministerios;
@@ -223,6 +227,22 @@ class PainelDaDisponibilidadeControllerTest {
     }
 
     @Test
+    void copiarLembreteAbreOTextoParaOWhatsApp() throws Exception {
+        when(lembretes.texto("Mídia", painel(false)))
+                .thenReturn(
+                        "*Mídia — Novembro*\nA disponibilidade de novembro está aberta.\n\nAinda faltam: Bruno Lima.");
+
+        assertThat(pagina(get("/ministerios/1/disponibilidade").with(user(GERENTE_DA_MIDIA))))
+                .contains("<button type=\"button\" class=\"rt-btn rt-btn--outline\" popovertarget=\"lembrete\">")
+                .contains("Copiar lembrete", "<div id=\"lembrete\" popover class=\"rt-sheet")
+                .contains("aria-label=\"Lembrete para o WhatsApp\"")
+                .contains("<p id=\"texto-do-lembrete\" class=\"rt-panel whitespace-pre-line p-4 select-all\">*Mídia —"
+                        + " Novembro* A disponibilidade de novembro está aberta. Ainda faltam: Bruno Lima.</p>")
+                .contains("<template id=\"texto-do-lembrete-copiado\">", "Lembrete copiado")
+                .contains("data-copiar=\"texto-do-lembrete\"", "Copiar texto");
+    }
+
+    @Test
     void travadoOfereceDestravarEExplicaQueOGerenteAindaMarca() throws Exception {
         when(consulta.painel(1L, NOVEMBRO)).thenReturn(painel(true));
 
@@ -231,7 +251,8 @@ class PainelDaDisponibilidadeControllerTest {
                         "<button type=\"submit\" class=\"rt-btn rt-btn--outline\" form=\"destravar-disponibilidade\">")
                 .contains("Destravar disponibilidade", "#lock-open\"", "Disponibilidade travada")
                 .contains("Você ainda pode marcar em nome de alguém, e cada mudança fica na auditoria.")
-                .doesNotContain("Travar disponibilidade");
+                .doesNotContain("Travar disponibilidade", "Copiar lembrete");
+        verify(lembretes, never()).texto(any(), any());
     }
 
     @Test
