@@ -202,7 +202,10 @@ class ComponentesTest {
                 .contains("<nav class=\"rt-nav flex-wrap\" aria-label=\"Principal\">")
                 .contains("<a class=\"rt-nav__item\" href=\"/\" aria-current=\"page\">", "Minhas escalas")
                 .contains("<a class=\"rt-nav__item\" href=\"/disponibilidade\">", "#calendar\"");
-        assertThat(secao("barra")).contains("Disponib.").doesNotContain("Disponibilidade<");
+        assertThat(secao("barra"))
+                .contains("<span class=\"max-w-full truncate\">Disponib.</span>")
+                .contains("class=\"rt-nav__item h-auto min-w-0 flex-auto")
+                .doesNotContain("Disponibilidade<");
     }
 
     @Test
