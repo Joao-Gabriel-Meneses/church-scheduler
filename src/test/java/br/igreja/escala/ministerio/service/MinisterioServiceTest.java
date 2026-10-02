@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class MinisterioServiceTest {
@@ -32,19 +33,21 @@ class MinisterioServiceTest {
     private final MinisterioRepository ministerios = mock(MinisterioRepository.class);
     private final MembresiaRepository membresias = mock(MembresiaRepository.class);
     private final UsuarioService usuarios = mock(UsuarioService.class);
-    private final MinisterioService servico = new MinisterioService(ministerios, membresias, usuarios);
+    private final ApplicationEventPublisher eventos = mock(ApplicationEventPublisher.class);
+    private final MinisterioService servico = new MinisterioService(ministerios, membresias, usuarios, eventos);
 
     private final Ministerio midia = comId(new Ministerio("Mídia", CorDoMinisterio.MINT, Icone.MONITOR), 1L);
     private final Ministerio louvor = comId(new Ministerio("Louvor", CorDoMinisterio.ROSE, Icone.MUSIC), 2L);
 
     @Test
     void criaQuandoONomeEstaLivre() {
-        when(ministerios.save(any())).thenAnswer(chamada -> chamada.getArgument(0));
+        when(ministerios.save(any())).thenAnswer(chamada -> comId(chamada.getArgument(0), 3L));
 
         var criado = servico.criar(new DadosDoMinisterio(" Recepção ", CorDoMinisterio.LEMON, Icone.DOOR_OPEN));
 
         assertThat(criado.getNome()).isEqualTo("Recepção");
         assertThat(criado.getCor()).isEqualTo(CorDoMinisterio.LEMON);
+        verify(eventos).publishEvent(new MinisterioCriado(3L));
     }
 
     @Test
@@ -57,6 +60,7 @@ class MinisterioServiceTest {
                     assertThat(recusa.getMessage()).isEqualTo("Já existe um ministério chamado Mídia.");
                 });
         verify(ministerios, never()).save(any());
+        verify(eventos, never()).publishEvent(any(Object.class));
     }
 
     @Test
