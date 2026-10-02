@@ -6,6 +6,8 @@ import static br.igreja.escala.evento.ExemplosDeEvento.DUAS_HORAS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,12 +34,14 @@ import br.igreja.escala.evento.service.ModeloEventoService;
 import br.igreja.escala.evento.service.PeriodoService;
 import br.igreja.escala.ministerio.Exemplos;
 import br.igreja.escala.ministerio.repository.MembresiaRepository;
+import br.igreja.escala.ministerio.service.FuncaoService;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,6 +73,9 @@ class EventoControllerTest {
     @MockitoBean
     PeriodoService periodos;
 
+    @MockitoBean
+    FuncaoService funcoes;
+
     private final Periodo novembro = ExemplosDeEvento.periodo(1L, NOVEMBRO);
     private final Evento cultoDoDia1 = ExemplosDeEvento.comId(
             Evento.doModelo(ExemplosDeEvento.cultoDeDomingo(1L), novembro, LocalDate.of(2026, 11, 1)), 500L);
@@ -84,6 +91,8 @@ class EventoControllerTest {
         when(periodos.doMes(any(), any())).thenReturn(Optional.empty());
         when(eventos.buscar(1L, 500L)).thenReturn(cultoDoDia1);
         when(eventos.buscar(1L, 501L)).thenReturn(ensaio);
+        var midia = Exemplos.midia();
+        when(funcoes.listar(1L)).thenReturn(List.of(Exemplos.projecao(midia), Exemplos.transmissao(midia)));
     }
 
     @Test
@@ -307,6 +316,69 @@ class EventoControllerTest {
                                 .param("duracaoMinutos", "120"),
                         "evento/evento-form"))
                 .contains("A data de um evento do modelo não muda.");
+    }
+
+    @Test
+    void eventoNovoVemComTodasAsFuncoesMarcadas() throws Exception {
+        assertThat(pagina(get("/ministerios/1/eventos/novo").with(user(GERENTE_DA_MIDIA)), "evento/evento-form"))
+                .contains("Funções que o evento precisa", "Desmarque o que o evento não usa.")
+                .contains("id=\"funcao-100\" name=\"funcoes\" value=\"100\" checked=\"checked\"")
+                .contains("id=\"funcao-101\" name=\"funcoes\" value=\"101\" checked=\"checked\"")
+                .contains("type=\"hidden\" name=\"_funcoes\" value=\"on\"");
+    }
+
+    @Test
+    void eventoComFuncoesEscolhidasMarcaSoElas() throws Exception {
+        cultoDoDia1.exigirFuncoes(Set.of(100L));
+
+        assertThat(pagina(get("/ministerios/1/eventos/500").with(user(GERENTE_DA_MIDIA)), "evento/evento-form"))
+                .contains("id=\"funcao-100\" name=\"funcoes\" value=\"100\" checked=\"checked\"")
+                .contains("id=\"funcao-101\" name=\"funcoes\" value=\"101\">");
+    }
+
+    @Test
+    void desmarcarTodasAsFuncoesChegaComoListaVaziaEVoltaComOErro() throws Exception {
+        when(eventos.alterar(eq(1L), eq(500L), argThat(dados -> dados.funcoes().isEmpty())))
+                .thenThrow(new RegraVioladaException("funcoes", "Escolha ao menos uma função."));
+
+        assertThat(pagina(
+                        post("/ministerios/1/eventos/500")
+                                .with(user(GERENTE_DA_MIDIA))
+                                .with(csrf())
+                                .param("nome", "Culto de domingo")
+                                .param("data", "2026-11-01")
+                                .param("horario", "18:00")
+                                .param("duracaoMinutos", "120")
+                                .param("_funcoes", "on"),
+                        "evento/evento-form"))
+                .contains("id=\"funcoes-erro\"", "Escolha ao menos uma função.")
+                .contains("aria-describedby=\"funcoes-dica funcoes-erro\"")
+                .contains("id=\"funcao-100\" name=\"funcoes\" value=\"100\">");
+    }
+
+    @Test
+    void salvaAsFuncoesMarcadas() throws Exception {
+        when(eventos.alterar(
+                        1L,
+                        500L,
+                        new DadosDoEvento(
+                                "Culto de domingo",
+                                LocalDate.of(2026, 11, 1),
+                                LocalTime.of(18, 0),
+                                120,
+                                List.of(100L))))
+                .thenReturn(cultoDoDia1);
+
+        mvc.perform(post("/ministerios/1/eventos/500")
+                        .with(user(GERENTE_DA_MIDIA))
+                        .with(csrf())
+                        .param("nome", "Culto de domingo")
+                        .param("data", "2026-11-01")
+                        .param("horario", "18:00")
+                        .param("duracaoMinutos", "120")
+                        .param("funcoes", "100")
+                        .param("_funcoes", "on"))
+                .andExpect(redirectedUrl("/ministerios/1/eventos?mes=2026-11"));
     }
 
     @Test

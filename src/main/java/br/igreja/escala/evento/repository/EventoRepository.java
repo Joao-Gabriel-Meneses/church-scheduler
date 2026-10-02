@@ -11,8 +11,11 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
 
     List<Evento> findByPeriodoIdOrderByDataAscHorarioAsc(Long periodoId);
 
-    /** Já traz o modelo: a página do evento mostra o nome dele, fora da transação (open-in-view desligado). */
-    @EntityGraph(attributePaths = "modelo")
+    /**
+     * Já traz o modelo e as funções exigidas: a página do evento mostra os dois fora da transação (open-in-view
+     * desligado).
+     */
+    @EntityGraph(attributePaths = {"modelo", "funcoesExigidas"})
     Optional<Evento> findByIdAndMinisterioId(Long id, Long ministerioId);
 
     boolean existsByModeloIdAndData(Long modeloId, LocalDate data);

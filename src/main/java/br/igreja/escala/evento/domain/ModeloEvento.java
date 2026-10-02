@@ -3,16 +3,23 @@ package br.igreja.escala.evento.domain;
 import br.igreja.escala.compartilhado.Exigencias;
 import br.igreja.escala.compartilhado.domain.DuracaoEmMinutos;
 import br.igreja.escala.compartilhado.domain.HorarioEmMinutos;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalTime;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Evento que se repete toda semana ("Culto de domingo", domingo, 18h00). Os eventos do mês nascem dele; mudar o modelo
@@ -49,6 +56,12 @@ public class ModeloEvento {
     @Column(nullable = false)
     private boolean ativo = true;
 
+    /** Ids das funções que os eventos do modelo precisam; vazio = todas as do ministério (o padrão). */
+    @ElementCollection
+    @CollectionTable(name = "modelo_evento_funcao", joinColumns = @JoinColumn(name = "modelo_id"))
+    @Column(name = "funcao_id", nullable = false)
+    private Set<Long> funcoesExigidas = new HashSet<>();
+
     protected ModeloEvento() {}
 
     public ModeloEvento(Long ministerioId, String nome, DayOfWeek diaDaSemana, LocalTime horario, Duration duracao) {
@@ -62,6 +75,13 @@ public class ModeloEvento {
         this.horario = Exigencias.presente(horario, "horario").withSecond(0).withNano(0);
         this.duracao = Duracoes.exigirValida(duracao);
         this.ativo = ativo;
+    }
+
+    /** Troca as funções dos próximos eventos; os já criados ficam como estão. Vazio volta ao padrão: todas. */
+    public void exigirFuncoes(Collection<Long> funcoes) {
+        Exigencias.presente(funcoes, "funcoes");
+        funcoesExigidas.clear();
+        funcoesExigidas.addAll(funcoes);
     }
 
     public Long getId() {
@@ -90,5 +110,10 @@ public class ModeloEvento {
 
     public boolean isAtivo() {
         return ativo;
+    }
+
+    /** Vazio quando os eventos do modelo precisam de todas as funções do ministério. */
+    public Set<Long> getFuncoesExigidas() {
+        return Collections.unmodifiableSet(funcoesExigidas);
     }
 }

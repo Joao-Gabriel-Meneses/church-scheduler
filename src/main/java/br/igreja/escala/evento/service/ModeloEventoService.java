@@ -4,6 +4,8 @@ import br.igreja.escala.compartilhado.NaoEncontradoException;
 import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.evento.domain.ModeloEvento;
 import br.igreja.escala.evento.repository.ModeloEventoRepository;
+import br.igreja.escala.ministerio.domain.Funcao;
+import br.igreja.escala.ministerio.service.FuncaoService;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import java.time.DayOfWeek;
 import java.util.Comparator;
@@ -27,10 +29,12 @@ public class ModeloEventoService {
 
     private final ModeloEventoRepository modelos;
     private final MinisterioService ministerios;
+    private final FuncaoService funcoes;
 
-    ModeloEventoService(ModeloEventoRepository modelos, MinisterioService ministerios) {
+    ModeloEventoService(ModeloEventoRepository modelos, MinisterioService ministerios, FuncaoService funcoes) {
         this.modelos = modelos;
         this.ministerios = ministerios;
+        this.funcoes = funcoes;
     }
 
     /** Todos os modelos do ministério, do domingo ao sábado. */
@@ -58,7 +62,9 @@ public class ModeloEventoService {
     }
 
     /**
-     * @throws RegraVioladaException no campo {@code horario}, se o ministério já tem um modelo nesse dia e horário
+     * @throws RegraVioladaException no campo {@code horario}, se o ministério já tem um modelo nesse dia e horário, ou
+     *     no campo {@code funcoes}, se nenhuma função foi marcada
+     * @throws NaoEncontradoException se uma função marcada é de outro ministério
      */
     @Transactional
     public ModeloEvento criar(Long ministerioId, DadosDoModelo dados) {
@@ -67,20 +73,32 @@ public class ModeloEventoService {
         var modelo =
                 new ModeloEvento(ministerioId, dados.nome(), dados.diaDaSemana(), dados.horario(), dados.duracao());
         modelo.alterar(dados.nome(), dados.diaDaSemana(), dados.horario(), dados.duracao(), dados.ativo());
+        exigirFuncoes(ministerioId, modelo, dados);
         return modelos.save(modelo);
     }
 
     /**
      * Muda o modelo para os próximos meses; os eventos já criados ficam como estão.
      *
-     * @throws RegraVioladaException no campo {@code horario}, se outro modelo do ministério já usa o dia e horário
+     * @throws RegraVioladaException no campo {@code horario}, se outro modelo do ministério já usa o dia e horário, ou
+     *     no campo {@code funcoes}, se nenhuma função foi marcada
+     * @throws NaoEncontradoException se uma função marcada é de outro ministério
      */
     @Transactional
     public ModeloEvento alterar(Long ministerioId, Long id, DadosDoModelo dados) {
         var modelo = buscar(ministerioId, id);
         exigirHorarioLivre(ministerioId, id, dados);
         modelo.alterar(dados.nome(), dados.diaDaSemana(), dados.horario(), dados.duracao(), dados.ativo());
+        exigirFuncoes(ministerioId, modelo, dados);
         return modelo;
+    }
+
+    private void exigirFuncoes(Long ministerioId, ModeloEvento modelo, DadosDoModelo dados) {
+        if (dados.funcoes() != null) {
+            var doMinisterio =
+                    funcoes.listar(ministerioId).stream().map(Funcao::getId).toList();
+            modelo.exigirFuncoes(FuncoesEscolhidas.paraGravar(dados.funcoes(), doMinisterio));
+        }
     }
 
     /** Um modelo por dia e horário no ministério; inativo também conta, porque basta reativá-lo. */

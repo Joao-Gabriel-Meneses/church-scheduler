@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import br.igreja.escala.compartilhado.Fuso;
 import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.evento.repository.EventoRepository;
+import br.igreja.escala.ministerio.service.FuncaoService;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import java.time.Clock;
 import java.time.Instant;
@@ -77,6 +78,6 @@ class ViradaDoMesTest {
     }
 
     private EventoService servico(Clock relogio) {
-        return new EventoService(eventos, periodos, modelos, ministerios, relogio);
+        return new EventoService(eventos, periodos, modelos, ministerios, mock(FuncaoService.class), relogio);
     }
 }

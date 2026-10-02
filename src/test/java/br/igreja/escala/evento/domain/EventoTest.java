@@ -10,6 +10,8 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class EventoTest {
@@ -131,5 +133,36 @@ class EventoTest {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> evento.alterar("Culto", LocalTime.NOON, Duration.ofSeconds(90 * 60 + 30)));
         assertThatIllegalArgumentException().isThrownBy(() -> evento.alterar("Culto", LocalTime.NOON, null));
+    }
+
+    @Test
+    void semEscolhaOEventoPrecisaDeTodasAsFuncoes() {
+        var evento = Evento.doModelo(cultoDeDomingo, outubro, DOMINGO);
+
+        assertThat(evento.getFuncoesExigidas()).isEmpty();
+        assertThat(evento.exige(100L)).isTrue();
+        assertThat(evento.exige(101L)).isTrue();
+    }
+
+    @Test
+    void eventoComFuncoesEscolhidasSoPrecisaDelasEVazioVoltaATodas() {
+        var evento = Evento.doModelo(cultoDeDomingo, outubro, DOMINGO);
+
+        evento.exigirFuncoes(List.of(100L));
+        assertThat(evento.exige(100L)).isTrue();
+        assertThat(evento.exige(101L)).isFalse();
+
+        evento.exigirFuncoes(Set.of());
+        assertThat(evento.exige(101L)).isTrue();
+    }
+
+    @Test
+    void eventoDoModeloCopiaAsFuncoesDoModeloSemFicarPresoAElas() {
+        cultoDeDomingo.exigirFuncoes(Set.of(100L));
+        var evento = Evento.doModelo(cultoDeDomingo, outubro, DOMINGO);
+
+        cultoDeDomingo.exigirFuncoes(Set.of(101L));
+
+        assertThat(evento.getFuncoesExigidas()).containsExactly(100L);
     }
 }

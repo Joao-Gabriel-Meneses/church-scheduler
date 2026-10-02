@@ -9,10 +9,13 @@ import br.igreja.escala.evento.service.DadosDoEvento;
 import br.igreja.escala.evento.service.EventoService;
 import br.igreja.escala.evento.service.ModeloEventoService;
 import br.igreja.escala.evento.service.PeriodoService;
+import br.igreja.escala.ministerio.domain.Funcao;
+import br.igreja.escala.ministerio.service.FuncaoService;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import br.igreja.escala.ministerio.web.GerenteDoMinisterio;
 import jakarta.validation.Valid;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.Locale;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
@@ -39,16 +42,19 @@ class EventoController {
     private final EventoService eventos;
     private final ModeloEventoService modelos;
     private final PeriodoService periodos;
+    private final FuncaoService funcoes;
 
     EventoController(
             MinisterioService ministerios,
             EventoService eventos,
             ModeloEventoService modelos,
-            PeriodoService periodos) {
+            PeriodoService periodos,
+            FuncaoService funcoes) {
         this.ministerios = ministerios;
         this.eventos = eventos;
         this.modelos = modelos;
         this.periodos = periodos;
+        this.funcoes = funcoes;
     }
 
     /** Sem {@code mes}, abre o mês seguinte, que é o que o gerente prepara. */
@@ -98,7 +104,7 @@ class EventoController {
 
     @GetMapping("/novo")
     String novo(@PathVariable Long ministerioId, Model model) {
-        return formulario(ministerioId, null, DadosDoEvento.vazio(), model);
+        return formulario(ministerioId, null, DadosDoEvento.vazio(idsDasFuncoes(ministerioId)), model);
     }
 
     @PostMapping
@@ -123,7 +129,7 @@ class EventoController {
     @GetMapping("/{eventoId}")
     String editar(@PathVariable Long ministerioId, @PathVariable Long eventoId, Model model) {
         var evento = eventos.buscar(ministerioId, eventoId);
-        return formulario(ministerioId, evento, DadosDoEvento.de(evento), model);
+        return formulario(ministerioId, evento, DadosDoEvento.de(evento, idsDasFuncoes(ministerioId)), model);
     }
 
     @PostMapping("/{eventoId}")
@@ -166,6 +172,7 @@ class EventoController {
         model.addAttribute("ministerio", ministerios.buscar(ministerioId));
         model.addAttribute("evento", evento);
         model.addAttribute("form", form);
+        model.addAttribute("caixasDeFuncao", CaixaDeFuncao.de(funcoes.listar(ministerioId), form.funcoes()));
         if (evento != null) {
             model.addAttribute("descricao", descrever(evento));
             model.addAttribute("dataDoEvento", Datas.dataCurta(evento.getData()));
@@ -173,6 +180,10 @@ class EventoController {
                     "doModelo", evento.isAvulso() ? null : evento.getModelo().getNome());
         }
         return FORMULARIO;
+    }
+
+    private List<Long> idsDasFuncoes(Long ministerioId) {
+        return funcoes.listar(ministerioId).stream().map(Funcao::getId).toList();
     }
 
     /** "Culto de domingo de 04/10". */
