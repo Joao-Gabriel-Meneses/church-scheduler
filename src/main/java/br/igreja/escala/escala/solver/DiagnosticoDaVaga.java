@@ -55,7 +55,7 @@ public final class DiagnosticoDaVaga {
                         pessoa -> eventosNoMes(vaga, pessoa)
                                 < escala.getParametros().limitePorMes(),
                         quantas -> quem(quantas) + " já " + (quantas == 1 ? "tem " : "têm ")
-                                + escala.getParametros().limitePorMes() + " escalas no mês."),
+                                + escalas(escala.getParametros().limitePorMes()) + " no mês."),
                 new Passo(
                         TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO,
                         pessoa -> cabeNoNivel(vaga, pessoa),
@@ -119,6 +119,11 @@ public final class DiagnosticoDaVaga {
                 .filter(outra -> Objects.equals(limitado, outra.getNivelId()))
                 .count();
         return doNivel < escala.getParametros().maximoDoNivel();
+    }
+
+    /** "1 escala", "3 escalas". */
+    private static String escalas(int quantas) {
+        return quantas + (quantas == 1 ? " escala" : " escalas");
     }
 
     /** "A única pessoa que pode", "As 3 pessoas que podem". */

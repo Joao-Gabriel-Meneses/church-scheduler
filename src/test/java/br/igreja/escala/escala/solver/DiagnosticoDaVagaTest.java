@@ -88,6 +88,17 @@ class DiagnosticoDaVagaTest {
     }
 
     @Test
+    void limiteDeUmFalaNoSingular() {
+        parametros = Cenario.limite(1);
+        var ana = pessoa(30, 1L, 2L);
+        var vazia = vaga(1, domingo, PROJECAO, null);
+
+        assertThat(motivo(vazia, List.of(ana), List.of(vazia, vaga(2, culto(2L, 11), PROJECAO, ana))))
+                .isEqualTo(new MotivoDaVagaVazia(
+                        TipoDeRegra.LIMITE_POR_PERIODO, "A única pessoa que pode já tem 1 escala no mês."));
+    }
+
+    @Test
     void comOLimiteDesligadoAindaHaQuemPossa() {
         regras = RegrasDoMinisterio.de(List.of(new RegraVigente(
                 TipoDeRegra.LIMITE_POR_PERIODO, Rigidez.HARD, 1, false, new LimitePorPeriodoParams(1))));

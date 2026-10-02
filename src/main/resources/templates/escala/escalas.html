@@ -35,7 +35,8 @@
     <th:block th:if="${geracao != null}"><section
             th:replace="~{escala/fragments/andamento :: andamento}"></section></th:block>
 
-    <div class="flex flex-col gap-2">
+    <div th:if="${recusa != null or (pagina.temPeriodo and !pagina.travada) or !pagina.alertas.isEmpty()}"
+         class="flex flex-col gap-2">
         <th:block th:if="${recusa != null}"><div th:replace="~{componentes/alerta :: alerta(titulo=${recusa},
                 corpo=null, regra=null, acaoTexto=null, icone=null)}"></div></th:block>
         <th:block th:if="${pagina.temPeriodo and !pagina.travada}"><div th:replace="~{componentes/alerta ::
