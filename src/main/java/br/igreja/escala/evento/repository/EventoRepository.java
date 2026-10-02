@@ -19,4 +19,12 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
     Optional<Evento> findByIdAndMinisterioId(Long id, Long ministerioId);
 
     boolean existsByModeloIdAndData(Long modeloId, LocalDate data);
+
+    /** Os eventos do período, cancelados incluídos, já com as funções exigidas (a escala lê fora do serviço). */
+    @EntityGraph(attributePaths = "funcoesExigidas")
+    List<Evento> findComFuncoesByPeriodoIdOrderByDataAscHorarioAsc(Long periodoId);
+
+    /** Eventos não cancelados dos outros ministérios entre as datas: a sobreposição entre ministérios. */
+    @EntityGraph(attributePaths = "funcoesExigidas")
+    List<Evento> findByMinisterioIdNotAndCanceladoFalseAndDataBetween(Long ministerioId, LocalDate de, LocalDate ate);
 }

@@ -79,6 +79,26 @@ public class EventoService {
     }
 
     /**
+     * Os eventos do mês, cancelados incluídos, por data e horário, já com as funções exigidas: a escala do mês parte
+     * deles (o que já passou fica como está; o cancelado sai da escala).
+     */
+    @Transactional(readOnly = true)
+    public List<Evento> daEscala(Long ministerioId, YearMonth mes) {
+        return periodos.doMes(ministerioId, mes)
+                .map(periodo -> eventos.findComFuncoesByPeriodoIdOrderByDataAscHorarioAsc(periodo.getId()))
+                .orElse(List.of());
+    }
+
+    /**
+     * Os eventos não cancelados dos outros ministérios com data entre {@code de} e {@code ate}, com as funções
+     * exigidas: ninguém serve em dois eventos que se sobrepõem, nem em ministérios diferentes.
+     */
+    @Transactional(readOnly = true)
+    public List<Evento> deOutrosMinisteriosEntre(Long ministerioId, LocalDate de, LocalDate ate) {
+        return eventos.findByMinisterioIdNotAndCanceladoFalseAndDataBetween(ministerioId, de, ate);
+    }
+
+    /**
      * Cria os eventos do mês a partir dos modelos ativos, de hoje em diante. Pode rodar de novo à vontade: não duplica
      * evento que já existe e não recria um cancelado.
      *
