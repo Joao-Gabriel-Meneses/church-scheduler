@@ -22,7 +22,7 @@ import java.util.Set;
  * @param eventos do período, cancelados incluídos, por data
  * @param vagas dos eventos do período
  * @param quemServe quem serve no ministério (conta ativa e alguma habilitação)
- * @param nomesDeQuemNaoServe quem está numa vaga e não serve mais (removido, desativado ou sem habilitação)
+ * @param quemNaoServeMais quem está numa vaga do mês e não serve mais (removido, desativado ou sem habilitação)
  * @param quemPode por evento por vir, quem serve e marcou Pode
  * @param compromissosEmOutrosMinisterios vagas vigentes de outros ministérios de quem serve aqui
  * @param agora o relógio de São Paulo: o que começou antes dele fica como está
@@ -36,7 +36,7 @@ record DadosDoPeriodo(
         List<Funcao> funcoes,
         List<Vaga> vagas,
         List<UsuarioResumo> quemServe,
-        Map<Long, String> nomesDeQuemNaoServe,
+        List<UsuarioResumo> quemNaoServeMais,
         Map<Long, Set<Long>> quemPode,
         List<HabilitacaoDaPessoa> habilitacoes,
         Map<Long, String> nomesDosNiveis,
@@ -54,7 +54,7 @@ record DadosDoPeriodo(
                 funcoes,
                 outras,
                 quemServe,
-                nomesDeQuemNaoServe,
+                quemNaoServeMais,
                 quemPode,
                 habilitacoes,
                 nomesDosNiveis,

@@ -23,7 +23,7 @@ public final class Navegacao {
     static final String MINISTERIO = "{ministerio}";
 
     /** Seção padrão ao entrar num ministério pela SideRail ou pelo atalho "Gerenciar". */
-    static final String SECAO_INICIAL = "eventos";
+    static final String SECAO_INICIAL = "escalas";
 
     private static final Pattern AREA_DO_MINISTERIO = Pattern.compile("^/ministerios/(\\d+)(?:/([^/]+))?(?:/.*)?$");
 
@@ -39,6 +39,13 @@ public final class Navegacao {
                     "/ministerios/" + MINISTERIO + "/" + SECAO_INICIAL,
                     Perfil.MEMBRO),
             new Entrada(Area.MEMBRO, "Ministérios", "Ministérios", "church", "/admin/ministerios", Perfil.ADMIN),
+            new Entrada(
+                    Area.MINISTERIO,
+                    "Escalas",
+                    "Escalas",
+                    "layout-dashboard",
+                    "/ministerios/" + MINISTERIO + "/escalas",
+                    Perfil.MEMBRO),
             new Entrada(
                     Area.MINISTERIO,
                     "Eventos",
@@ -66,6 +73,13 @@ public final class Navegacao {
                     "Funções",
                     "layers",
                     "/ministerios/" + MINISTERIO + "/funcoes",
+                    Perfil.MEMBRO),
+            new Entrada(
+                    Area.MINISTERIO,
+                    "Regras",
+                    "Regras",
+                    "settings-2",
+                    "/ministerios/" + MINISTERIO + "/regras",
                     Perfil.MEMBRO),
             new Entrada(Area.MINISTERIO, "Ministérios", "Ministérios", "church", "/admin/ministerios", Perfil.ADMIN),
             new Entrada(Area.MINISTERIO, "Minhas escalas", "Minhas", "calendar-check", "/", Perfil.MEMBRO)));

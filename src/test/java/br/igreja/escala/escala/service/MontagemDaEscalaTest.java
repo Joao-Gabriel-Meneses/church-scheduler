@@ -145,7 +145,7 @@ class MontagemDaEscalaTest {
                 dados.funcoes(),
                 dados.vagas(),
                 dados.quemServe(),
-                Map.of(33L, "Diego Martins"),
+                List.of(pessoa(33L, "Diego Martins")),
                 dados.quemPode(),
                 dados.habilitacoes(),
                 dados.nomesDosNiveis(),
@@ -187,7 +187,7 @@ class MontagemDaEscalaTest {
                 List.of(projecao, transmissao),
                 new ArrayList<>(vagas),
                 List.of(ana, bruno, carla),
-                Map.of(),
+                List.of(),
                 quemPode,
                 List.of(
                         new HabilitacaoDaPessoa(30L, 100L, 201L),

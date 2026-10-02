@@ -8,6 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.igreja.escala.TesteDeController;
 import br.igreja.escala.disponibilidade.domain.Resposta;
 import br.igreja.escala.disponibilidade.service.LinhaDeDisponibilidade;
+import br.igreja.escala.escala.service.CelulaDaGrade;
+import br.igreja.escala.escala.service.LinhaDaGrade;
+import br.igreja.escala.escala.service.SlotDaGrade;
 import br.igreja.escala.identidade.domain.Usuario;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
 import br.igreja.escala.identidade.service.UsuarioDetailsService;
@@ -345,6 +348,43 @@ class ComponentesTest {
                 .doesNotContain("rt-toolbar__regras", "rt-btn", "rt-badge--locked");
     }
 
+    @Test
+    void toolbarEmAndamentoMostraOProgressoNoLugarDaAcao() {
+        assertThat(secao("toolbar-em-andamento"))
+                .contains("<span class=\"rt-badge\">", "#sparkles\"", "Gerando escala")
+                .doesNotContain("rt-btn");
+    }
+
+    @Test
+    void gradeTemUmaLinhaPorEventoEUmaColunaPorFuncao() {
+        String grade = secao("grade");
+
+        assertThat(grade)
+                .contains("<table class=\"rt-table rt-sched\">", "<th scope=\"col\">Evento</th>")
+                .contains("<th scope=\"col\">Projeção</th>", "<th scope=\"col\">Transmissão</th>")
+                .contains("<span class=\"rt-avail__day\">05</span><span class=\"rt-caption\">Dom</span>")
+                .contains("<span>Culto de domingo</span><span class=\"rt-caption\">18h00</span>")
+                .contains("<ul class=\"flex flex-col gap-3 md:hidden\" aria-label=\"Escala do mês\">")
+                .contains("<div class=\"rt-panel relative hidden overflow-x-auto md:block\">");
+        assertThat(grade.split("<tr class=\"is-alert\">", -1))
+                .as("só a linha com vaga vazia")
+                .hasSize(2);
+    }
+
+    @Test
+    void slotMostraOEstadoComTextoOuIconeAlemDaCor() {
+        String grade = secao("grade");
+
+        assertThat(grade)
+                .contains("<span class=\"rt-slot\"><span class=\"rt-avatar\" aria-hidden=\"true\">AS</span><span>Ana"
+                        + " Souza<span class=\"rt-slot__meta\">Experiente</span></span></span>")
+                .contains("<span class=\"rt-slot rt-slot--pinned\">", "#pin\"")
+                .contains("<span class=\"rt-slot rt-slot--forced\">", "<span class=\"rt-slot__meta\">Forçada</span>")
+                .contains("<span class=\"rt-slot rt-slot--empty\">", "Vaga vazia", "Opcional, vazia")
+                .contains("<span class=\"rt-slot__meta\">Sem habilitação</span>")
+                .contains("<span aria-hidden=\"true\">—</span><span class=\"sr-only\">Não precisa</span>");
+    }
+
     private String secao(String id) {
         return entre("<section id=\"" + id + "\">", "</section>");
     }
@@ -369,6 +409,53 @@ class ComponentesTest {
             model.addAttribute("form", form);
             model.addAttribute(BindingResult.MODEL_KEY_PREFIX + "form", resultado);
             model.addAttribute("opcoes", List.of(new Opcao("1", "Projeção"), new Opcao("2", "Transmissão")));
+            model.addAttribute("funcoesDaGrade", List.of("Projeção", "Transmissão"));
+            model.addAttribute(
+                    "linhasDaGrade",
+                    List.of(
+                            new LinhaDaGrade(
+                                    "05",
+                                    "Dom",
+                                    "Culto de domingo",
+                                    "18h00",
+                                    false,
+                                    List.of(
+                                            new CelulaDaGrade(
+                                                    "Projeção",
+                                                    true,
+                                                    List.of(SlotDaGrade.de("Ana Souza", "Experiente", false, false))),
+                                            new CelulaDaGrade(
+                                                    "Transmissão",
+                                                    true,
+                                                    List.of(SlotDaGrade.de(
+                                                            "Pedro Alves", "Experiente", true, false))))),
+                            new LinhaDaGrade(
+                                    "12",
+                                    "Dom",
+                                    "Culto de domingo",
+                                    "18h00",
+                                    true,
+                                    List.of(
+                                            new CelulaDaGrade(
+                                                    "Projeção",
+                                                    true,
+                                                    List.of(SlotDaGrade.de("Carla Dias", "Iniciante", false, true))),
+                                            new CelulaDaGrade(
+                                                    "Transmissão",
+                                                    true,
+                                                    List.of(SlotDaGrade.vazia(true), SlotDaGrade.vazia(false))))),
+                            new LinhaDaGrade(
+                                    "16",
+                                    "Qui",
+                                    "Casamento",
+                                    "19h30",
+                                    false,
+                                    List.of(
+                                            new CelulaDaGrade(
+                                                    "Projeção",
+                                                    true,
+                                                    List.of(SlotDaGrade.de("Lucas Lima", null, false, false))),
+                                            new CelulaDaGrade("Transmissão", false, List.of())))));
             model.addAttribute(
                     "linhaRespondida",
                     new LinhaDeDisponibilidade(

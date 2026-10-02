@@ -145,7 +145,8 @@ final class MontagemDaEscala {
                     niveis.getOrDefault(usuario.id(), Map.of()),
                     eventosQuePode.getOrDefault(usuario.id(), Set.of())));
         }
-        dados.nomesDeQuemNaoServe().forEach((id, nome) -> pessoas.add(new Pessoa(id, nome, Map.of(), Set.of())));
+        dados.quemNaoServeMais()
+                .forEach(usuario -> pessoas.add(new Pessoa(usuario.id(), usuario.nome(), Map.of(), Set.of())));
         return pessoas;
     }
 

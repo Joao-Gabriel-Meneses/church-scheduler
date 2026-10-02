@@ -238,6 +238,14 @@
         </div>
     </section>
 
+    <section id="schedule-grid" class="flex flex-col gap-2">
+        <h2 class="text-heading">ScheduleGrid e Slot</h2>
+        <p class="text-label text-ink-muted">No celular, a grade vira um cartão por evento.</p>
+        <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
+            <div th:replace="~{componentes/grade :: grade(funcoes=${funcoesDaGrade}, linhas=${linhasDaGrade})}"></div>
+        </div>
+    </section>
+
     <section id="toolbar" class="flex flex-col gap-2">
         <h2 class="text-heading">Toolbar</h2>
         <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">

@@ -139,7 +139,7 @@ class GravacaoDaEscalaTest {
                         List.of(Exemplos.projecao(midia)),
                         List.of(doCancelado),
                         List.of(),
-                        Map.of(),
+                        List.of(),
                         Map.of(),
                         List.of(),
                         Map.of(),

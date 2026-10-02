@@ -96,10 +96,7 @@ class LeituraDoPeriodo {
                 funcoes.listar(ministerioId),
                 vagasDoMes,
                 quemServe,
-                naoServem.isEmpty()
-                        ? Map.of()
-                        : usuarios.resumosPorId(naoServem).values().stream()
-                                .collect(Collectors.toMap(UsuarioResumo::id, UsuarioResumo::nome)),
+                naoServem.isEmpty() ? List.of() : usuarios.resumos(naoServem),
                 disponibilidade.quemPode(ministerioId, mes),
                 habilitacoes.doMinisterio(ministerioId),
                 niveis.listar(ministerioId).stream().collect(Collectors.toMap(Nivel::getId, Nivel::getNome)),
