@@ -65,7 +65,7 @@ class ComponentesDevControllerTest {
         mvc.perform(get("/teste/vitrine/membro").with(user(ANA)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(Matchers.containsString("Mídia — Outubro")))
-                .andExpect(content().string(Matchers.containsString("rt-nav border-t-2")))
+                .andExpect(content().string(Matchers.containsString("rt-nav gap-1 border-t-2")))
                 .andExpect(content().string(Matchers.containsString("Disponibilidade de outubro salva")));
     }
 
