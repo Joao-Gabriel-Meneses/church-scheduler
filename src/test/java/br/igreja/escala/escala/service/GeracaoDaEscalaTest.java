@@ -4,15 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_SELF;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import ai.timefold.solver.core.api.solver.SolverJob;
 import ai.timefold.solver.core.api.solver.SolverJobBuilder;
 import ai.timefold.solver.core.api.solver.SolverManager;
-import ai.timefold.solver.core.api.solver.event.FinalBestSolutionEvent;
 import br.igreja.escala.AcessoDeTeste;
 import br.igreja.escala.compartilhado.Fuso;
 import br.igreja.escala.compartilhado.RegraVioladaException;
@@ -28,13 +28,13 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class GeracaoDaEscalaTest {
@@ -50,22 +50,34 @@ class GeracaoDaEscalaTest {
     @SuppressWarnings("unchecked")
     private final SolverJobBuilder<EscalaDoPeriodo> construtor = mock(SolverJobBuilder.class, RETURNS_SELF);
 
+    @SuppressWarnings("unchecked")
+    private final SolverJob<EscalaDoPeriodo> trabalho = mock(SolverJob.class);
+
     private final GravacaoDaEscala gravacao = mock(GravacaoDaEscala.class);
     private final PeriodoService periodos = mock(PeriodoService.class);
     private final EventoService eventos = mock(EventoService.class);
-    private final GeracaoDaEscala servico =
-            new GeracaoDaEscala(solverManager, gravacao, new GeracoesEmAndamento(), periodos, eventos, AGORA);
+
+    /** A fila das gerações: guarda o que chegou e só roda quando o teste manda. */
+    private final List<Runnable> fila = new ArrayList<>();
+
+    private final GeracaoDaEscala servico = new GeracaoDaEscala(
+            solverManager, gravacao, new GeracoesEmAndamento(), periodos, eventos, AGORA, fila::add);
 
     private final Periodo novembro = ExemplosDeEvento.periodo(MIDIA, NOVEMBRO);
+    private final EscalaDoPeriodo problema = new EscalaDoPeriodo(400L, List.of(), List.of(), null, List.of(), null);
+    private final EscalaDoPeriodo solucao = new EscalaDoPeriodo(400L, List.of(), List.of(), null, List.of(), null);
 
     @BeforeEach
-    void prepara() {
+    void prepara() throws Exception {
         ReflectionTestUtils.setField(novembro, "disponibilidadeTravada", true);
         when(periodos.doMes(MIDIA, NOVEMBRO)).thenReturn(Optional.of(novembro));
         when(eventos.porVirDoMes(MIDIA, NOVEMBRO))
                 .thenReturn(List.of(Evento.avulso(
                         novembro, "Culto", LocalDate.of(2026, 11, 1), LocalTime.of(18, 0), Duration.ofHours(2))));
         when(solverManager.solveBuilder()).thenReturn(construtor);
+        when(construtor.run()).thenReturn(trabalho);
+        when(trabalho.getFinalBestSolution()).thenReturn(solucao);
+        when(gravacao.preparar(MIDIA, NOVEMBRO)).thenReturn(problema);
     }
 
     @Test
@@ -76,7 +88,7 @@ class GeracaoDaEscalaTest {
                 .isInstanceOf(RegraVioladaException.class)
                 .hasMessage("Trave a disponibilidade de novembro antes de gerar a escala: a geração usa as respostas"
                         + " travadas.");
-        verify(solverManager, never()).solveBuilder();
+        assertThat(fila).isEmpty();
     }
 
     @Test
@@ -89,7 +101,7 @@ class GeracaoDaEscalaTest {
         when(eventos.porVirDoMes(MIDIA, NOVEMBRO)).thenReturn(List.of());
         assertThatThrownBy(() -> servico.iniciar(MIDIA, NOVEMBRO, AcessoDeTeste.GERENTE_DA_MIDIA))
                 .hasMessage("Não há eventos por vir em novembro: não há escala para gerar.");
-        verify(solverManager, never()).solveBuilder();
+        assertThat(fila).isEmpty();
     }
 
     @Test
@@ -100,21 +112,23 @@ class GeracaoDaEscalaTest {
         assertThat(segunda).isSameAs(primeira);
         assertThat(primeira.isGerando()).isTrue();
         assertThat(primeira.getAutorId()).isEqualTo(AcessoDeTeste.GERENTE_DA_MIDIA.getId());
-        verify(solverManager, times(1)).solveBuilder();
-        verify(construtor).withProblemId(400L);
-        verify(construtor, times(1)).run();
+        assertThat(fila).hasSize(1);
         assertThat(servico.andamento(MIDIA, NOVEMBRO)).contains(primeira);
     }
 
     @Test
-    void aoTerminarGravaOResultadoEDizQuantasVagasPreencheu() {
+    void naVezDelaLeResolveEGravaEmSequencia() throws Exception {
         var andamento = servico.iniciar(MIDIA, NOVEMBRO, AcessoDeTeste.GERENTE_DA_MIDIA);
-        var solucao = new EscalaDoPeriodo(400L, List.of(), List.of(), null, List.of(), null);
         when(gravacao.gravar(any(), any(), any())).thenReturn(0);
 
-        terminar(solucao);
+        fila.getFirst().run();
 
-        verify(gravacao).gravar(solucao, andamento, Duration.ZERO);
+        var ordem = inOrder(gravacao, construtor, trabalho);
+        ordem.verify(gravacao).preparar(MIDIA, NOVEMBRO);
+        ordem.verify(construtor).withProblem(problema);
+        ordem.verify(trabalho).getFinalBestSolution();
+        ordem.verify(gravacao).gravar(solucao, andamento, Duration.ZERO);
+        verify(construtor).withProblemId(400L);
         assertThat(andamento.getEstado()).isEqualTo(Andamento.Estado.CONCLUIDA);
         assertThat(andamento.getMensagem()).isEqualTo("Escala de novembro gerada: 0 de 0 vagas preenchidas");
         assertThat(andamento.getFim()).isCompleted();
@@ -127,33 +141,38 @@ class GeracaoDaEscalaTest {
         var andamento = servico.iniciar(MIDIA, NOVEMBRO, AcessoDeTeste.GERENTE_DA_MIDIA);
         when(gravacao.gravar(any(), any(), any())).thenThrow(RegraVioladaException.geral("Foi destravada."));
 
-        terminar(new EscalaDoPeriodo(400L, List.of(), List.of(), null, List.of(), null));
+        fila.getFirst().run();
 
         assertThat(andamento.getEstado()).isEqualTo(Andamento.Estado.FALHOU);
         assertThat(andamento.getMensagem()).isEqualTo("Foi destravada.");
         assertThat(servico.iniciar(MIDIA, NOVEMBRO, AcessoDeTeste.GERENTE_DA_MIDIA))
                 .isNotSameAs(andamento);
-        verify(solverManager, times(2)).solveBuilder();
+        assertThat(fila).hasSize(2);
     }
 
     @Test
-    void erroNoSolverViraFalhaSemDetalhesParaOGerente() {
+    void erroNoSolverViraFalhaSemDetalhesParaOGerente() throws Exception {
         var andamento = servico.iniciar(MIDIA, NOVEMBRO, AcessoDeTeste.GERENTE_DA_MIDIA);
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<BiConsumer<Object, Throwable>> tratador = ArgumentCaptor.forClass(BiConsumer.class);
-        verify(construtor).withExceptionHandler(tratador.capture());
+        when(trabalho.getFinalBestSolution())
+                .thenThrow(new ExecutionException(new IllegalStateException("banco caiu")));
 
-        tratador.getValue().accept(400L, new IllegalStateException("banco caiu"));
+        fila.getFirst().run();
 
         assertThat(andamento.getEstado()).isEqualTo(Andamento.Estado.FALHOU);
         assertThat(andamento.getMensagem())
                 .isEqualTo("A geração da escala falhou. Tente de novo; se continuar, avise o admin.");
+        verify(gravacao, never()).gravar(any(), any(), any());
     }
 
-    @SuppressWarnings("unchecked")
-    private void terminar(EscalaDoPeriodo solucao) {
-        ArgumentCaptor<Consumer<FinalBestSolutionEvent<EscalaDoPeriodo>>> fim = ArgumentCaptor.forClass(Consumer.class);
-        verify(construtor).withFinalBestSolutionEventConsumer(fim.capture());
-        fim.getValue().accept(() -> solucao);
+    @Test
+    void filaCheiaNaoDeixaAGeracaoPresa() {
+        var recusa = new GeracaoDaEscala(
+                solverManager, gravacao, new GeracoesEmAndamento(), periodos, eventos, AGORA, tarefa -> {
+                    throw new RejectedExecutionException("desligando");
+                });
+
+        assertThatThrownBy(() -> recusa.iniciar(MIDIA, NOVEMBRO, AcessoDeTeste.GERENTE_DA_MIDIA))
+                .isInstanceOf(RejectedExecutionException.class);
+        assertThat(recusa.andamento(MIDIA, NOVEMBRO)).isEmpty();
     }
 }

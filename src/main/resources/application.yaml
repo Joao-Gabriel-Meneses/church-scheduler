@@ -55,8 +55,8 @@ management:
 
 timefold:
   solver-manager:
-    # Uma geração por vez no app inteiro: duas gerações de ministérios diferentes não escalam a mesma pessoa em
-    # horários sobrepostos (cada uma lê o que a outra gravou), e a VM de 1 OCPU não divide o processador.
+    # Um solver por vez: a VM de 1 OCPU não divide o processador. As gerações também esperam numa fila de uma thread
+    # (GeracaoDaEscala), para cada uma ler o que a anterior gravou.
     parallel-solver-count: 1
   solver:
     termination:

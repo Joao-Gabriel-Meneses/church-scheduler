@@ -8,19 +8,28 @@ import br.igreja.escala.evento.domain.Periodo;
 import br.igreja.escala.evento.service.EventoService;
 import br.igreja.escala.evento.service.PeriodoService;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
+import jakarta.annotation.PreDestroy;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Gera a escala de um mês em segundo plano, com o SolverManager do Timefold (até 30 s, uma geração por vez no app). O
- * resultado vira o rascunho; as vagas fixadas e forçadas ficam como estão. Só gera com a disponibilidade travada.
+ * Gera a escala de um mês em segundo plano, com o SolverManager do Timefold (até 30 s). O resultado vira o rascunho;
+ * as vagas fixadas e forçadas ficam como estão. Só gera com a disponibilidade travada.
+ *
+ * <p>Uma geração por vez no app inteiro, numa fila de uma thread: cada uma lê o banco, resolve e grava antes da
+ * próxima começar. Assim a geração da Mídia enxerga o que a do Louvor acabou de gravar, e ninguém fica em dois
+ * ministérios no mesmo horário. (O consumidor final do SolverManager roda em outra thread, sem essa garantia.)
  */
 @Service
 public class GeracaoDaEscala {
@@ -33,7 +42,9 @@ public class GeracaoDaEscala {
     private final PeriodoService periodos;
     private final EventoService eventos;
     private final Clock relogio;
+    private final Executor fila;
 
+    @Autowired
     GeracaoDaEscala(
             SolverManager<EscalaDoPeriodo> solverManager,
             GravacaoDaEscala gravacao,
@@ -41,12 +52,32 @@ public class GeracaoDaEscala {
             PeriodoService periodos,
             EventoService eventos,
             Clock relogio) {
+        this(
+                solverManager,
+                gravacao,
+                andamentos,
+                periodos,
+                eventos,
+                relogio,
+                Executors.newSingleThreadExecutor(
+                        Thread.ofPlatform().name("geracao-da-escala").daemon().factory()));
+    }
+
+    GeracaoDaEscala(
+            SolverManager<EscalaDoPeriodo> solverManager,
+            GravacaoDaEscala gravacao,
+            GeracoesEmAndamento andamentos,
+            PeriodoService periodos,
+            EventoService eventos,
+            Clock relogio,
+            Executor fila) {
         this.solverManager = solverManager;
         this.gravacao = gravacao;
         this.andamentos = andamentos;
         this.periodos = periodos;
         this.eventos = eventos;
         this.relogio = relogio;
+        this.fila = fila;
     }
 
     /**
@@ -62,16 +93,7 @@ public class GeracaoDaEscala {
             return registrada;
         }
         try {
-            solverManager
-                    .solveBuilder()
-                    .withProblemId(periodo.getId())
-                    .withProblemFinder(id -> gravacao.preparar(ministerioId, mes))
-                    .withBestSolutionEventConsumer(evento -> nova.melhorAte(
-                            preenchidas(evento.solution()),
-                            evento.solution().getVagas().size()))
-                    .withFinalBestSolutionEventConsumer(evento -> concluir(nova, evento.solution()))
-                    .withExceptionHandler((id, erro) -> falhou(nova, erro))
-                    .run();
+            fila.execute(() -> gerar(nova, ministerioId, mes));
         } catch (RuntimeException erro) {
             andamentos.remover(nova);
             throw erro;
@@ -102,6 +124,36 @@ public class GeracaoDaEscala {
             throw RegraVioladaException.geral("Não há eventos por vir em " + nomeDoMes + ": não há escala para gerar.");
         }
         return periodo;
+    }
+
+    /** Na fila: lê o mês (cria e apaga vagas), resolve esperando o solver e grava o rascunho. */
+    private void gerar(Andamento andamento, Long ministerioId, YearMonth mes) {
+        try {
+            var problema = gravacao.preparar(ministerioId, mes);
+            var solucao = solverManager
+                    .solveBuilder()
+                    .withProblemId(andamento.getPeriodoId())
+                    .withProblem(problema)
+                    .withBestSolutionEventConsumer(evento -> andamento.melhorAte(
+                            preenchidas(evento.solution()),
+                            evento.solution().getVagas().size()))
+                    .run()
+                    .getFinalBestSolution();
+            concluir(andamento, solucao);
+        } catch (InterruptedException interrompida) {
+            Thread.currentThread().interrupt();
+            falhou(andamento, interrompida);
+        } catch (Exception erro) {
+            falhou(andamento, erro);
+        }
+    }
+
+    /** Ao desligar o app, a geração em andamento para (o rascunho anterior fica como estava). */
+    @PreDestroy
+    void desligar() {
+        if (fila instanceof ExecutorService servico) {
+            servico.shutdownNow();
+        }
     }
 
     private void concluir(Andamento andamento, EscalaDoPeriodo solucao) {

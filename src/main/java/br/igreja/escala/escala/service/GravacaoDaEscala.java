@@ -46,7 +46,7 @@ class GravacaoDaEscala {
 
     /**
      * Cria as vagas que faltam nos eventos por vir, apaga as que saíram da escala e monta o problema com as vagas soltas
-     * vazias. Roda na thread do solver, quando a geração começa, então lê o que as outras gerações já gravaram.
+     * vazias. Roda na fila das gerações, quando chega a vez desta, então lê o que as anteriores já gravaram.
      */
     @Transactional
     public EscalaDoPeriodo preparar(Long ministerioId, YearMonth mes) {
