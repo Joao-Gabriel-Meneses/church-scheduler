@@ -10,6 +10,12 @@ import br.igreja.escala.compartilhado.Fuso;
 import br.igreja.escala.disponibilidade.domain.Disponibilidade;
 import br.igreja.escala.disponibilidade.domain.Resposta;
 import br.igreja.escala.disponibilidade.repository.DisponibilidadeRepository;
+import br.igreja.escala.escala.domain.MaxPorNivelParams;
+import br.igreja.escala.escala.domain.Regra;
+import br.igreja.escala.escala.domain.TipoDeRegra;
+import br.igreja.escala.escala.domain.Vaga;
+import br.igreja.escala.escala.repository.RegraRepository;
+import br.igreja.escala.escala.repository.VagaRepository;
 import br.igreja.escala.evento.domain.Evento;
 import br.igreja.escala.evento.domain.ModeloEvento;
 import br.igreja.escala.evento.domain.Periodo;
@@ -35,6 +41,7 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Set;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -93,6 +100,12 @@ class PaginasDoGerenteIT {
     @Autowired
     DisponibilidadeRepository disponibilidades;
 
+    @Autowired
+    VagaRepository vagas;
+
+    @Autowired
+    RegraRepository regras;
+
     private Long ministerioId;
     private YearMonth mes;
     private UsuarioAutenticado gerente;
@@ -124,10 +137,13 @@ class PaginasDoGerenteIT {
             membresias.save(new Membresia(ana.getId(), midia));
             membresias.save(new Membresia(desativadaId, midia));
             var projecao = funcoes.save(new Funcao(midia, "Projeção", Icone.MONITOR, 1, 1));
+            funcoes.save(new Funcao(midia, "Transmissão", Icone.VIDEO, 1, 1));
             var iniciante = niveis.save(new Nivel(midia, "Iniciante", 1));
             habilitacoes.save(new Habilitacao(ana.getId(), projecao, iniciante));
-            var domingo = modelos.save(new ModeloEvento(
-                    midia.getId(), "Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), DUAS_HORAS));
+            var novoDomingo = new ModeloEvento(
+                    midia.getId(), "Culto de domingo", DayOfWeek.SUNDAY, LocalTime.of(18, 0), DUAS_HORAS);
+            novoDomingo.exigirFuncoes(Set.of(projecao.getId()));
+            var domingo = modelos.save(novoDomingo);
             mes = YearMonth.now(Fuso.SAO_PAULO).plusMonths(2);
             var periodo = periodos.save(new Periodo(midia.getId(), mes));
             var dataDoDomingo = mes.atDay(1).with(TemporalAdjusters.firstInMonth(DayOfWeek.SUNDAY));
@@ -136,6 +152,13 @@ class PaginasDoGerenteIT {
             disponibilidades.save(new Disponibilidade(ana.getId(), doModelo, Resposta.PODE, paula.getId()));
             eventoAvulsoId = eventos.save(Evento.avulso(periodo, "Ensaio", mes.atDay(10), LocalTime.NOON, DUAS_HORAS))
                     .getId();
+            var daAna = new Vaga(eventoDoModeloId, projecao.getId(), 1);
+            daAna.escalar(ana.getId());
+            vagas.save(daAna);
+            vagas.save(new Vaga(eventoAvulsoId, projecao.getId(), 1));
+            var maximo = new Regra(midia.getId(), TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO);
+            maximo.alterar(new MaxPorNivelParams(iniciante.getId(), 1), true);
+            regras.save(maximo);
             gerente = new UsuarioAutenticado(paula);
             membro = new UsuarioAutenticado(ana);
             membroId = ana.getId();
@@ -148,6 +171,17 @@ class PaginasDoGerenteIT {
     @AfterEach
     void apagaOsDados() {
         transacao.executeWithoutResult(status -> {
+            jdbc.update(
+                    "delete from vaga where evento_id in (select id from evento where ministerio_id = ?)",
+                    ministerioId);
+            jdbc.update(
+                    "delete from evento_funcao where evento_id in (select id from evento where ministerio_id = ?)",
+                    ministerioId);
+            jdbc.update(
+                    "delete from modelo_evento_funcao where modelo_id in"
+                            + " (select id from modelo_evento where ministerio_id = ?)",
+                    ministerioId);
+            jdbc.update("delete from regra where ministerio_id = ?", ministerioId);
             jdbc.update(
                     "delete from disponibilidade where evento_id in (select id from evento where ministerio_id = ?)",
                     ministerioId);
@@ -210,6 +244,25 @@ class PaginasDoGerenteIT {
         mvc.perform(get("/disponibilidade").param("mes", mes.toString()).with(user(membro)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(Matchers.containsString("Marcado por Paula Páginas")));
+    }
+
+    @Test
+    void paginasDaEscalaEDasRegrasAbrem() throws Exception {
+        mvc.perform(get("/ministerios/{m}/escalas", ministerioId)
+                        .param("mes", mes.toString())
+                        .with(user(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Ana Páginas")))
+                .andExpect(content().string(Matchers.containsString("Vaga vazia")))
+                .andExpect(content().string(Matchers.containsString("Sem vagas: gere a escala de novo")))
+                .andExpect(content().string(Matchers.containsString("aberta")));
+        abre("/ministerios/{m}/escalas", ministerioId);
+        mvc.perform(get("/ministerios/{m}/regras", ministerioId).with(user(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(
+                        content().string(Matchers.containsString("No máximo 1 pessoa do nível Iniciante por evento.")));
+        abre("/ministerios/{m}/regras/limite", ministerioId);
+        abre("/ministerios/{m}/regras/maximo-por-nivel", ministerioId);
     }
 
     @Test

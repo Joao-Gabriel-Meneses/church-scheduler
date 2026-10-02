@@ -8,6 +8,8 @@ import br.igreja.escala.disponibilidade.service.ConsultaDaDisponibilidade;
 import br.igreja.escala.disponibilidade.service.DisponibilidadeService;
 import br.igreja.escala.disponibilidade.service.GrupoDeDisponibilidade;
 import br.igreja.escala.disponibilidade.service.LinhaDeDisponibilidade;
+import br.igreja.escala.escala.domain.MaxPorNivelParams;
+import br.igreja.escala.escala.service.RegraService;
 import br.igreja.escala.evento.domain.Evento;
 import br.igreja.escala.evento.repository.EventoRepository;
 import br.igreja.escala.evento.repository.PeriodoRepository;
@@ -81,6 +83,9 @@ class SeedDeDesenvolvimentoIT {
     ConsultaDaDisponibilidade consulta;
 
     @Autowired
+    RegraService regras;
+
+    @Autowired
     UsuarioRepository usuarioRepository;
 
     @Autowired
@@ -109,6 +114,7 @@ class SeedDeDesenvolvimentoIT {
                 usuarios,
                 autenticacao,
                 disponibilidades,
+                regras,
                 "admin.seed@teste.local",
                 "senha-dos-membros");
 
@@ -159,6 +165,7 @@ class SeedDeDesenvolvimentoIT {
                         usuarios,
                         autenticacao,
                         disponibilidades,
+                        regras,
                         "admin.seed@teste.local",
                         "senha-dos-membros")
                 .run(new DefaultApplicationArguments());
@@ -178,6 +185,17 @@ class SeedDeDesenvolvimentoIT {
                 .isTrue();
         var painel = consulta.painel(midia.getId(), proximo);
         assertThat(painel.responderam()).hasSize(11);
+        var desteMes = consulta.painel(midia.getId(), proximo.minusMonths(1));
+        if (!desteMes.eventos().isEmpty()) {
+            assertThat(desteMes.responderam())
+                    .as("o mês travado também tem respostas, para gerar a escala")
+                    .hasSize(11);
+        }
+        assertThat(regras.doMinisterio(midia.getId()).maximoPorNivel())
+                .get()
+                .extracting(MaxPorNivelParams::maximo)
+                .isEqualTo(1);
+        assertThat(regras.doMinisterio(louvor.getId()).maximoPorNivel()).isEmpty();
         assertThat(painel.faltamResponder()).isNotEmpty();
         var ana = usuarioRepository.findByEmail("ana.souza@escala.local").orElseThrow();
         var tela = consulta.doMembro(ana.getId(), proximo);
