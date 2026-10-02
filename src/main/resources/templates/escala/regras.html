@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<!--/*
+    As regras da escala do ministério (gerente): o catálogo na ordem, com o que cada regra faz aqui, a rigidez e o
+    estado. Nesta fase o gerente muda o limite do mês e o máximo por nível. ListRow no celular e DataTable no desktop.
+    Sem primário: a página só leva aos formulários.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title th:text="|${ministerio.nome} — Regras · Escala|">Mídia — Regras · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-1">
+        <h1 class="text-title" th:text="|${ministerio.nome} — Regras|">Mídia — Regras</h1>
+        <p class="text-ink-muted">O que a geração respeita. As rígidas nunca são violadas: sem ninguém que caiba, a
+            vaga fica vazia e a página de escalas diz por quê.</p>
+    </header>
+
+    <ul class="rt-list md:hidden">
+        <li th:each="regra : ${regras}"><a th:replace="~{componentes/lista :: linha(titulo=${regra.nome},
+                sub=|${regra.rigidez} · ${regra.estado} · ${regra.descricao}|, icone='settings-2',
+                href=${regra.edicao != null} ? @{/ministerios/{m}/regras/{r}(m=${ministerio.id}, r=${regra.edicao})}
+                        : null,
+                selecionada=false)}"></a></li>
+    </ul>
+    <div class="rt-panel hidden overflow-x-auto md:block">
+        <table class="rt-table">
+            <thead>
+            <tr>
+                <th scope="col">Regra</th>
+                <th scope="col">O que faz</th>
+                <th scope="col">Rigidez</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span class="sr-only">Ações</span></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="regra : ${regras}">
+                <td class="whitespace-nowrap"><div th:replace="~{componentes/tabela :: duasLinhas(${regra.nome},
+                        ${regra.codigo})}"></div></td>
+                <td th:text="${regra.descricao}">Ninguém faz duas funções no mesmo evento.</td>
+                <td class="whitespace-nowrap"><span th:replace="~{componentes/badge :: badge(texto=${regra.rigidez},
+                        variante=null, icone=null, tint=null, classe=null)}"></span></td>
+                <td class="whitespace-nowrap"><th:block th:replace="~{componentes/tabela :: estado(texto=${regra.estado},
+                        variante=${regra.ligada ? null : 'vazio'})}"></th:block></td>
+                <td class="text-right"><th:block th:if="${regra.edicao != null}"><a th:replace="~{componentes/botao ::
+                        botaoIcone(icone='pencil', rotulo=${'Editar ' + regra.nome},
+                        href=@{/ministerios/{m}/regras/{r}(m=${ministerio.id}, r=${regra.edicao})},
+                        tamanho='sm', variante=null, classe=null)}"></a></th:block></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

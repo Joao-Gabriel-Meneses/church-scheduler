@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!--/* O limite do mês (LIMITE_POR_PERIODO): em quantos eventos do mês cada pessoa serve, no máximo. */-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title th:text="|Limite do mês · ${ministerio.nome} · Escala|">Limite do mês · Mídia · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-1">
+        <p class="text-ink-muted" th:text="|${ministerio.nome} · Regras|">Mídia · Regras</p>
+        <h1 class="text-title">Limite do mês</h1>
+        <p class="text-ink-muted">Conta eventos: dois cultos no mesmo domingo são dois. Vale para a próxima geração.</p>
+    </header>
+
+    <form th:action="@{/ministerios/{m}/regras/limite(m=${ministerio.id})}" th:object="${form}" method="post"
+          class="rt-panel flex w-full max-w-md flex-col gap-4 p-6">
+        <th:block th:replace="~{componentes/formulario :: errosGerais}"></th:block>
+        <th:block th:with="tipo='number', inputmode='numeric',
+                           min=${T(br.igreja.escala.escala.domain.LimitePorPeriodoParams).MINIMO},
+                           max=${T(br.igreja.escala.escala.domain.LimitePorPeriodoParams).MAXIMO},
+                           dica='O padrão é 3.'">
+            <div th:replace="~{componentes/formulario :: campoDoObjeto('Eventos por pessoa no mês', 'maximo')}"></div>
+        </th:block>
+        <div class="flex flex-wrap gap-2">
+            <button th:replace="~{componentes/botao :: botao(texto='Salvar', variante=null, icone=null, classe=null,
+                    tipo=null)}"></button>
+            <a th:replace="~{componentes/botao :: botao(texto='Cancelar', variante='secondary',
+                    href=@{/ministerios/{m}/regras(m=${ministerio.id})}, icone=null, classe=null)}"></a>
+        </div>
+    </form>
+</main>
+</body>
+</html>
