@@ -23,6 +23,8 @@
         <node.version>v24.21.0</node.version>
         <palantir-java-format.version>2.100.0</palantir-java-format.version>
         <spotless.version>3.10.3</spotless.version>
+        <!-- O starter 2.x é o que suporta o Spring Boot 4; o 2.7.0 é compilado contra o Boot 4.1.1. -->
+        <timefold.version>2.7.0</timefold.version>
         <!-- Cobertura mínima de linhas dos testes unitários (política de testes do CLAUDE.md). -->
         <cobertura.minima>0.70</cobertura.minima>
         <!--
@@ -61,6 +63,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>ai.timefold.solver</groupId>
+            <artifactId>timefold-solver-spring-boot-starter</artifactId>
+            <version>${timefold.version}</version>
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>

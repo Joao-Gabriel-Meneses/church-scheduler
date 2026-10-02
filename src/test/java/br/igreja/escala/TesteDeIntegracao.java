@@ -39,6 +39,9 @@ import org.springframework.test.context.TestPropertySource;
             "escala.admin.email=" + CredenciaisDeTeste.ADMIN_EMAIL,
             "escala.admin.senha=" + CredenciaisDeTeste.ADMIN_SENHA,
             "escala.url-base=" + CredenciaisDeTeste.URL_BASE,
-            CredenciaisDeTeste.PROPRIEDADE_CHAVE_LEMBRAR_ME
+            CredenciaisDeTeste.PROPRIEDADE_CHAVE_LEMBRAR_ME,
+            // A geração da escala nos testes: problemas pequenos, que estabilizam em menos de um segundo.
+            "timefold.solver.termination.spent-limit=10s",
+            "timefold.solver.termination.unimproved-spent-limit=1s"
         })
 public @interface TesteDeIntegracao {}
