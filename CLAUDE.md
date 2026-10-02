@@ -22,7 +22,7 @@ Objetivos do autor: servir o ministério, compor portfólio e aprender Java/Spri
 | --- | --- |
 | Linguagem | Java 21 |
 | Framework | Spring Boot 4.1 (Web, Security, Data JPA, Validation, Mail) |
-| Solver | Timefold Solver Community (`timefold-solver-spring-boot-starter`, só suporta Spring Boot 4.x) |
+| Solver | Timefold Solver Community 2.7.0 (`timefold-solver-spring-boot-starter`; o 2.x é o que suporta o Spring Boot 4, e o 2.7.0 é compilado contra o 4.1.1) |
 | Front-end | Thymeleaf + htmx + Tailwind CSS, renderizado no servidor, mobile-first |
 | Banco | Oracle Autonomous Database Always Free **19c** (produção). Em São Paulo o Always Free só oferece 19c |
 | Migrações | Flyway |
@@ -74,7 +74,7 @@ Gerente e admin também servem e aparecem na escala. Um usuário pode estar em v
 - **Sessões:** redefinir a senha de alguém ou desativar a conta encerra na hora todas as sessões abertas da pessoa, inclusive o "continuar conectado" (`SessoesAbertas`, depois do commit). Trocar a própria senha encerra as outras sessões e mantém a atual.
 - Editar a conta de outra pessoa, redefinir a senha, desativar e reativar registram `Auditoria`. A edição guarda só quais campos mudaram, sem os valores; desativar e reativar ficam sem ministério.
 - Cadastrar um e-mail que já tem conta só cria a membresia; a conta não muda (se estiver desativada, o gerente é avisado).
-- **Navegação do gerente:** Eventos (mês e modelos), Disponibilidade (painel e trava), Membros (e habilitações) e Funções (funções e níveis), mais Ministérios para o admin. O design prevê Escalas, Disponibilidade, Membros e Regras; a navegação é revista quando essas páginas existirem.
+- **Navegação do gerente:** Escalas (rascunho e geração), Eventos (mês e modelos), Disponibilidade (painel e trava), Membros (e habilitações), Funções (funções e níveis) e Regras, mais Ministérios para o admin. "Gerenciar" e a SideRail abrem as Escalas (`Navegacao.SECAO_INICIAL`).
 - **Navegação do membro:** Minhas escalas e Disponibilidade (como no README do NavPills). O início tem o botão "Marcar disponibilidade".
 
 ## Modelo de dados (resumo)
@@ -85,12 +85,12 @@ Gerente e admin também servem e aparecem na escala. Um usuário pode estar em v
 - `Funcao` (`qtd_min`, `qtd_max`)
 - `Nivel` (`ordem`)
 - `Habilitacao` (usuario × funcao × nivel)
-- `Regra` (`tipo`, `parametros` JSON, `rigidez` HARD/SOFT, `peso`, `ativa`)
-- `ModeloEvento`
-- `Evento`
+- `Regra` (`tipo`, `parametros` JSON, `rigidez` HARD/MEDIUM/SOFT, `peso`, `ativa`; uma por ministério e tipo, `uk_regra_tipo`)
+- `ModeloEvento` (e `modelo_evento_funcao`: as funções que os eventos do modelo precisam)
+- `Evento` (e `evento_funcao`: as funções que o evento precisa; sem linhas = todas)
 - `Periodo` (`disponibilidade_travada`, `status_escala` RASCUNHO/PUBLICADA)
 - `Disponibilidade` (PODE / NAO_PODE / PREFERE_NAO; uma por usuário × evento, `uk_disponibilidade`; guarda `data_na_resposta`/`horario_na_resposta_minutos` e `marcado_por_id`)
-- `Vaga` (evento × funcao × posicao, `usuario_id` anulável, `fixada`, `forcada`, `justificativa`)
+- `Vaga` (evento × funcao × posicao, `uk_vaga`; `usuario_id` anulável, `fixada`, `forcada`, `justificativa`; forçada exige pessoa e justificativa)
 - `SolicitacaoTroca`
 - `Auditoria`
 
@@ -112,7 +112,7 @@ Existe um **catálogo fixo de tipos de regra**. Cada tipo é implementado uma ú
 | `HABILITACAO` | Sempre ativa (hard) |
 | `DISPONIBILIDADE` | Só escala quem marcou PODE (hard) |
 | `UMA_FUNCAO_POR_EVENTO` | Hard |
-| `MAX_POR_NIVEL_NO_EVENTO` | Máx. 1 Iniciante por evento, ou seja, nunca dois iniciantes juntos (hard) |
+| `MAX_POR_NIVEL_NO_EVENTO` | Máx. 1 Iniciante por evento, ou seja, nunca dois iniciantes juntos (hard). Desligada no catálogo padrão; o gerente liga na página de regras, escolhendo o nível e a quantidade |
 | `LIMITE_POR_PERIODO` | Máx. de escalas por mês por pessoa, **editável pelo gerente** (padrão 3). Conta **eventos**: dois cultos no mesmo domingo contam 2 (hard; o gerente pode forçar mais, com justificativa) |
 | `SEM_SOBREPOSICAO` | Sempre ativa (hard): ninguém em dois eventos com horários sobrepostos, **nem em ministérios diferentes** |
 | `EQUILIBRIO_DE_CARGA` | Distribuir o serviço igualmente (soft) |
@@ -146,28 +146,50 @@ Outras regras:
 - **Lembrete:** "Copiar lembrete" monta o texto para o WhatsApp com o link da tela do mês e quem ainda falta. Sem envio de e-mail nesta fase. O link vem de `escala.url-base` (`EnderecoDoSistema`): em produção é `https://${DOMINIO}`, e sem ele o app não sobe.
 - **htmx:** cada toque troca o grupo do ministério inteiro (`#grupo-{id}`); na tela do membro, o total vai junto em OOB. Sem JS, o mesmo `<form>` funciona com redirect.
 
-### Decidido para a Fase 3
+### Escala (Fase 3)
 
+A Fase 3 foi dividida. A **3a** (feita) gera a escala com o Timefold e mostra o rascunho ao gerente, com as vagas vazias explicadas. A **3b** traz o ajuste manual, fixar, forçar com justificativa, publicar e "Minhas escalas".
+
+- **Funções exigidas:** cada modelo e cada evento escolhem as funções que precisam (`modelo_evento_funcao`, `evento_funcao`). **Sem linhas, precisa de todas as funções do ministério**, que é o padrão; uma função criada depois entra sozinha nos eventos não personalizados. Marcar todas no formulário grava zero linhas; desmarcar todas é recusado. O evento gerado de um modelo copia as funções dele, e editar o modelo não muda os eventos já criados. Excluir a função apaga as linhas dela em cascata (o evento que só tinha ela volta para todas).
+- **Vagas:** gerar cria as que faltam nos eventos por vir: da posição 1 até o `qtd_max` de cada função exigida. A posição até o `qtd_min` é obrigatória; acima dele, opcional.
+  - **Vaga vigente** (`MontagemDaEscala.vigente`): evento não cancelado, função exigida pelo evento e posição até o `qtd_max`. Só a vigente aparece na grade, entra no solver e conta como compromisso nos outros ministérios.
+  - As outras (evento cancelado, função que deixou de ser exigida, `qtd_max` reduzido) saem da escala na hora, a página de escalas diz quem saiu, e a próxima geração as apaga. Se o evento for reativado antes, elas voltam.
+  - Evento que já começou fica como está; as vagas dele contam no limite e no equilíbrio do mês.
+- **Regras:** o catálogo é o enum `TipoDeRegra`, com o padrão de cada tipo; cada ministério tem uma linha de `regra` por tipo.
+  - O ministério criado pelo `MinisterioService` recebe o catálogo padrão (evento `MinisterioCriado`, gravado pelo `RegraService` na mesma transação): rígidas ligadas, limite de 3 eventos por mês e máximo por nível desligado. Tipo sem linha vale o padrão do enum (a migração só criou a tabela).
+  - A rigidez dá o nível da pontuação e o peso multiplica a penalidade; desligada pesa zero (`PesosDasRegras`, via `ConstraintWeightOverrides`). Os parâmetros ficam em JSON e são validados pelo record do tipo (`LimitePorPeriodoParams`, `MaxPorNivelParams`, `SemParametros`), estritos com campo desconhecido, ausente ou nulo.
+  - Não se desligam: pessoas por função, habilitação, disponibilidade, uma função por evento, sem sobreposição e prioridade por data (sem ela o solver deixaria as vagas vazias).
+  - Na página de regras o gerente muda o limite do mês (1 a 31) e liga o máximo por nível, escolhendo o nível e a quantidade (1 a 20), com `Auditoria` (`ALTERAR_REGRA`). Nível excluído deixa o máximo por nível sem efeito, e a página diz isso.
 - **Sem sobreposição de horários** (`SEM_SOBREPOSICAO`): a mesma pessoa não serve em dois eventos que se sobrepõem, contando início e duração (`Evento.getInicio()` e `getFim()`, que pode cair no dia seguinte), **inclusive entre ministérios diferentes**.
-  - As vagas já preenchidas em outros ministérios entram na geração como fatos fixos (problem facts), não como variáveis: gerar a escala da Mídia não mexe na do Louvor.
+  - As vagas vigentes de outros ministérios entram como fatos (`CompromissoFixo`), só com pessoa e horário: gerar a da Mídia não mexe na do Louvor, e nada do outro ministério aparece na tela ("já serve em outro evento nesse horário").
   - Eventos colados (um termina às 11h00 e o outro começa às 11h00) não se sobrepõem. Evento cancelado não conta.
-- **Limite mensal** (`LIMITE_POR_PERIODO`): o gerente edita o limite do ministério na página de regras; o padrão é 3.
-  - Conta **por evento**: cada evento do ministério no mês em que a pessoa serve conta 1, mesmo que dois caiam no mesmo dia. Uma pessoa tem no máximo uma vaga por evento (`UMA_FUNCAO_POR_EVENTO`).
-  - O gerente pode **forçar** acima do limite, com justificativa e registro em `Auditoria`, como qualquer alocação forçada.
-- **Destravar a disponibilidade de um período com escala publicada exige confirmação** (Sheet, `componentes/sheet :: confirmacao`), porque a escala publicada foi gerada com aquelas respostas. Hoje, sem escala publicada, destravar é direto.
-- **Funções exigidas por evento: adiado para a Fase 3.** Hoje todo evento pede todas as funções do ministério, com o `qtd_min` e o `qtd_max` de cada função. Escolher quais funções cada evento ou modelo exige (ex.: a quinta sem Transmissão) entra junto com as vagas.
+- **Limite mensal** (`LIMITE_POR_PERIODO`): conta **eventos** distintos do ministério no mês, mesmo que dois caiam no mesmo dia, incluindo os que já começaram. Uma pessoa tem no máximo uma vaga por evento (`UMA_FUNCAO_POR_EVENTO`). Na 3b, o gerente poderá forçar acima do limite, com justificativa e `Auditoria`.
+- **Prioridade por data** (medium): a vaga obrigatória vazia pesa 100 mais os dias até o fim do mês; a opcional, 1. Preencher mais vagas vale mais que a data, e a data desempata. **Equilíbrio** (soft): o quadrado dos eventos de cada pessoa no mês.
+- **Geração** (`GeracaoDaEscala`):
+  - Só com a disponibilidade do período travada; sem trava, o servidor recusa.
+  - Uma por vez no app inteiro, numa fila de uma thread: cada geração lê o mês (cria e apaga vagas), resolve pelo `SolverManager` esperando o resultado e grava, antes de a próxima ler. Assim a da Mídia vê o que a do Louvor acabou de gravar. O consumidor final do `SolverManager` roda em outra thread e não dá essa garantia; o `GeracaoDaEscalaIT` tem um teste com duas gerações ao mesmo tempo.
+  - Até 30 s, ou 5 s sem melhorar (`timefold.solver.termination`). Gerar de novo substitui o rascunho, menos as vagas fixadas e forçadas (`@PlanningPin`).
+  - A gravação relê a trava com o período bloqueado: destravada no meio, o resultado é descartado e o gerente é avisado. Registra `Auditoria` (`GERAR_ESCALA`, com as vagas preenchidas, o tempo e a pontuação).
+  - O andamento fica em memória (`GeracoesEmAndamento`, uma instância do app): o segundo clique encontra a geração rodando e não dispara outra. Um reinício no meio perde só a geração.
+- **Explicação da vaga vazia** (`DiagnosticoDaVaga`): no Timefold 2 não existe `SolutionManager.explain`, e o `analyze` é da versão Enterprise. Quem serve passa pelas regras rígidas ligadas, nesta ordem: habilitação, disponibilidade, uma função por evento, sobreposição, limite e máximo por nível. A primeira que deixa ninguém é o motivo ("Ninguém habilitado em Projeção marcou Pode."). É calculada ao abrir a página, com os dados de agora, e só as vagas obrigatórias dos eventos por vir geram alerta.
+- **Página de escalas** (`/ministerios/{id}/escalas`): a Toolbar tem "Gerar escala" (o primário; durante a geração vira o Badge "Gerando escala"). O painel de andamento pede `/escalas/andamento` a cada 2 s; quando termina, a resposta manda recarregar a página (`HX-Redirect`), que avisa o resultado uma vez. Depois vêm os alertas, os StatCards, a grade (`componentes/grade`, só leitura) e as escalas por pessoa.
+- **Destravar a disponibilidade de um período com escala publicada exige confirmação** (Sheet, `componentes/sheet :: confirmacao`), porque a escala publicada foi gerada com aquelas respostas. Entra com a publicação, na 3b.
+- **Pendente na 3b:** ajuste manual, fixar e forçar com justificativa (`DiagnosticoDaVaga` diz qual regra a alocação viola), publicar (Badge Publicada), "Regerar não fixadas" no lugar de "Gerar escala" quando já há rascunho (README da Toolbar), "Minhas escalas" e a confirmação ao destravar.
 
 ## Solver (Timefold)
 
-- **Entidade planejada:** `Vaga`, com variável `usuario` anulável (`allowsUnassigned = true`) para permitir vagas vazias.
-- Alocações publicadas, fixadas ou forçadas usam `@PlanningPin`.
+- **Domínio separado da JPA** (`escala.solver`), porque o solver clona a solução e roda sem sessão do Hibernate:
+  - `EscalaDoPeriodo` (`@PlanningSolution`): as vagas, as pessoas (o value range), os compromissos fixos, os parâmetros e os pesos das regras.
+  - `VagaPlanejada` (`@PlanningEntity`): `pessoa` anulável (`allowsUnassigned = true`) para a vaga vazia; fixadas e forçadas com `@PlanningPin`.
+  - Fatos: `Pessoa` (nível em cada função e eventos em que marcou Pode), `CompromissoFixo` e `ParametrosDaEscala`.
+  - `LeituraDoPeriodo` lê o mês pelos serviços públicos dos outros módulos, e `MontagemDaEscala` (sem banco nem Spring) monta o problema e decide as vagas que entram e saem.
+- O Timefold 2 exige getter e setter públicos em toda propriedade da solução lida por getter (ex.: `pesos`).
 - **Pontuação:** `HardMediumSoftScore`.
   - Hard: regras rígidas.
   - Medium: vaga vazia, com peso maior quanto mais próximo o evento.
-  - Soft: equilíbrio de carga (penalizar o quadrado das escalas por pessoa) e preferências.
-- A geração é assíncrona via `SolverManager`, com limite de 10–30 s. O resultado vira rascunho.
-- Explicar vagas vazias ao gerente com `SolutionManager.explain`.
-- **Toda restrição nova precisa de teste com `ConstraintVerifier`**, cobrindo o caso que penaliza e o que não penaliza.
+  - Soft: equilíbrio de carga (o quadrado das escalas por pessoa) e preferências (Fase 5).
+- `RestricoesDaEscala`: uma restrição por tipo de regra, com o nome do tipo como id.
+- **Toda restrição nova precisa de teste com `ConstraintVerifier`**, cobrindo o caso que penaliza e o que não penaliza (`RestricoesDaEscalaTest`). O `GeracaoDaMidiaTest` roda o solver no cenário da Mídia do seed, inclusive em `FULL_ASSERT`, que pega pontuação incremental errada.
 
 ## Infraestrutura e restrições do ambiente
 
@@ -242,7 +264,7 @@ O design system "Escala" (feito no Claude Design) está em `docs/design/`. O `do
 - **Tokens:** `docs/design/tokens.css` é gerado de `tokens.json` por `python3 docs/design/gerar_tokens_css.py`. Nunca edite o `.css` à mão; token novo entra no `tokens.json`.
 - **Tailwind só para layout e ajustes.** O `src/main/frontend/app.css` liga o Tailwind aos tokens (`@theme inline reference`) e apaga o tema padrão: só existem utilitários dos tokens (`bg-brand`, `p-4` = `space-4`, `h-control`, `text-title`, `rounded-pill`...). Uma classe fora deles (`bg-slate-50`, `p-5`, `font-bold`) não gera CSS, sem erro nenhum.
 - **Componentes:** as classes `.rt-*` vêm de `docs/design/components/bundle.css` e dos componentes criados no app (Field, Toast, Sheet e a Toolbar no celular, com README na pasta de cada um). Não reescreva componentes em utilitários do Tailwind.
-- **Telas usam só os fragmentos de `templates/componentes/`** (botao, badge, lista, tabela, alerta, formulario, toast, navegacao, toolbar, sheet, icone, disponibilidade, estatistica) e os layouts de `templates/layouts/`: `simples` (sem navegação), `membro` (celular) e `gerente` (desktop). Cada fragmento documenta as opções no topo do arquivo.
+- **Telas usam só os fragmentos de `templates/componentes/`** (botao, badge, lista, tabela, alerta, formulario, toast, navegacao, toolbar, sheet, icone, disponibilidade, estatistica, grade) e os layouts de `templates/layouts/`: `simples` (sem navegação), `membro` (celular) e `gerente` (desktop). Cada fragmento documenta as opções no topo do arquivo.
 - **Nenhuma cor ou tamanho fixo fora dos tokens:** nada de `style=`, `<style>`, valor arbitrário do Tailwind (`w-[37px]`) ou cor hexadecimal. O `TemplatesUsamSoTokensTest` falha nesses casos.
 - **Voz:** português, tratando por "você", sentence case, botões com verbo no infinitivo ("Gerar escala", "Salvar"), sem emoji. Títulos no padrão "Ministério — Período". Todo alerta diz o quê, onde e por quê.
 - **Listas de cadastro:** ListRow no celular (`rt-list md:hidden`) e DataTable no desktop (`rt-panel hidden md:block`).
@@ -267,9 +289,10 @@ O design system "Escala" (feito no Claude Design) está em `docs/design/`. O `do
   - Cada teste cria os próprios dados e usa `@Transactional` para desfazê-los. Nunca dependa de dados de outra classe nem do admin criado na subida. O banco é um container novo, sem reuse.
   - A exceção é o `PaginasDoGerenteIT`, que grava os dados de verdade e os apaga no `@AfterEach`: ele abre as páginas sem a transação do teste em volta, porque com `open-in-view` desligado uma associação lazy lida fora do serviço só falha assim. Página nova do gerente entra nele.
   - Teste de concorrência (ex.: `DisponibilidadeConcorrenciaIT`) também roda sem `@Transactional`, com transações de verdade em threads, e apaga os dados no `@AfterEach`.
+  - O `GeracaoDaEscalaIT` também: a geração roda na fila e só enxerga o que foi commitado. O teste espera a geração terminar (`Andamento.getFim()`) antes de conferir e de apagar. Nos ITs, o solver termina com 1 s sem melhorar (`@TesteDeIntegracao`).
   - As classes rodam em ordem aleatória. Para reproduzir uma falha, use a semente do log (`-Dfailsafe.runOrder.random.seed=...`).
 - Não existe perfil padrão. O `./mvnw spring-boot:run` ativa o `dev`; na IDE, rode `TestEscalaApplication` ou ative o perfil `dev`.
-- O perfil `dev` tem seed (`SeedDeDesenvolvimento`): Mídia com 20 membros, funções, níveis, modelos e eventos, e Louvor. Gerente da Mídia: `paula.ribeiro@escala.local`; a senha dos membros está no `application-dev.yaml`.
+- O perfil `dev` tem seed (`SeedDeDesenvolvimento`): Mídia com 20 membros, funções, níveis, modelos e eventos, e Louvor. A Mídia chega com o mês atual respondido e travado (pronto para gerar a escala), o próximo respondido e aberto, e no máximo um Iniciante por evento. Gerente da Mídia: `paula.ribeiro@escala.local`; a senha dos membros está no `application-dev.yaml`.
 - Correção de bug começa por um teste que reproduz o bug.
 - O JaCoCo falha o `verify` se a cobertura de linhas dos testes unitários ficar abaixo de 70% (excluídos `*Application`, `config` e DTOs).
 
@@ -291,7 +314,9 @@ docker compose up -d            # produção (Caddy + app)
 1. **Fase 0 — Fundação:** repositório, Spring Boot + Flyway + Oracle, CI, login e perfis, VM Oracle (São Paulo), imagens arm64, deploy com HTTPS.
 2. **Fase 1 — Cadastros:** ministérios, funções, níveis, membros, habilitações, modelos de evento.
 3. **Fase 2 — Disponibilidade:** tela mobile de marcação, trava do período, painel de quem não respondeu.
-4. **Fase 3 — Escala automática:** domínio Timefold, catálogo de regras, geração, alertas, ajuste manual, forçar com justificativa, publicação (ver "Decidido para a Fase 3").
+4. **Fase 3 — Escala automática** (ver "Escala (Fase 3)"):
+   - **3a (feita):** domínio Timefold, catálogo de regras e página de regras, funções exigidas por evento, geração em segundo plano, rascunho com as vagas vazias explicadas.
+   - **3b:** ajuste manual, fixar, forçar com justificativa, publicação e "Minhas escalas".
 5. **Fase 4 — Pós-publicação:** desistência, alertas ao líder, e-mails de publicação e lembrete de 24 h, texto para WhatsApp, PDF. **Aqui o MVP entra em uso.**
 6. **Fase 5 — Refinos:** preferências, relatórios, auditoria completa.
 7. **Fase 6 — Expansão:** louvor, criando só os tipos de regra que faltarem.
