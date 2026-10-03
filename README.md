@@ -30,4 +30,4 @@ pre-commit run --all-files  # roda todos os hooks
 
 ## Deploy
 
-Produção roda em uma VM Oracle Cloud Always Free (ARM64) com Docker Compose (Caddy + app) e Autonomous Database. O passo a passo, incluindo o backup diário, está em [docs/deploy.md](docs/deploy.md).
+Produção roda em `escala.ibrp.com.br`: uma VM Oracle Cloud Always Free (ARM64) com Docker Compose (cloudflared + app), atrás de um Cloudflare Tunnel, e Autonomous Database 19c. O passo a passo, incluindo o backup diário, está em [docs/deploy.md](docs/deploy.md).
