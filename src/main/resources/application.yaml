@@ -37,8 +37,6 @@ spring:
           max-age: 365d
 
 server:
-  # Atrás do Caddy: respeita X-Forwarded-Proto/Host para gerar URLs https.
-  forward-headers-strategy: framework
   servlet:
     session:
       cookie:
@@ -57,8 +55,8 @@ management:
 
 timefold:
   solver-manager:
-    # Um solver por vez: a VM de 1 OCPU não divide o processador. As gerações também esperam numa fila de uma thread
-    # (GeracaoDaEscala), para cada uma ler o que a anterior gravou.
+    # Um solver por vez, para não tirar o processador da VM pequena das páginas. As gerações também esperam numa fila
+    # de uma thread (GeracaoDaEscala), para cada uma ler o que a anterior gravou.
     parallel-solver-count: 1
   solver:
     termination:
