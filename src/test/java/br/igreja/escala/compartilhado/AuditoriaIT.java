@@ -17,9 +17,12 @@ import br.igreja.escala.ministerio.repository.MinisterioRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @TesteDeIntegracao
 class AuditoriaIT {
@@ -46,8 +49,19 @@ class AuditoriaIT {
         var ana = usuarios.save(Usuario.membro("Ana", "ana.auditoria@teste.local", "{noop}x"));
         var midia = ministerios.save(new Ministerio("Mídia Auditoria", CorDoMinisterio.MINT, Icone.MONITOR));
 
-        auditoria.registrar(new RegistroDeAuditoria(
-                AcaoAuditada.REDEFINIR_SENHA, gerente.getId(), midia.getId(), ana.getId(), "Senha de Ana redefinida"));
+        var requisicao = new MockHttpServletRequest();
+        requisicao.addHeader("CF-Connecting-IP", "2804:14c:65a1:4000::1f");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(requisicao));
+        try {
+            auditoria.registrar(new RegistroDeAuditoria(
+                    AcaoAuditada.REDEFINIR_SENHA,
+                    gerente.getId(),
+                    midia.getId(),
+                    ana.getId(),
+                    "Senha de Ana redefinida"));
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
         entityManager.flush();
         entityManager.clear();
 
@@ -55,6 +69,7 @@ class AuditoriaIT {
         assertThat(registros).singleElement().satisfies(registro -> {
             assertThat(registro.getAcao()).isEqualTo(AcaoAuditada.REDEFINIR_SENHA);
             assertThat(registro.getAlvoUsuarioId()).isEqualTo(ana.getId());
+            assertThat(registro.getIp()).isEqualTo("2804:14c:65a1:4000::1f");
             assertThat(registro.getCriadoEm()).isNotNull();
         });
     }
