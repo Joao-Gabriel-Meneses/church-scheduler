@@ -81,6 +81,11 @@
         acaoTexto='Gerar escala', acaoIcone='sparkles', acaoHref=null)}"></div></section>
 <section id="toolbar-minima"><div th:replace="~{componentes/toolbar :: toolbar(periodo='Outubro 2026',
         periodoCurto='Out 2026', anteriorHref='#', proximoHref='#', travada=null, regrasHref=null, acaoTexto=null)}"></div></section>
+<section id="toolbar-em-andamento"><div th:replace="~{componentes/toolbar :: toolbar(periodo='Outubro 2026',
+        periodoCurto='Out 2026', anteriorHref='#', proximoHref='#', travada=true, regrasHref=null, acaoTexto=null,
+        progresso='Gerando escala')}"></div></section>
+<section id="grade"><div th:replace="~{componentes/grade :: grade(funcoes=${funcoesDaGrade},
+        linhas=${linhasDaGrade})}"></div></section>
 
 </body>
 </html>

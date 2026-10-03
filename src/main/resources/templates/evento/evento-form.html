@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!--/*
     Evento avulso novo (${evento} nulo) ou edição de um evento. Num evento do modelo (${doModelo}), a data não muda:
-    vai num campo escondido e aparece como texto. Cancelar pede confirmação; o cancelado pode ser reativado.
+    vai num campo escondido e aparece como texto. As funções que o evento precisa vêm marcadas (todas, por padrão).
+    Cancelar pede confirmação; o cancelado pode ser reativado.
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
@@ -50,6 +51,7 @@
             </th:block>
             <th:block th:replace="~{evento/fragments/duracao :: duracao}"></th:block>
         </div>
+        <fieldset th:replace="~{evento/fragments/funcoes :: funcoes('Funções que o evento precisa')}"></fieldset>
         <div class="flex flex-wrap gap-2">
             <button th:replace="~{componentes/botao :: botao(texto='Salvar', variante=null, icone=null, classe=null,
                     tipo=null)}"></button>

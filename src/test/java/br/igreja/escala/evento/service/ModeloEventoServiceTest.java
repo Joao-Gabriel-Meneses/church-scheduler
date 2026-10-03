@@ -15,6 +15,8 @@ import br.igreja.escala.compartilhado.NaoEncontradoException;
 import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.evento.domain.ModeloEvento;
 import br.igreja.escala.evento.repository.ModeloEventoRepository;
+import br.igreja.escala.ministerio.Exemplos;
+import br.igreja.escala.ministerio.service.FuncaoService;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import java.time.DayOfWeek;
 import java.time.Duration;
@@ -27,7 +29,8 @@ class ModeloEventoServiceTest {
 
     private final ModeloEventoRepository modelos = mock(ModeloEventoRepository.class);
     private final MinisterioService ministerios = mock(MinisterioService.class);
-    private final ModeloEventoService servico = new ModeloEventoService(modelos, ministerios);
+    private final FuncaoService funcoes = mock(FuncaoService.class);
+    private final ModeloEventoService servico = new ModeloEventoService(modelos, ministerios, funcoes);
 
     @Test
     void listaDoDomingoAoSabadoComDiaEHorarioEscritos() {
@@ -52,6 +55,20 @@ class ModeloEventoServiceTest {
         verify(ministerios).buscar(1L);
         assertThat(criado.getMinisterioId()).isEqualTo(1L);
         assertThat(criado.isAtivo()).isFalse();
+    }
+
+    @Test
+    void modeloGuardaAsFuncoesMarcadasParaOsProximosEventos() {
+        var midia = Exemplos.midia();
+        when(funcoes.listar(1L)).thenReturn(List.of(Exemplos.projecao(midia), Exemplos.transmissao(midia)));
+        when(modelos.save(any())).thenAnswer(chamada -> chamada.getArgument(0));
+
+        var quinta = servico.criar(
+                1L,
+                new DadosDoModelo(
+                        "Culto de quinta", DayOfWeek.THURSDAY, LocalTime.of(19, 30), 120, true, List.of(100L)));
+
+        assertThat(quinta.getFuncoesExigidas()).containsExactly(100L);
     }
 
     @Test

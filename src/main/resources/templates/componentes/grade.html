@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!--/*
+    ScheduleGrid e Slot (docs/design/components/ScheduleGrid e Slot): a escala do período, uma linha por evento e uma
+    coluna por função, cada célula com as vagas da função no evento. Só leitura nesta fase (Fase 3a).
+        <div th:replace="~{componentes/grade :: grade(funcoes=${pagina.funcoes}, linhas=${pagina.linhas})}"></div>
+      funcoes  os nomes das colunas (List<String>)
+      linhas   List<LinhaDaGrade>: dia ("04"), diaDaSemana ("Dom"), nome, horario ("18h00"), comVagaVazia e uma
+               CelulaDaGrade por função (exigida e as vagas, List<SlotDaGrade>)
+    No desktop é a tabela (rt-table rt-sched, dentro de rt-panel com rolagem horizontal); no celular, um cartão por
+    evento com as funções uma abaixo da outra. A linha com vaga obrigatória vazia ganha is-alert (filete à esquerda),
+    além do texto "Vaga vazia". Função que o evento não exige aparece como "—" ("Não precisa" para o leitor de tela).
+
+    celula(celula): as vagas de uma célula, empilhadas (função com qtd_max > 1 tem várias).
+    vaga(vaga): o Slot. Preenchida (pílula brand-tint com avatar, nome e nível), fixada (--pinned, alfinete), forçada
+        (--forced, triângulo e "Forçada") ou vazia (--empty, tracejado, triângulo e "Vaga vazia"; a opcional diz
+        "Opcional, vazia"). Estado nunca só por cor: sempre ícone ou texto.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="grade(funcoes, linhas)">
+    <ul class="flex flex-col gap-3 md:hidden" aria-label="Escala do mês">
+        <li th:each="linha : ${linhas}" class="rt-panel flex flex-col gap-3 p-4">
+            <div th:replace="~{componentes/grade :: evento(${linha})}"></div>
+            <div th:each="celula : ${linha.celulas}" class="flex flex-col gap-1">
+                <span class="rt-label text-ink-muted" th:text="${celula.funcao}">Projeção</span>
+                <div th:replace="~{componentes/grade :: celula(${celula})}"></div>
+            </div>
+        </li>
+    </ul>
+
+    <!--/* relative: o texto sr-only (position absolute) fica preso à rolagem e não alarga a página. */-->
+    <div class="rt-panel relative hidden overflow-x-auto md:block">
+        <table class="rt-table rt-sched">
+            <caption class="sr-only">Escala do mês: um evento por linha e uma função por coluna</caption>
+            <thead>
+            <tr>
+                <th scope="col">Evento</th>
+                <th th:each="funcao : ${funcoes}" scope="col" th:text="${funcao}">Projeção</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="linha : ${linhas}" th:class="${linha.comVagaVazia} ? 'is-alert'">
+                <td class="whitespace-nowrap"><div th:replace="~{componentes/grade :: evento(${linha})}"></div></td>
+                <td th:each="celula : ${linha.celulas}"><div
+                        th:replace="~{componentes/grade :: celula(${celula})}"></div></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div th:fragment="evento(linha)" class="rt-route">
+    <span class="rt-avail__date"><span class="rt-avail__day" th:text="${linha.dia}">05</span><span
+            class="rt-caption" th:text="${linha.diaDaSemana}">Dom</span></span>
+    <div class="rt-cell-2"><span th:text="${linha.nome}">Culto de domingo</span><span class="rt-caption"
+            th:text="${linha.horario}">18h00</span></div>
+</div>
+
+<div th:fragment="celula(celula)" class="flex flex-col items-start gap-1">
+    <th:block th:if="${celula.exigida}">
+        <th:block th:each="vaga : ${celula.vagas}"><span
+                th:replace="~{componentes/grade :: vaga(${vaga})}"></span></th:block>
+        <span th:if="${celula.vagas.isEmpty()}" class="rt-caption">Sem vagas: gere a escala de novo</span>
+    </th:block>
+    <span th:unless="${celula.exigida}" class="text-ink-muted"><span aria-hidden="true">—</span><span
+            class="sr-only">Não precisa</span></span>
+</div>
+
+<th:block th:fragment="vaga(vaga)">
+    <span th:if="${vaga.vazia}" class="rt-slot rt-slot--empty"><svg
+            th:replace="~{componentes/icone :: icone('triangle-alert')}"></svg><th:block
+            th:text="${vaga.obrigatoria} ? 'Vaga vazia' : 'Opcional, vazia'">Vaga vazia</th:block></span>
+    <span th:unless="${vaga.vazia}"
+          th:class="|rt-slot${vaga.fixada ? ' rt-slot--pinned' : ''}${vaga.forcada ? ' rt-slot--forced' : ''}|"><span
+            class="rt-avatar" aria-hidden="true" th:text="${vaga.iniciais}">AS</span><span><th:block
+            th:text="${vaga.nome}">Ana Souza</th:block><span class="rt-slot__meta"
+            th:text="${vaga.meta}">Experiente</span></span><span th:if="${vaga.fixada or vaga.forcada}"
+            class="rt-slot__icon"><svg th:replace="~{componentes/icone :: icone(${vaga.forcada ? 'triangle-alert'
+            : 'pin'})}"></svg></span></span>
+</th:block>
+
+</body>
+</html>

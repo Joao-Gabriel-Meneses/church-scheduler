@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<!--/*
+    Campo "Funções que o evento precisa" dos formulários de evento e de modelo: uma caixa de seleção por função do
+    ministério, no th:object do <form> (campo funcoes). ${caixasDeFuncao} vem do controller (CaixaDeFuncao); sem funções
+    no ministério, o campo não aparece. Todas marcadas é o padrão. O "_funcoes" faz o Spring receber a lista vazia
+    quando nenhuma caixa fica marcada, e o serviço recusa.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<fieldset th:fragment="funcoes(legenda)" th:if="${!caixasDeFuncao.isEmpty()}" class="flex flex-col"
+          th:with="_id='funcoes', dica='Desmarque o que o evento não usa.',
+                   erro=${#fields.hasErrors('funcoes')} ? ${#strings.listJoin(#fields.errors('funcoes'), ' ')} : null"
+          th:aria-describedby="${erro != null} ? 'funcoes-dica funcoes-erro' : 'funcoes-dica'">
+    <legend class="rt-field__label" th:text="${legenda}">Funções que o evento precisa</legend>
+    <th:block th:each="caixa : ${caixasDeFuncao}">
+        <label th:replace="~{componentes/formulario :: caixaDeSelecao(rotulo=${caixa.nome}, nome='funcoes',
+                valor=${caixa.id}, campoId=|funcao-${caixa.id}|, marcada=${caixa.marcada})}"></label>
+    </th:block>
+    <input type="hidden" name="_funcoes" value="on">
+    <th:block th:replace="~{componentes/formulario :: mensagensDoCampo}"></th:block>
+</fieldset>
+</body>
+</html>

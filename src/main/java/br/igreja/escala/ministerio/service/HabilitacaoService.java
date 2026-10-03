@@ -51,6 +51,17 @@ public class HabilitacaoService {
                 .toList();
     }
 
+    /** Todas as habilitações do ministério, por pessoa, função e nível. */
+    @Transactional(readOnly = true)
+    public List<HabilitacaoDaPessoa> doMinisterio(Long ministerioId) {
+        return habilitacoes.findByFuncaoMinisterioId(ministerioId).stream()
+                .map(habilitacao -> new HabilitacaoDaPessoa(
+                        habilitacao.getUsuarioId(),
+                        habilitacao.getFuncao().getId(),
+                        habilitacao.getNivel().getId()))
+                .toList();
+    }
+
     /**
      * Define as habilitações do membro no ministério de uma vez: cada função do ministério fica no nível pedido, ou sem
      * habilitação se ela não vier no mapa (ou vier com nível nulo).

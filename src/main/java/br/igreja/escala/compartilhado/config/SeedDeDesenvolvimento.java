@@ -2,6 +2,7 @@ package br.igreja.escala.compartilhado.config;
 
 import br.igreja.escala.disponibilidade.domain.Resposta;
 import br.igreja.escala.disponibilidade.service.DisponibilidadeService;
+import br.igreja.escala.escala.service.RegraService;
 import br.igreja.escala.evento.service.DadosDoEvento;
 import br.igreja.escala.evento.service.DadosDoModelo;
 import br.igreja.escala.evento.service.EventoService;
@@ -45,10 +46,11 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Dados de exemplo só no perfil dev: Mídia (com 20 membros, funções, níveis, habilitações, modelos e os eventos deste
  * mês e do próximo, com dois cultos em cada domingo) e Louvor (Vocal para a Ana, a Paula e a Priscila, com um ensaio
- * aos sábados), para a SideRail e a disponibilidade por ministério aparecerem. A Mídia já chega com respostas no
- * próximo mês e com a disponibilidade deste mês travada. Roda depois do admin inicial e só se a Mídia ainda não
- * existe. Usa só os serviços públicos dos módulos, como uma pessoa faria pelas telas. O SeedDeDesenvolvimentoIT roda o
- * seed no banco dos testes.
+ * aos sábados), para a SideRail e a disponibilidade por ministério aparecerem. A Mídia já chega com respostas nos dois
+ * meses, com a disponibilidade deste mês travada (pronta para gerar a escala) e com no máximo um Iniciante por evento,
+ * configurado como o gerente faria na página de regras. Roda depois do admin inicial e só se a Mídia ainda não existe.
+ * Usa só os serviços públicos dos módulos, como uma pessoa faria pelas telas. O SeedDeDesenvolvimentoIT roda o seed no
+ * banco dos testes.
  */
 @Component
 @Profile("dev")
@@ -95,6 +97,7 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
     private final UsuarioService usuarios;
     private final UsuarioDetailsService autenticacao;
     private final DisponibilidadeService disponibilidades;
+    private final RegraService regras;
     private final String emailDoAdmin;
     private final String senhaDosMembros;
 
@@ -109,6 +112,7 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
             UsuarioService usuarios,
             UsuarioDetailsService autenticacao,
             DisponibilidadeService disponibilidades,
+            RegraService regras,
             @Value("${escala.admin.email}") String emailDoAdmin,
             @Value("${escala.dev.senha-dos-membros}") String senhaDosMembros) {
         this.ministerios = ministerios;
@@ -121,6 +125,7 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
         this.usuarios = usuarios;
         this.autenticacao = autenticacao;
         this.disponibilidades = disponibilidades;
+        this.regras = regras;
         this.emailDoAdmin = emailDoAdmin;
         this.senhaDosMembros = senhaDosMembros;
     }
@@ -162,6 +167,7 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
         }
         var paula = usuarios.buscarPorEmail("paula.ribeiro@escala.local").orElseThrow();
         membros.tornarGerente(midia, paula.id(), admin);
+        regras.alterarMaximoPorNivel(midia, true, doMinisterio.get("Iniciante").getId(), 1, admin);
 
         // Dois cultos no mesmo domingo: a escala (Fase 3) não pode pôr a mesma pessoa nos dois se eles se sobrepuserem,
         // e o limite do mês conta cada um.
@@ -177,8 +183,11 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
         eventos.gerarDoMes(louvor, proximo.minusMonths(1));
         eventos.gerarDoMes(louvor, proximo);
 
-        responder(midia, proximo, autenticacao.loadUserByUsername(paula.email()));
+        var gerente = autenticacao.loadUserByUsername(paula.email());
+        responder(midia, proximo.minusMonths(1));
         disponibilidades.travar(midia, proximo.minusMonths(1), admin);
+        responder(midia, proximo);
+        exemplosDaAna(midia, proximo, gerente);
         log.info(
                 "Seed de desenvolvimento criado: Mídia e Louvor, {} membros. Gerente: paula.ribeiro@escala.local",
                 PESSOAS.size());
@@ -186,10 +195,9 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
 
     /**
      * Respostas de exemplo da Mídia no mês: doze pessoas respondem tudo, três respondem metade e o resto não responde.
-     * A Ana responde só os três primeiros eventos, o segundo marcado pela Paula em nome dela, e o horário do terceiro
-     * muda depois da resposta, para a tela dela mostrar o "Marcado por" e o aviso.
+     * A Ana fica de fora (exemplosDaAna).
      */
-    private void responder(Long midia, YearMonth mes, UsuarioAutenticado paula) {
+    private void responder(Long midia, YearMonth mes) {
         var doMes = eventos.porVirDoMes(midia, mes);
         var queServem = membros.queServem(midia);
         for (int i = 0; i < queServem.size(); i++) {
@@ -200,6 +208,14 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
                 disponibilidades.marcar(pessoa.id(), midia, doMes.get(j).getId(), resposta);
             }
         }
+    }
+
+    /**
+     * A Ana responde só os três primeiros eventos do mês, o segundo marcado pela Paula em nome dela, e o horário do
+     * terceiro muda depois da resposta, para a tela dela mostrar o "Marcado por" e o aviso.
+     */
+    private void exemplosDaAna(Long midia, YearMonth mes, UsuarioAutenticado paula) {
+        var doMes = eventos.porVirDoMes(midia, mes);
         if (doMes.size() < 3) {
             return;
         }

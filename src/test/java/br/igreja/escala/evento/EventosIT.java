@@ -23,9 +23,11 @@ import br.igreja.escala.identidade.domain.Usuario;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
 import br.igreja.escala.identidade.repository.UsuarioRepository;
 import br.igreja.escala.ministerio.domain.CorDoMinisterio;
+import br.igreja.escala.ministerio.domain.Funcao;
 import br.igreja.escala.ministerio.domain.Icone;
 import br.igreja.escala.ministerio.domain.Membresia;
 import br.igreja.escala.ministerio.domain.Ministerio;
+import br.igreja.escala.ministerio.repository.FuncaoRepository;
 import br.igreja.escala.ministerio.repository.MembresiaRepository;
 import br.igreja.escala.ministerio.repository.MinisterioRepository;
 import jakarta.persistence.EntityManager;
@@ -34,8 +36,10 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,6 +71,9 @@ class EventosIT {
 
     @Autowired
     MembresiaRepository membresias;
+
+    @Autowired
+    FuncaoRepository funcoes;
 
     @Autowired
     MockMvc mvc;
@@ -117,6 +124,36 @@ class EventosIT {
                         new ModeloEvento(midia.getId(), "Outro", DayOfWeek.SUNDAY, LocalTime.of(18, 0), DUAS_HORAS)))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("UK_MODELO_EVENTO_HORARIO");
+    }
+
+    @Test
+    void funcoesExigidasVaoDoModeloParaOEventoESaemComAFuncao() {
+        var projecao = funcoes.save(new Funcao(midia, "Projeção", Icone.MONITOR, 1, 1));
+        funcoes.save(new Funcao(midia, "Transmissão", Icone.VIDEO, 1, 1));
+        var quinta = new ModeloEvento(
+                midia.getId(), "Culto de quinta", DayOfWeek.THURSDAY, LocalTime.of(19, 30), DUAS_HORAS);
+        quinta.exigirFuncoes(Set.of(projecao.getId()));
+        modelos.save(quinta);
+        var periodo = periodos.save(new Periodo(midia.getId(), MES));
+        var evento = eventos.save(Evento.doModelo(
+                quinta, periodo, MES.atDay(1).with(TemporalAdjusters.firstInMonth(DayOfWeek.THURSDAY))));
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(eventos.findById(evento.getId()).orElseThrow().getFuncoesExigidas())
+                .containsExactly(projecao.getId());
+        assertThat(modelos.findById(quinta.getId()).orElseThrow().getFuncoesExigidas())
+                .containsExactly(projecao.getId());
+
+        jdbc.update("delete from funcao where id = ?", projecao.getId());
+
+        assertThat(jdbc.queryForObject(
+                        "select count(*) from evento_funcao where evento_id = ?", Integer.class, evento.getId()))
+                .as("a função excluída sai do evento, que volta a precisar de todas")
+                .isZero();
+        assertThat(jdbc.queryForObject(
+                        "select count(*) from modelo_evento_funcao where modelo_id = ?", Integer.class, quinta.getId()))
+                .isZero();
     }
 
     @Test

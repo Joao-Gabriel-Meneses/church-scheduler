@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<!--/* Criar ou alterar um modelo de evento (gerente). ${modeloId} nulo = novo. Modelo não se exclui: fica inativo. */-->
+<!--/*
+    Criar ou alterar um modelo de evento (gerente). ${modeloId} nulo = novo. Modelo não se exclui: fica inativo.
+    As funções do modelo vão para os eventos criados dele depois; os que já existem ficam como estão.
+*/-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
 <head>
@@ -29,6 +32,8 @@
         </div>
         <p class="text-label text-ink-muted">O horário e a duração padrão. Dá para mudar num evento sem mudar o
             modelo.</p>
+        <fieldset th:replace="~{evento/fragments/funcoes :: funcoes('Funções que os eventos do modelo precisam')}">
+        </fieldset>
         <th:block th:replace="~{componentes/formulario :: caixaDeSelecaoDoObjeto('Ativo: gera eventos nos próximos meses',
                 'ativo')}"></th:block>
         <div class="flex flex-wrap gap-2">

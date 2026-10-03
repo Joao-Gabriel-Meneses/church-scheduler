@@ -106,7 +106,7 @@ class NavegacaoTest {
                         tuple("Louvor", "/ministerios/2/membros", false));
         assertThat(Navegacao.ministerios("/ministerios/2", MIDIA_E_LOUVOR))
                 .extracting(ItemDeNavegacao::url)
-                .containsExactly("/ministerios/1/eventos", "/ministerios/2/eventos");
+                .containsExactly("/ministerios/1/escalas", "/ministerios/2/escalas");
         assertThat(Navegacao.ministerios("/", MIDIA_E_LOUVOR)).isEmpty();
         assertThat(Navegacao.ministerios("/admin/ministerios", MIDIA_E_LOUVOR)).isEmpty();
     }
@@ -123,7 +123,15 @@ class NavegacaoTest {
                 .isSubsetOf(IconesTest.disponiveis());
         assertThat(Navegacao.PRINCIPAL.itens(todos, "/ministerios/1/funcoes", MIDIA_E_LOUVOR))
                 .extracting(ItemDeNavegacao::rotulo)
-                .containsExactly("Eventos", "Disponibilidade", "Membros", "Funções", "Ministérios", "Minhas escalas");
+                .containsExactly(
+                        "Escalas",
+                        "Eventos",
+                        "Disponibilidade",
+                        "Membros",
+                        "Funções",
+                        "Regras",
+                        "Ministérios",
+                        "Minhas escalas");
         assertThat(Navegacao.PRINCIPAL.itens(todos, "/ministerios/1/funcoes", MIDIA_E_LOUVOR))
                 .extracting(ItemDeNavegacao::icone)
                 .isSubsetOf(IconesTest.disponiveis());

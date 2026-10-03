@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<!--/*
+    O andamento da geração na página de escalas (${geracao}, GeracaoNaTela). O htmx pede este painel de novo a cada
+    2 s; quando a geração termina, a resposta manda recarregar a página (HX-Redirect). Sem JS, "Atualizar agora".
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section th:fragment="andamento" id="andamento" class="rt-panel flex flex-col gap-1 p-4 md:p-6" role="status"
+         aria-live="polite" th:hx-get="@{/ministerios/{m}/escalas/andamento(m=${ministerio.id}, mes=${mes})}"
+         hx-trigger="every 2s" hx-swap="outerHTML">
+    <p class="text-heading" th:text="|Gerando a escala de ${#strings.toLowerCase(nomeDoMes)}|">Gerando a escala de
+        outubro</p>
+    <p class="text-ink-muted" th:text="${geracao.descricao()}">12 s de até 30 s · 20 de 28 vagas preenchidas até agora</p>
+    <p class="text-label text-ink-muted">A página atualiza sozinha quando terminar. <a class="underline"
+            th:href="@{/ministerios/{m}/escalas(m=${ministerio.id}, mes=${mes})}">Atualizar agora</a></p>
+</section>
+</body>
+</html>

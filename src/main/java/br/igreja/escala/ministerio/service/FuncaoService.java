@@ -6,6 +6,7 @@ import br.igreja.escala.ministerio.domain.Funcao;
 import br.igreja.escala.ministerio.repository.Contagem;
 import br.igreja.escala.ministerio.repository.FuncaoRepository;
 import br.igreja.escala.ministerio.repository.HabilitacaoRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -32,6 +33,12 @@ public class FuncaoService {
     }
 
     /** As funções do ministério com quantos membros estão habilitados em cada uma. */
+    /** As funções com esses ids, de qualquer ministério: a escala confere as vagas dos outros ministérios. */
+    @Transactional(readOnly = true)
+    public List<Funcao> porIds(Collection<Long> ids) {
+        return funcoes.findAllById(ids);
+    }
+
     @Transactional(readOnly = true)
     public List<FuncaoResumo> resumos(Long ministerioId) {
         Map<Long, Long> habilitados = habilitacoes.contarPorFuncao(ministerioId).stream()

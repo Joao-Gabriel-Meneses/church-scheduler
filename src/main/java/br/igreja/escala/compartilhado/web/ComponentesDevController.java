@@ -2,6 +2,9 @@ package br.igreja.escala.compartilhado.web;
 
 import br.igreja.escala.disponibilidade.domain.Resposta;
 import br.igreja.escala.disponibilidade.service.LinhaDeDisponibilidade;
+import br.igreja.escala.escala.service.CelulaDaGrade;
+import br.igreja.escala.escala.service.LinhaDaGrade;
+import br.igreja.escala.escala.service.SlotDaGrade;
 import java.util.List;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
@@ -25,7 +28,71 @@ class ComponentesDevController {
         model.addAttribute(
                 "niveis", List.of(new Opcao("INICIANTE", "Iniciante"), new Opcao("EXPERIENTE", "Experiente")));
         model.addAttribute("disponibilidade", disponibilidade());
+        model.addAttribute("funcoesDaGrade", List.of("Projeção", "Transmissão"));
+        model.addAttribute("linhasDaGrade", grade());
         return "dev/componentes";
+    }
+
+    /** As linhas do preview do ScheduleGrid: preenchida, fixada, vazia e forçada. */
+    private static List<LinhaDaGrade> grade() {
+        return List.of(
+                linha(
+                        "05",
+                        "Dom",
+                        "Culto de domingo",
+                        "18h00",
+                        vaga("Ana Souza", "Experiente"),
+                        vaga("Lucas Lima", "Iniciante")),
+                linha(
+                        "09",
+                        "Qui",
+                        "Culto de quinta",
+                        "19h30",
+                        SlotDaGrade.de("Pedro Alves", "Experiente", true, false),
+                        vaga("Bia Rocha", "Experiente")),
+                linha(
+                        "12",
+                        "Dom",
+                        "Culto de domingo",
+                        "18h00",
+                        vaga("João Meneses", "Experiente"),
+                        SlotDaGrade.vazia(true)),
+                linha(
+                        "16",
+                        "Qui",
+                        "Culto de quinta",
+                        "19h30",
+                        SlotDaGrade.de("Carla Dias", "Iniciante", false, true),
+                        vaga("Ana Souza", "Experiente")),
+                linha(
+                        "18",
+                        "Sáb",
+                        "Conferência de jovens",
+                        "15h00",
+                        vaga("Lucas Lima", "Iniciante"),
+                        vaga("Pedro Alves", "Experiente")));
+    }
+
+    private static LinhaDaGrade linha(
+            String dia,
+            String diaDaSemana,
+            String nome,
+            String horario,
+            SlotDaGrade projecao,
+            SlotDaGrade transmissao) {
+        return new LinhaDaGrade(
+                dia,
+                diaDaSemana,
+                nome,
+                horario,
+                projecao.vazia() || transmissao.vazia(),
+                List.of(
+                        new CelulaDaGrade("Projeção", true, List.of(projecao)),
+                        new CelulaDaGrade("Transmissão", true, List.of(transmissao))));
+    }
+
+    private static SlotDaGrade vaga(String nome, String nivel) {
+        return SlotDaGrade.de(nome, nivel, false, false);
     }
 
     /** As linhas do preview do AvailabilityPicker, mais uma marcada pelo gerente e outra de evento que mudou. */
@@ -78,6 +145,8 @@ class ComponentesDevController {
     String gerenteEscalas(Model model) {
         model.addAttribute("navegacao", abasDoGerente("Escalas"));
         model.addAttribute("ministerios", ministerios());
+        model.addAttribute("funcoesDaGrade", List.of("Projeção", "Transmissão"));
+        model.addAttribute("linhasDaGrade", grade());
         return "dev/gerente-escalas";
     }
 

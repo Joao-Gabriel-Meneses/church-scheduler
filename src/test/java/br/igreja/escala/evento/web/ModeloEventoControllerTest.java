@@ -27,6 +27,7 @@ import br.igreja.escala.evento.service.ModeloEventoService;
 import br.igreja.escala.evento.service.ModeloResumo;
 import br.igreja.escala.ministerio.Exemplos;
 import br.igreja.escala.ministerio.repository.MembresiaRepository;
+import br.igreja.escala.ministerio.service.FuncaoService;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
@@ -53,10 +54,49 @@ class ModeloEventoControllerTest {
     @MockitoBean
     ModeloEventoService modelos;
 
+    @MockitoBean
+    FuncaoService funcoes;
+
     @BeforeEach
     void prepara() {
         AcessoDeTeste.configurar(membresias);
         when(ministerios.buscar(AcessoDeTeste.MIDIA)).thenReturn(Exemplos.midia());
+        var midia = Exemplos.midia();
+        when(funcoes.listar(1L)).thenReturn(List.of(Exemplos.projecao(midia), Exemplos.transmissao(midia)));
+    }
+
+    @Test
+    void modeloGuardaAsFuncoesMarcadas() throws Exception {
+        when(modelos.criar(
+                        1L,
+                        new DadosDoModelo(
+                                "Culto de quinta", DayOfWeek.THURSDAY, LocalTime.of(19, 30), 120, true, List.of(100L))))
+                .thenReturn(ExemplosDeEvento.cultoDeQuinta(1L));
+
+        mvc.perform(post("/ministerios/1/eventos/modelos")
+                        .with(user(GERENTE_DA_MIDIA))
+                        .with(csrf())
+                        .param("nome", "Culto de quinta")
+                        .param("diaDaSemana", "THURSDAY")
+                        .param("horario", "19:30")
+                        .param("duracaoMinutos", "120")
+                        .param("ativo", "true")
+                        .param("funcoes", "100")
+                        .param("_funcoes", "on"))
+                .andExpect(redirectedUrl("/ministerios/1/eventos/modelos"));
+    }
+
+    @Test
+    void modeloNovoVemComTodasAsFuncoesMarcadas() throws Exception {
+        String html = mvc.perform(get("/ministerios/1/eventos/modelos/novo").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(html)
+                .contains("Funções que os eventos do modelo precisam")
+                .contains("id=\"funcao-100\" name=\"funcoes\" value=\"100\" checked=\"checked\"");
     }
 
     @Test

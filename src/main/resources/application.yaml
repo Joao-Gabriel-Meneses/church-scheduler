@@ -52,3 +52,14 @@ management:
     health:
       # O health consulta o banco; o healthcheck periódico mantém o Autonomous DB ativo.
       show-details: never
+
+timefold:
+  solver-manager:
+    # Um solver por vez: a VM de 1 OCPU não divide o processador. As gerações também esperam numa fila de uma thread
+    # (GeracaoDaEscala), para cada uma ler o que a anterior gravou.
+    parallel-solver-count: 1
+  solver:
+    termination:
+      # A escala do mês sai em até 30 s; termina antes se a pontuação parar de melhorar por 5 s.
+      spent-limit: 30s
+      unimproved-spent-limit: 5s

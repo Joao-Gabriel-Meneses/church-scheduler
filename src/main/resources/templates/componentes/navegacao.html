@@ -5,7 +5,8 @@
     em ${ministerios}.
 
     navPills(itens): pílulas no topo; a atual fica escura (aria-current="page").
-    barraInferior(itens): no celular a navegação vira barra inferior, com ícone + rótulo curto.
+    barraInferior(itens): no celular a navegação vira barra inferior, com ícone + rótulo curto. Cabem os 8 itens do admin
+        num ministério em 390px; numa tela mais estreita o rótulo encolhe com reticências, sem rolagem lateral.
     rail(ministerios): SideRail de ministérios no desktop, com aria-label e Tooltip com o nome em cada item;
         escondida com menos de dois.
     seletorDeMinisterio(ministerios): no celular, a rail vira um seletor no topo (sem JS).
@@ -20,11 +21,13 @@
             th:text="${item.rotulo}">Escalas</th:block></a>
 </nav>
 
-<nav th:fragment="barraInferior(itens)" class="rt-nav border-t-2 border-surface bg-canvas p-2" aria-label="Principal">
-    <a th:each="item : ${itens}" class="rt-nav__item h-auto flex-1 flex-col justify-center gap-1 px-1 py-2 text-label"
+<nav th:fragment="barraInferior(itens)" class="rt-nav gap-1 border-t-2 border-surface bg-canvas px-1 py-2"
+     aria-label="Principal">
+    <a th:each="item : ${itens}"
+       class="rt-nav__item h-auto min-w-0 flex-auto flex-col justify-center gap-1 px-0 py-2 text-label"
        th:href="@{${item.url}}" th:aria-current="${item.atual} ? 'page' : null"><svg
-            th:replace="~{componentes/icone :: icone(${item.icone})}"></svg><th:block
-            th:text="${item.rotuloCurto}">Escalas</th:block></a>
+            th:replace="~{componentes/icone :: icone(${item.icone})}"></svg><span class="max-w-full truncate"
+            th:text="${item.rotuloCurto}">Escalas</span></a>
 </nav>
 
 <nav th:fragment="rail(ministerios)" th:if="${ministerios != null and ministerios.size() > 1}" class="rt-rail"

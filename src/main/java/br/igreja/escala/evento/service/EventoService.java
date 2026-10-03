@@ -6,6 +6,8 @@ import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.evento.domain.Evento;
 import br.igreja.escala.evento.domain.ModeloEvento;
 import br.igreja.escala.evento.repository.EventoRepository;
+import br.igreja.escala.ministerio.domain.Funcao;
+import br.igreja.escala.ministerio.service.FuncaoService;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -25,6 +27,7 @@ public class EventoService {
     private final PeriodoService periodos;
     private final ModeloEventoService modelos;
     private final MinisterioService ministerios;
+    private final FuncaoService funcoes;
     private final Clock relogio;
 
     EventoService(
@@ -32,11 +35,13 @@ public class EventoService {
             PeriodoService periodos,
             ModeloEventoService modelos,
             MinisterioService ministerios,
+            FuncaoService funcoes,
             Clock relogio) {
         this.eventos = eventos;
         this.periodos = periodos;
         this.modelos = modelos;
         this.ministerios = ministerios;
+        this.funcoes = funcoes;
         this.relogio = relogio;
     }
 
@@ -74,6 +79,26 @@ public class EventoService {
     }
 
     /**
+     * Os eventos do mês, cancelados incluídos, por data e horário, já com as funções exigidas: a escala do mês parte
+     * deles (o que já passou fica como está; o cancelado sai da escala).
+     */
+    @Transactional(readOnly = true)
+    public List<Evento> daEscala(Long ministerioId, YearMonth mes) {
+        return periodos.doMes(ministerioId, mes)
+                .map(periodo -> eventos.findComFuncoesByPeriodoIdOrderByDataAscHorarioAsc(periodo.getId()))
+                .orElse(List.of());
+    }
+
+    /**
+     * Os eventos não cancelados dos outros ministérios com data entre {@code de} e {@code ate}, com as funções
+     * exigidas: ninguém serve em dois eventos que se sobrepõem, nem em ministérios diferentes.
+     */
+    @Transactional(readOnly = true)
+    public List<Evento> deOutrosMinisteriosEntre(Long ministerioId, LocalDate de, LocalDate ate) {
+        return eventos.findByMinisterioIdNotAndCanceladoFalseAndDataBetween(ministerioId, de, ate);
+    }
+
+    /**
      * Cria os eventos do mês a partir dos modelos ativos, de hoje em diante. Pode rodar de novo à vontade: não duplica
      * evento que já existe e não recria um cancelado.
      *
@@ -101,21 +126,25 @@ public class EventoService {
     }
 
     /**
-     * @throws RegraVioladaException no campo {@code data}, se a data já passou
+     * @throws RegraVioladaException no campo {@code data}, se a data já passou, ou no campo {@code funcoes}, se nenhuma
+     *     função foi marcada
+     * @throws br.igreja.escala.compartilhado.NaoEncontradoException se uma função marcada é de outro ministério
      */
     @Transactional
     public Evento criarAvulso(Long ministerioId, DadosDoEvento dados) {
         ministerios.buscar(ministerioId);
         exigirHojeOuDepois(dados.data());
         var periodo = periodos.obterOuCriar(ministerioId, YearMonth.from(dados.data()));
-        return eventos.save(Evento.avulso(periodo, dados.nome(), dados.data(), dados.horario(), dados.duracao()));
+        var evento = Evento.avulso(periodo, dados.nome(), dados.data(), dados.horario(), dados.duracao());
+        exigirFuncoes(ministerioId, evento, dados);
+        return eventos.save(evento);
     }
 
     /**
      * Muda nome, horário e duração; num avulso, também a data. Não muda o modelo de onde o evento veio.
      *
      * @throws RegraVioladaException no campo {@code data}, se tentar mudar a data de um evento do modelo ou pôr um
-     *     avulso numa data que já passou
+     *     avulso numa data que já passou, ou no campo {@code funcoes}, se nenhuma função foi marcada
      */
     @Transactional
     public Evento alterar(Long ministerioId, Long eventoId, DadosDoEvento dados) {
@@ -130,6 +159,7 @@ public class EventoService {
             evento.mudarData(dados.data(), periodos.obterOuCriar(ministerioId, YearMonth.from(dados.data())));
         }
         evento.alterar(dados.nome(), dados.horario(), dados.duracao());
+        exigirFuncoes(ministerioId, evento, dados);
         return evento;
     }
 
@@ -154,6 +184,14 @@ public class EventoService {
     public Evento buscar(Long ministerioId, Long eventoId) {
         return eventos.findByIdAndMinisterioId(eventoId, ministerioId)
                 .orElseThrow(() -> new NaoEncontradoException("Evento " + eventoId + " no ministério " + ministerioId));
+    }
+
+    private void exigirFuncoes(Long ministerioId, Evento evento, DadosDoEvento dados) {
+        if (dados.funcoes() != null) {
+            var doMinisterio =
+                    funcoes.listar(ministerioId).stream().map(Funcao::getId).toList();
+            evento.exigirFuncoes(FuncoesEscolhidas.paraGravar(dados.funcoes(), doMinisterio));
+        }
     }
 
     private void exigirHojeOuDepois(LocalDate data) {

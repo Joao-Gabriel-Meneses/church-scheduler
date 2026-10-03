@@ -22,6 +22,8 @@ import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.evento.domain.Evento;
 import br.igreja.escala.evento.domain.Periodo;
 import br.igreja.escala.evento.repository.EventoRepository;
+import br.igreja.escala.ministerio.Exemplos;
+import br.igreja.escala.ministerio.service.FuncaoService;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -30,6 +32,7 @@ import java.time.YearMonth;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -47,7 +50,8 @@ class EventoServiceTest {
     private final PeriodoService periodos = mock(PeriodoService.class);
     private final ModeloEventoService modelos = mock(ModeloEventoService.class);
     private final MinisterioService ministerios = mock(MinisterioService.class);
-    private final EventoService servico = new EventoService(eventos, periodos, modelos, ministerios, HOJE);
+    private final FuncaoService funcoes = mock(FuncaoService.class);
+    private final EventoService servico = new EventoService(eventos, periodos, modelos, ministerios, funcoes, HOJE);
 
     private final Periodo outubro = periodo(1L, OUTUBRO);
     private final Periodo novembro = periodo(1L, NOVEMBRO);
@@ -57,6 +61,8 @@ class EventoServiceTest {
         when(periodos.obterOuCriar(1L, OUTUBRO)).thenReturn(outubro);
         when(periodos.obterOuCriar(1L, NOVEMBRO)).thenReturn(novembro);
         when(modelos.ativos(1L)).thenReturn(List.of(cultoDeDomingo(1L), cultoDeQuinta(1L)));
+        var midia = Exemplos.midia();
+        when(funcoes.listar(1L)).thenReturn(List.of(Exemplos.projecao(midia), Exemplos.transmissao(midia)));
     }
 
     @Test
@@ -123,6 +129,60 @@ class EventoServiceTest {
 
         assertThat(conferencia.isAvulso()).isTrue();
         assertThat(conferencia.getPeriodo()).isSameAs(novembro);
+    }
+
+    @Test
+    void avulsoGravaSoAsFuncoesMarcadas() {
+        when(eventos.save(any())).thenAnswer(chamada -> chamada.getArgument(0));
+
+        var casamento = servico.criarAvulso(
+                1L,
+                new DadosDoEvento("Casamento", LocalDate.of(2026, 11, 14), LocalTime.of(15, 0), 120, List.of(100L)));
+
+        assertThat(casamento.getFuncoesExigidas()).containsExactly(100L);
+    }
+
+    @Test
+    void alterarComTodasMarcadasVoltaAoPadraoESemFuncoesNaoMexe() {
+        var evento = Evento.doModelo(cultoDeDomingo(1L), novembro, LocalDate.of(2026, 11, 1));
+        evento.exigirFuncoes(Set.of(100L));
+        when(eventos.findByIdAndMinisterioId(500L, 1L)).thenReturn(Optional.of(evento));
+
+        servico.alterar(1L, 500L, new DadosDoEvento("Culto", LocalDate.of(2026, 11, 1), LocalTime.of(18, 0), 120));
+        assertThat(evento.getFuncoesExigidas()).containsExactly(100L);
+
+        servico.alterar(
+                1L,
+                500L,
+                new DadosDoEvento("Culto", LocalDate.of(2026, 11, 1), LocalTime.of(18, 0), 120, List.of(100L, 101L)));
+        assertThat(evento.getFuncoesExigidas()).isEmpty();
+    }
+
+    @Test
+    void eventoSemNenhumaFuncaoMarcadaERecusado() {
+        var evento = Evento.doModelo(cultoDeDomingo(1L), novembro, LocalDate.of(2026, 11, 1));
+        when(eventos.findByIdAndMinisterioId(500L, 1L)).thenReturn(Optional.of(evento));
+
+        assertThatThrownBy(() -> servico.alterar(
+                        1L,
+                        500L,
+                        new DadosDoEvento("Culto", LocalDate.of(2026, 11, 1), LocalTime.of(18, 0), 120, List.of())))
+                .isInstanceOfSatisfying(
+                        RegraVioladaException.class,
+                        recusa -> assertThat(recusa.campo()).isEqualTo("funcoes"));
+    }
+
+    @Test
+    void gerarDoMesCopiaAsFuncoesDoModelo() {
+        var quintaSemTransmissao = cultoDeQuinta(1L);
+        quintaSemTransmissao.exigirFuncoes(Set.of(100L));
+        when(modelos.ativos(1L)).thenReturn(List.of(quintaSemTransmissao));
+
+        servico.gerarDoMes(1L, NOVEMBRO);
+
+        assertThat(gravados())
+                .isNotEmpty()
+                .allSatisfy(evento -> assertThat(evento.getFuncoesExigidas()).containsExactly(100L));
     }
 
     @Test

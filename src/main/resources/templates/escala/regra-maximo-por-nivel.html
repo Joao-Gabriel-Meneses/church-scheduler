@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!--/*
+    O máximo por nível no evento (MAX_POR_NIVEL_NO_EVENTO): ligada, quantas pessoas de um nível servem no mesmo evento
+    (na Mídia, um Iniciante). O nível é o que a pessoa tem na função da vaga.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title th:text="|Máximo por nível · ${ministerio.nome} · Escala|">Máximo por nível · Mídia · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-1">
+        <p class="text-ink-muted" th:text="|${ministerio.nome} · Regras|">Mídia · Regras</p>
+        <h1 class="text-title">Máximo por nível</h1>
+        <p class="text-ink-muted">Ex.: no máximo 1 Iniciante por evento, para nunca ficarem dois iniciantes juntos. Vale
+            para a próxima geração.</p>
+    </header>
+
+    <p th:if="${niveis.isEmpty()}" class="rt-panel p-6 text-ink-muted">O ministério ainda não tem níveis. Crie os
+        níveis em Funções para usar esta regra.</p>
+
+    <form th:action="@{/ministerios/{m}/regras/maximo-por-nivel(m=${ministerio.id})}" th:object="${form}"
+          method="post" class="rt-panel flex w-full max-w-md flex-col gap-4 p-6">
+        <th:block th:replace="~{componentes/formulario :: errosGerais}"></th:block>
+        <th:block th:replace="~{componentes/formulario :: caixaDeSelecaoDoObjeto('Ligar o máximo por nível',
+                'ligada')}"></th:block>
+        <th:block th:with="vazio='Escolha o nível'">
+            <div th:replace="~{componentes/formulario :: selecaoDoObjeto('Nível', 'nivelId', ${niveis})}"></div>
+        </th:block>
+        <th:block th:with="tipo='number', inputmode='numeric',
+                           min=${T(br.igreja.escala.escala.domain.MaxPorNivelParams).MINIMO},
+                           max=${T(br.igreja.escala.escala.domain.MaxPorNivelParams).MAXIMO}">
+            <div th:replace="~{componentes/formulario :: campoDoObjeto('Pessoas do nível por evento', 'maximo')}"></div>
+        </th:block>
+        <div class="flex flex-wrap gap-2">
+            <button th:replace="~{componentes/botao :: botao(texto='Salvar', variante=null, icone=null, classe=null,
+                    tipo=null)}"></button>
+            <a th:replace="~{componentes/botao :: botao(texto='Cancelar', variante='secondary',
+                    href=@{/ministerios/{m}/regras(m=${ministerio.id})}, icone=null, classe=null)}"></a>
+        </div>
+    </form>
+</main>
+</body>
+</html>

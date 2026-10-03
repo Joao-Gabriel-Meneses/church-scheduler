@@ -11,6 +11,8 @@
         regrasHref   atalho para as regras (IconButton no desktop, botão com rótulo no sheet)
         acaoTexto    ação da página, com acaoIcone, acaoHref (sem href é um botão) e acaoVariante (padrão primary)
         acaoFormulario  id de um <form method="post"> da página que a ação envia (ex.: travar a disponibilidade)
+        progresso    texto de um trabalho em andamento no lugar da ação (ex.: "Gerando escala"), como Badge com faísca;
+                     a página mostra o detalhe e atualiza sozinha
     No celular (< 560px) fica numa linha: seletor compacto (periodoCurto) e "Mais ações", que abre um Sheet com a
     trava e as ações. As ações existem uma vez só no HTML (docs/design/components/Toolbar/toolbar-celular.css).
 
@@ -42,6 +44,8 @@
         <a th:if="${regrasHref != null}" class="rt-icon-btn rt-toolbar__regras" th:href="${regrasHref}"
            aria-label="Regras" title="Regras"><svg th:replace="~{componentes/icone :: icone('settings-2')}"></svg><span
                 class="rt-toolbar__rotulo">Regras</span></a>
+        <th:block th:if="${progresso != null}"><span th:replace="~{componentes/badge :: badge(texto=${progresso},
+                variante=null, icone='sparkles', tint=null, classe=null)}"></span></th:block>
         <th:block th:if="${acaoTexto != null}"><button th:replace="~{componentes/botao :: botao(texto=${acaoTexto},
                 variante=${acaoVariante ?: 'primary'}, icone=${acaoIcone}, href=${acaoHref},
                 tipo=${acaoFormulario != null ? 'submit' : 'button'}, formulario=${acaoFormulario}, tamanho=null,

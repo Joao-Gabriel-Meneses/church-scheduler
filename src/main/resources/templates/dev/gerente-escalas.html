@@ -29,9 +29,7 @@
                 acaoTexto='Revisar', acaoHref='#', icone='arrow-left-right')}"></div>
     </div>
 
-    <div class="rt-panel p-6">
-        <p class="text-ink-muted">A grade da escala (ScheduleGrid) entra na Fase 3.</p>
-    </div>
+    <div th:replace="~{componentes/grade :: grade(funcoes=${funcoesDaGrade}, linhas=${linhasDaGrade})}"></div>
 </main>
 </body>
 </html>

@@ -12,6 +12,7 @@ import br.igreja.escala.ministerio.repository.MinisterioRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,11 +23,17 @@ public class MinisterioService {
     private final MinisterioRepository ministerios;
     private final MembresiaRepository membresias;
     private final UsuarioService usuarios;
+    private final ApplicationEventPublisher eventos;
 
-    MinisterioService(MinisterioRepository ministerios, MembresiaRepository membresias, UsuarioService usuarios) {
+    MinisterioService(
+            MinisterioRepository ministerios,
+            MembresiaRepository membresias,
+            UsuarioService usuarios,
+            ApplicationEventPublisher eventos) {
         this.ministerios = ministerios;
         this.membresias = membresias;
         this.usuarios = usuarios;
+        this.eventos = eventos;
     }
 
     /**
@@ -64,6 +71,8 @@ public class MinisterioService {
     }
 
     /**
+     * Cria o ministério e avisa os outros módulos ({@link MinisterioCriado}), na mesma transação.
+     *
      * @throws RegraVioladaException se já existe um ministério com esse nome
      */
     @Transactional
@@ -71,7 +80,9 @@ public class MinisterioService {
         if (ministerios.existsByNomeIgnoreCase(dados.nome().strip())) {
             throw nomeEmUso(dados);
         }
-        return ministerios.save(new Ministerio(dados.nome(), dados.cor(), dados.icone()));
+        var criado = ministerios.save(new Ministerio(dados.nome(), dados.cor(), dados.icone()));
+        eventos.publishEvent(new MinisterioCriado(criado.getId()));
+        return criado;
     }
 
     /**

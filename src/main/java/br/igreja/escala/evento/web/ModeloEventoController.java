@@ -6,6 +6,8 @@ import br.igreja.escala.compartilhado.web.Formularios;
 import br.igreja.escala.compartilhado.web.Opcao;
 import br.igreja.escala.evento.service.DadosDoModelo;
 import br.igreja.escala.evento.service.ModeloEventoService;
+import br.igreja.escala.ministerio.domain.Funcao;
+import br.igreja.escala.ministerio.service.FuncaoService;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import br.igreja.escala.ministerio.web.GerenteDoMinisterio;
 import jakarta.validation.Valid;
@@ -33,10 +35,12 @@ class ModeloEventoController {
 
     private final MinisterioService ministerios;
     private final ModeloEventoService modelos;
+    private final FuncaoService funcoes;
 
-    ModeloEventoController(MinisterioService ministerios, ModeloEventoService modelos) {
+    ModeloEventoController(MinisterioService ministerios, ModeloEventoService modelos, FuncaoService funcoes) {
         this.ministerios = ministerios;
         this.modelos = modelos;
+        this.funcoes = funcoes;
     }
 
     @GetMapping
@@ -48,7 +52,7 @@ class ModeloEventoController {
 
     @GetMapping("/novo")
     String novo(@PathVariable Long ministerioId, Model model) {
-        return formulario(ministerioId, null, DadosDoModelo.novo(), "Criar modelo", model);
+        return formulario(ministerioId, null, DadosDoModelo.novo(idsDasFuncoes(ministerioId)), "Criar modelo", model);
     }
 
     @PostMapping
@@ -73,7 +77,8 @@ class ModeloEventoController {
     @GetMapping("/{modeloId}")
     String editar(@PathVariable Long ministerioId, @PathVariable Long modeloId, Model model) {
         var modelo = modelos.buscar(ministerioId, modeloId);
-        return formulario(ministerioId, modeloId, DadosDoModelo.de(modelo), modelo.getNome(), model);
+        return formulario(
+                ministerioId, modeloId, DadosDoModelo.de(modelo, idsDasFuncoes(ministerioId)), modelo.getNome(), model);
     }
 
     @PostMapping("/{modeloId}")
@@ -103,7 +108,12 @@ class ModeloEventoController {
         model.addAttribute("form", form);
         model.addAttribute("cabecalho", cabecalho);
         model.addAttribute("dias", diasDaSemana());
+        model.addAttribute("caixasDeFuncao", CaixaDeFuncao.de(funcoes.listar(ministerioId), form.funcoes()));
         return FORMULARIO;
+    }
+
+    private List<Long> idsDasFuncoes(Long ministerioId) {
+        return funcoes.listar(ministerioId).stream().map(Funcao::getId).toList();
     }
 
     /** Do domingo ao sábado, como a igreja conta a semana. */

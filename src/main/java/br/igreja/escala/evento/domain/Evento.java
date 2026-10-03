@@ -3,8 +3,10 @@ package br.igreja.escala.evento.domain;
 import br.igreja.escala.compartilhado.Exigencias;
 import br.igreja.escala.compartilhado.domain.DuracaoEmMinutos;
 import br.igreja.escala.compartilhado.domain.HorarioEmMinutos;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -17,6 +19,10 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Um evento do mês: gerado de um modelo (mantém o vínculo, e a data é a do modelo) ou avulso. Editar o evento não muda
@@ -60,6 +66,12 @@ public class Evento {
     @Column(nullable = false)
     private boolean cancelado;
 
+    /** Ids das funções que o evento precisa; vazio = todas as do ministério (o padrão). */
+    @ElementCollection
+    @CollectionTable(name = "evento_funcao", joinColumns = @JoinColumn(name = "evento_id"))
+    @Column(name = "funcao_id", nullable = false)
+    private Set<Long> funcoesExigidas = new HashSet<>();
+
     protected Evento() {}
 
     private Evento(
@@ -70,7 +82,7 @@ public class Evento {
         alterar(nome, horario, duracao);
     }
 
-    /** Evento do modelo numa data do dia da semana dele, com o nome, o horário e a duração padrão. */
+    /** Evento do modelo numa data do dia da semana dele, com o nome, o horário, a duração e as funções do modelo. */
     public static Evento doModelo(ModeloEvento modelo, Periodo periodo, LocalDate data) {
         Exigencias.presente(modelo, "modelo");
         if (!modelo.getMinisterioId().equals(periodo.getMinisterioId())) {
@@ -79,7 +91,9 @@ public class Evento {
         if (data.getDayOfWeek() != modelo.getDiaDaSemana()) {
             throw new IllegalArgumentException("a data " + data + " não é " + modelo.getDiaDaSemana());
         }
-        return new Evento(periodo, modelo, modelo.getNome(), data, modelo.getHorario(), modelo.getDuracao());
+        var evento = new Evento(periodo, modelo, modelo.getNome(), data, modelo.getHorario(), modelo.getDuracao());
+        evento.exigirFuncoes(modelo.getFuncoesExigidas());
+        return evento;
     }
 
     public static Evento avulso(Periodo periodo, String nome, LocalDate data, LocalTime horario, Duration duracao) {
@@ -122,6 +136,18 @@ public class Evento {
 
     public boolean isAvulso() {
         return modelo == null;
+    }
+
+    /** Troca as funções que o evento precisa. Vazio volta ao padrão: todas as do ministério. */
+    public void exigirFuncoes(Collection<Long> funcoes) {
+        Exigencias.presente(funcoes, "funcoes");
+        funcoesExigidas.clear();
+        funcoesExigidas.addAll(funcoes);
+    }
+
+    /** Se o evento precisa da função; sem escolha, precisa de todas. */
+    public boolean exige(Long funcaoId) {
+        return funcoesExigidas.isEmpty() || funcoesExigidas.contains(funcaoId);
     }
 
     private void moverPara(LocalDate data, Periodo periodo) {
@@ -168,5 +194,10 @@ public class Evento {
 
     public boolean isCancelado() {
         return cancelado;
+    }
+
+    /** Vazio quando o evento precisa de todas as funções do ministério. */
+    public Set<Long> getFuncoesExigidas() {
+        return Collections.unmodifiableSet(funcoesExigidas);
     }
 }
