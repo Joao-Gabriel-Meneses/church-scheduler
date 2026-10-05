@@ -118,6 +118,8 @@ class PaginasDoGerenteIT {
     private Long modeloId;
     private Long eventoDoModeloId;
     private Long eventoAvulsoId;
+    private Long vagaDaAnaId;
+    private Long periodoId;
 
     @BeforeEach
     void gravaOsDados() {
@@ -154,7 +156,8 @@ class PaginasDoGerenteIT {
                     .getId();
             var daAna = new Vaga(eventoDoModeloId, projecao.getId(), 1);
             daAna.escalar(ana.getId());
-            vagas.save(daAna);
+            vagaDaAnaId = vagas.save(daAna).getId();
+            periodoId = periodo.getId();
             vagas.save(new Vaga(eventoAvulsoId, projecao.getId(), 1));
             var minimo = new Regra(midia.getId(), TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO);
             minimo.alterar(new MinPorNivelParams(iniciante.getId(), 1), true);
@@ -264,6 +267,39 @@ class PaginasDoGerenteIT {
                                 "Pelo menos 1 pessoa do nível Iniciante em cada evento com alguém escalado.")));
         abre("/ministerios/{m}/regras/limite", ministerioId);
         abre("/ministerios/{m}/regras/minimo-por-nivel", ministerioId);
+    }
+
+    @Test
+    void vagaAbreNoSheetENaPaginaEOResumoDePublicarAparece() throws Exception {
+        mvc.perform(get("/ministerios/{m}/escalas/vagas/{v}", ministerioId, vagaDaAnaId)
+                        .header("HX-Request", "true")
+                        .with(user(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Ana Páginas")))
+                .andExpect(content().string(Matchers.containsString("Na vaga")));
+        abre("/ministerios/{m}/escalas/vagas/{v}", ministerioId, vagaDaAnaId);
+        mvc.perform(get("/ministerios/{m}/escalas", ministerioId)
+                        .param("mes", mes.toString())
+                        .with(user(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Publicar a escala de")))
+                .andExpect(content().string(Matchers.containsString("hx-target=\"#vaga-conteudo\"")));
+    }
+
+    @Test
+    void escalaPublicadaAbreParaOGerenteEParaOMembro() throws Exception {
+        jdbc.update("update periodo set status_escala = 'PUBLICADA' where id = ?", periodoId);
+
+        mvc.perform(get("/ministerios/{m}/escalas", ministerioId)
+                        .param("mes", mes.toString())
+                        .with(user(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Reabrir para rascunho")));
+        mvc.perform(get("/escalas/{m}", ministerioId)
+                        .param("mes", mes.toString())
+                        .with(user(membro)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Ana Páginas")));
     }
 
     @Test

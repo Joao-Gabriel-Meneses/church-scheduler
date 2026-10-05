@@ -121,6 +121,7 @@ class GeracaoDaEscalaIT {
     private Long transmissaoId;
     private Long anaId;
     private Long carlaId;
+    private Long brunoId;
     private Long ensaioId;
     private Long periodoDoLouvorId;
     private UsuarioAutenticado gerente;
@@ -139,6 +140,7 @@ class GeracaoDaEscalaIT {
             var carla = usuarios.save(Usuario.membro("Carla Geração", "carla.geracao@teste.local", "{noop}x"));
             anaId = ana.getId();
             carlaId = carla.getId();
+            brunoId = bruno.getId();
             var daPaula = new Membresia(paula.getId(), midia);
             daPaula.tornarGerente();
             membresias.save(daPaula);
@@ -269,6 +271,46 @@ class GeracaoDaEscalaIT {
         assertThat(pessoa(domingo17, projecaoId)).isEqualTo(carlaId);
     }
 
+    /**
+     * Pelas telas: a Carla entra à mão na Projeção do dia 17 (fixada) e o Bruno é forçado na Projeção do dia 10 depois
+     * de marcar Não pode, com justificativa. "Regerar não fixadas" não mexe nas duas.
+     */
+    @Test
+    void vagaAjustadaAMaoEVagaForcadaSobrevivemAGerarDeNovo() throws Exception {
+        gerar();
+        var projecao17 = vaga(domingo17, projecaoId);
+        mvc.perform(post("/ministerios/{m}/escalas/vagas/{v}/escalar", midiaId, projecao17.getId())
+                        .param("usuarioId", String.valueOf(carlaId))
+                        .param("versao", String.valueOf(projecao17.getVersao()))
+                        .param("mes", MES.toString())
+                        .with(csrf())
+                        .with(user(gerente)))
+                .andExpect(flash().attribute("sucesso", Matchers.notNullValue()));
+        jdbc.update(
+                "update disponibilidade set resposta = 'NAO_PODE' where usuario_id = ? and evento_id = ?",
+                brunoId,
+                domingo10);
+        var projecao10 = vaga(domingo10, projecaoId);
+        mvc.perform(post("/ministerios/{m}/escalas/vagas/{v}/escalar", midiaId, projecao10.getId())
+                        .param("usuarioId", String.valueOf(brunoId))
+                        .param("justificativa", "Combinou comigo por telefone")
+                        .param("versao", String.valueOf(projecao10.getVersao()))
+                        .param("mes", MES.toString())
+                        .with(csrf())
+                        .with(user(gerente)))
+                .andExpect(flash().attribute("sucesso", Matchers.endsWith("com a vaga forçada")));
+
+        assertThat(gerar().getEstado()).isEqualTo(Andamento.Estado.CONCLUIDA);
+
+        var fixada = vaga(domingo17, projecaoId);
+        assertThat(fixada.getUsuarioId()).isEqualTo(carlaId);
+        assertThat(fixada.isFixada()).isTrue();
+        var forcada = vaga(domingo10, projecaoId);
+        assertThat(forcada.getUsuarioId()).isEqualTo(brunoId);
+        assertThat(forcada.isForcada()).isTrue();
+        assertThat(forcada.getJustificativa()).isEqualTo("Combinou comigo por telefone");
+    }
+
     @Test
     void eventoCanceladoSaiDaEscalaEAProximaGeracaoApagaAsVagas() throws Exception {
         gerar();
@@ -338,6 +380,13 @@ class GeracaoDaEscalaIT {
                 .getResponse()
                 .getContentAsString()
                 .replaceAll("\\s+", " ");
+    }
+
+    private Vaga vaga(Long eventoId, Long funcaoId) {
+        return vagas.findByEventoIdIn(List.of(eventoId)).stream()
+                .filter(vaga -> vaga.getFuncaoId().equals(funcaoId))
+                .findFirst()
+                .orElseThrow();
     }
 
     private Long pessoa(Long eventoId, Long funcaoId) {
