@@ -10,7 +10,7 @@ import br.igreja.escala.compartilhado.Fuso;
 import br.igreja.escala.disponibilidade.domain.Disponibilidade;
 import br.igreja.escala.disponibilidade.domain.Resposta;
 import br.igreja.escala.disponibilidade.repository.DisponibilidadeRepository;
-import br.igreja.escala.escala.domain.MaxPorNivelParams;
+import br.igreja.escala.escala.domain.MinPorNivelParams;
 import br.igreja.escala.escala.domain.Regra;
 import br.igreja.escala.escala.domain.TipoDeRegra;
 import br.igreja.escala.escala.domain.Vaga;
@@ -156,9 +156,9 @@ class PaginasDoGerenteIT {
             daAna.escalar(ana.getId());
             vagas.save(daAna);
             vagas.save(new Vaga(eventoAvulsoId, projecao.getId(), 1));
-            var maximo = new Regra(midia.getId(), TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO);
-            maximo.alterar(new MaxPorNivelParams(iniciante.getId(), 1), true);
-            regras.save(maximo);
+            var minimo = new Regra(midia.getId(), TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO);
+            minimo.alterar(new MinPorNivelParams(iniciante.getId(), 1), true);
+            regras.save(minimo);
             gerente = new UsuarioAutenticado(paula);
             membro = new UsuarioAutenticado(ana);
             membroId = ana.getId();
@@ -262,7 +262,7 @@ class PaginasDoGerenteIT {
                 .andExpect(
                         content().string(Matchers.containsString("No máximo 1 pessoa do nível Iniciante por evento.")));
         abre("/ministerios/{m}/regras/limite", ministerioId);
-        abre("/ministerios/{m}/regras/maximo-por-nivel", ministerioId);
+        abre("/ministerios/{m}/regras/minimo-por-nivel", ministerioId);
     }
 
     @Test

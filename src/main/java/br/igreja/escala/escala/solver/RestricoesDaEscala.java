@@ -24,7 +24,7 @@ public class RestricoesDaEscala implements ConstraintProvider {
             umaFuncaoPorEvento(fabrica),
             semSobreposicao(fabrica),
             limitePorPeriodo(fabrica),
-            maxPorNivelNoEvento(fabrica),
+            minPorNivelNoEvento(fabrica),
             prioridadePorData(fabrica),
             equilibrioDeCarga(fabrica)
         };
@@ -104,22 +104,25 @@ public class RestricoesDaEscala implements ConstraintProvider {
                 .asConstraint(TipoDeRegra.LIMITE_POR_PERIODO.name());
     }
 
-    /** Mais pessoas do nível limitado no evento que o máximo (o nível de cada uma é o da função da vaga). */
-    Constraint maxPorNivelNoEvento(ConstraintFactory fabrica) {
+    /**
+     * Menos pessoas do nível exigido no evento que o mínimo, contando as vagas preenchidas de todas as funções (o nível
+     * de cada pessoa é o da função da vaga). O evento sem ninguém escalado não forma grupo, então não viola.
+     */
+    Constraint minPorNivelNoEvento(ConstraintFactory fabrica) {
         return fabrica.forEach(VagaPlanejada.class)
                 .join(
                         ParametrosDaEscala.class,
-                        Joiners.filtering((vaga, parametros) -> parametros.nivelLimitado() != null
-                                && parametros.nivelLimitado().equals(vaga.getNivelId())))
+                        Joiners.filtering((vaga, parametros) -> parametros.nivelExigido() != null))
                 .groupBy(
                         (vaga, parametros) -> vaga.getEvento(),
                         (vaga, parametros) -> parametros,
-                        ConstraintCollectors.countBi())
-                .filter((evento, parametros, pessoas) -> pessoas > parametros.maximoDoNivel())
+                        ConstraintCollectors.sum((VagaPlanejada vaga, ParametrosDaEscala parametros) ->
+                                parametros.nivelExigido().equals(vaga.getNivelId()) ? 1 : 0))
+                .filter((evento, parametros, doNivel) -> doNivel < parametros.minimoDoNivel())
                 .penalize(
                         HardMediumSoftScore.ONE_HARD,
-                        (evento, parametros, pessoas) -> pessoas - parametros.maximoDoNivel())
-                .asConstraint(TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO.name());
+                        (evento, parametros, doNivel) -> parametros.minimoDoNivel() - doNivel)
+                .asConstraint(TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO.name());
     }
 
     /** Vaga vazia: a obrigatória pesa 100 mais os dias até o fim do mês; a opcional, 1. */

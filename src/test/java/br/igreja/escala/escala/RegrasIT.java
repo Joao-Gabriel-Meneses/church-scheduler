@@ -71,7 +71,7 @@ class RegrasIT {
                 .isEqualTo("3");
         assertThat(jdbc.queryForObject(
                         "select count(*) from regra where ministerio_id = ? and ativa = 0", Integer.class, midiaId))
-                .as("só o máximo por nível nasce desligado")
+                .as("só o mínimo por nível nasce desligado")
                 .isEqualTo(1);
     }
 

@@ -20,23 +20,23 @@ class RegraTest {
     }
 
     @Test
-    void maximoPorNivelNasceDesligadoESemNivel() {
-        var maximo = new Regra(1L, TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO);
+    void minimoPorNivelNasceDesligadoESemNivel() {
+        var minimo = new Regra(1L, TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO);
 
-        assertThat(maximo.isAtiva()).isFalse();
-        assertThat(maximo.getParametros()).isEqualTo(new MaxPorNivelParams(null, 1));
-        assertThat(ReflectionTestUtils.getField(maximo, "parametros")).isEqualTo("{\"nivelId\":null,\"maximo\":1}");
+        assertThat(minimo.isAtiva()).isFalse();
+        assertThat(minimo.getParametros()).isEqualTo(new MinPorNivelParams(null, 1));
+        assertThat(ReflectionTestUtils.getField(minimo, "parametros")).isEqualTo("{\"nivelId\":null,\"minimo\":1}");
     }
 
     @Test
     void alteraParametrosELigaOuDesliga() {
-        var maximo = new Regra(1L, TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO);
+        var minimo = new Regra(1L, TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO);
 
-        maximo.alterar(new MaxPorNivelParams(200L, 1), true);
+        minimo.alterar(new MinPorNivelParams(200L, 1), true);
 
-        assertThat(maximo.vigente())
+        assertThat(minimo.vigente())
                 .isEqualTo(new RegraVigente(
-                        TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO, Rigidez.HARD, 1, true, new MaxPorNivelParams(200L, 1)));
+                        TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO, Rigidez.HARD, 1, true, new MinPorNivelParams(200L, 1)));
     }
 
     @Test

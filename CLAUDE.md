@@ -100,7 +100,7 @@ Tudo que varia por ministério (funções, níveis, regras, eventos) pertence ao
 - `parametros` é `CLOB` com `CHECK (parametros IS JSON)`. Na entidade, mapeie como `String` com `@Lob` e converta com Jackson na classe de parâmetros. Não use `@JdbcTypeCode(SqlTypes.JSON)`: com o dialeto 19 o Hibernate espera **BLOB**.
 - Flags (`gerente`, `fixada`, `ativa`...) são `NUMBER(1)` com `CHECK (col IN (0, 1))`, mapeadas como `boolean` no Java.
 
-Cada tipo de regra tem uma classe Java de parâmetros (ex.: `MaxPorNivelParams`) que valida esse JSON.
+Cada tipo de regra tem uma classe Java de parâmetros (ex.: `MinPorNivelParams`) que valida esse JSON.
 
 ## Regras de negócio — o ponto central
 
@@ -114,7 +114,7 @@ Existe um **catálogo fixo de tipos de regra**. Cada tipo é implementado uma ú
 | `HABILITACAO` | Sempre ativa (hard) |
 | `DISPONIBILIDADE` | Só escala quem marcou PODE (hard) |
 | `UMA_FUNCAO_POR_EVENTO` | Hard |
-| `MAX_POR_NIVEL_NO_EVENTO` | Máx. 1 Iniciante por evento, ou seja, nunca dois iniciantes juntos (hard). Desligada no catálogo padrão; o gerente liga na página de regras, escolhendo o nível e a quantidade |
+| `MIN_POR_NIVEL_NO_EVENTO` | Pelo menos 1 Experiente em cada evento com alguém escalado, contando as vagas preenchidas de todas as funções (hard, **não forçável**). A falta é o mínimo menos as pessoas do nível; evento sem ninguém escalado não viola. Desligada no catálogo padrão (substituiu a `MAX_POR_NIVEL_NO_EVENTO` na V13, que a criou desligada em todo ministério); o gerente liga na página de regras, escolhendo o nível e a quantidade |
 | `LIMITE_POR_PERIODO` | Máx. de escalas por mês por pessoa, **editável pelo gerente** (padrão 3). Conta **eventos**: dois cultos no mesmo domingo contam 2 (hard; o gerente pode forçar mais, com justificativa) |
 | `SEM_SOBREPOSICAO` | Sempre ativa (hard): ninguém em dois eventos com horários sobrepostos, **nem em ministérios diferentes** |
 | `EQUILIBRIO_DE_CARGA` | Distribuir o serviço igualmente (soft) |
@@ -158,10 +158,10 @@ A Fase 3 foi dividida. A **3a** (feita) gera a escala com o Timefold e mostra o 
   - As outras (evento cancelado, função que deixou de ser exigida, `qtd_max` reduzido) saem da escala na hora, a página de escalas diz quem saiu, e a próxima geração as apaga. Se o evento for reativado antes, elas voltam.
   - Evento que já começou fica como está; as vagas dele contam no limite e no equilíbrio do mês.
 - **Regras:** o catálogo é o enum `TipoDeRegra`, com o padrão de cada tipo; cada ministério tem uma linha de `regra` por tipo.
-  - O ministério criado pelo `MinisterioService` recebe o catálogo padrão (evento `MinisterioCriado`, gravado pelo `RegraService` na mesma transação): rígidas ligadas, limite de 3 eventos por mês e máximo por nível desligado. Tipo sem linha vale o padrão do enum (a migração só criou a tabela).
-  - A rigidez dá o nível da pontuação e o peso multiplica a penalidade; desligada pesa zero (`PesosDasRegras`, via `ConstraintWeightOverrides`). Os parâmetros ficam em JSON e são validados pelo record do tipo (`LimitePorPeriodoParams`, `MaxPorNivelParams`, `SemParametros`), estritos com campo desconhecido, ausente ou nulo.
+  - O ministério criado pelo `MinisterioService` recebe o catálogo padrão (evento `MinisterioCriado`, gravado pelo `RegraService` na mesma transação): rígidas ligadas, limite de 3 eventos por mês e mínimo por nível desligado. Tipo sem linha vale o padrão do enum (a migração só criou a tabela).
+  - A rigidez dá o nível da pontuação e o peso multiplica a penalidade; desligada pesa zero (`PesosDasRegras`, via `ConstraintWeightOverrides`). Os parâmetros ficam em JSON e são validados pelo record do tipo (`LimitePorPeriodoParams`, `MinPorNivelParams`, `SemParametros`), estritos com campo desconhecido, ausente ou nulo.
   - Não se desligam: pessoas por função, habilitação, disponibilidade, uma função por evento, sem sobreposição e prioridade por data (sem ela o solver deixaria as vagas vazias).
-  - Na página de regras o gerente muda o limite do mês (1 a 31) e liga o máximo por nível, escolhendo o nível e a quantidade (1 a 20), com `Auditoria` (`ALTERAR_REGRA`). Nível excluído deixa o máximo por nível sem efeito, e a página diz isso.
+  - Na página de regras o gerente muda o limite do mês (1 a 31) e liga o mínimo por nível, escolhendo o nível e a quantidade (1 a 20), com `Auditoria` (`ALTERAR_REGRA`). Nível excluído deixa o mínimo por nível sem efeito, e a página diz isso.
 - **Sem sobreposição de horários** (`SEM_SOBREPOSICAO`): a mesma pessoa não serve em dois eventos que se sobrepõem, contando início e duração (`Evento.getInicio()` e `getFim()`, que pode cair no dia seguinte), **inclusive entre ministérios diferentes**.
   - As vagas vigentes de outros ministérios entram como fatos (`CompromissoFixo`), só com pessoa e horário: gerar a da Mídia não mexe na do Louvor, e nada do outro ministério aparece na tela ("já serve em outro evento nesse horário").
   - Eventos colados (um termina às 11h00 e o outro começa às 11h00) não se sobrepõem. Evento cancelado não conta.
@@ -173,7 +173,7 @@ A Fase 3 foi dividida. A **3a** (feita) gera a escala com o Timefold e mostra o 
   - Até 30 s, ou 5 s sem melhorar (`timefold.solver.termination`). Gerar de novo substitui o rascunho, menos as vagas fixadas e forçadas (`@PlanningPin`).
   - A gravação relê a trava com o período bloqueado: destravada no meio, o resultado é descartado e o gerente é avisado. Registra `Auditoria` (`GERAR_ESCALA`, com as vagas preenchidas, o tempo e a pontuação).
   - O andamento fica em memória (`GeracoesEmAndamento`, uma instância do app): o segundo clique encontra a geração rodando e não dispara outra. Um reinício no meio perde só a geração.
-- **Explicação da vaga vazia** (`DiagnosticoDaVaga`): no Timefold 2 não existe `SolutionManager.explain`, e o `analyze` é da versão Enterprise. Quem serve passa pelas regras rígidas ligadas, nesta ordem: habilitação, disponibilidade, uma função por evento, sobreposição, limite e máximo por nível. A primeira que deixa ninguém é o motivo ("Ninguém habilitado em Projeção marcou Pode."). É calculada ao abrir a página, com os dados de agora, e só as vagas obrigatórias dos eventos por vir geram alerta.
+- **Explicação da vaga vazia** (`DiagnosticoDaVaga`): no Timefold 2 não existe `SolutionManager.explain`, e o `analyze` é da versão Enterprise. Quem serve passa pelas regras rígidas ligadas, nesta ordem: habilitação, disponibilidade, uma função por evento, sobreposição, limite e mínimo por nível. A primeira que deixa ninguém é o motivo ("Ninguém habilitado em Projeção marcou Pode."). No mínimo por nível, cabe quem completa o mínimo com as outras vagas do evento ("O evento precisa de pelo menos 1 pessoa do nível Experiente, e a única pessoa que pode não é desse nível."). É calculada ao abrir a página, com os dados de agora, e só as vagas obrigatórias dos eventos por vir geram alerta.
 - **Página de escalas** (`/ministerios/{id}/escalas`): a Toolbar tem "Gerar escala" (o primário; durante a geração vira o Badge "Gerando escala"). O painel de andamento pede `/escalas/andamento` a cada 2 s; quando termina, a resposta manda recarregar a página (`HX-Redirect`), que avisa o resultado uma vez. Depois vêm os alertas, os StatCards, a grade (`componentes/grade`, só leitura) e as escalas por pessoa.
 - **Destravar a disponibilidade de um período com escala publicada exige confirmação** (Sheet, `componentes/sheet :: confirmacao`), porque a escala publicada foi gerada com aquelas respostas. Entra com a publicação, na 3b.
 - **Pendente na 3b:** ajuste manual, fixar e forçar com justificativa (`DiagnosticoDaVaga` diz qual regra a alocação viola), publicar (Badge Publicada), "Regerar não fixadas" no lugar de "Gerar escala" quando já há rascunho (README da Toolbar), "Minhas escalas" e a confirmação ao destravar.
@@ -297,7 +297,7 @@ O design system "Escala" (feito no Claude Design) está em `docs/design/`. O `do
   - O `GeracaoDaEscalaIT` também: a geração roda na fila e só enxerga o que foi commitado. O teste espera a geração terminar (`Andamento.getFim()`) antes de conferir e de apagar. Nos ITs, o solver termina com 1 s sem melhorar (`@TesteDeIntegracao`).
   - As classes rodam em ordem aleatória. Para reproduzir uma falha, use a semente do log (`-Dfailsafe.runOrder.random.seed=...`).
 - Não existe perfil padrão. O `./mvnw spring-boot:run` ativa o `dev`; na IDE, rode `TestEscalaApplication` ou ative o perfil `dev`.
-- O perfil `dev` tem seed (`SeedDeDesenvolvimento`): Mídia com 20 membros, funções, níveis, modelos e eventos, e Louvor. A Mídia chega com o mês atual respondido e travado (pronto para gerar a escala), o próximo respondido e aberto, e no máximo um Iniciante por evento. Gerente da Mídia: `paula.ribeiro@escala.local`; a senha dos membros está no `application-dev.yaml`.
+- O perfil `dev` tem seed (`SeedDeDesenvolvimento`): Mídia com 20 membros, funções, níveis, modelos e eventos, e Louvor. A Mídia chega com o mês atual respondido e travado (pronto para gerar a escala), o próximo respondido e aberto, e pelo menos um Experiente por evento. Gerente da Mídia: `paula.ribeiro@escala.local`; a senha dos membros está no `application-dev.yaml`.
 - Correção de bug começa por um teste que reproduz o bug.
 - O JaCoCo falha o `verify` se a cobertura de linhas dos testes unitários ficar abaixo de 70% (excluídos `*Application`, `config` e DTOs).
 

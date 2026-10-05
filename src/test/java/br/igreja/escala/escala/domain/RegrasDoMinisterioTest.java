@@ -18,13 +18,13 @@ class RegrasDoMinisterioTest {
     }
 
     @Test
-    void maximoPorNivelSoValeLigadoEComNivel() {
+    void minimoPorNivelSoValeLigadoEComNivel() {
         var ligado = RegrasDoMinisterio.de(List.of(new RegraVigente(
-                TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO, Rigidez.HARD, 1, true, new MaxPorNivelParams(200L, 1))));
+                TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO, Rigidez.HARD, 1, true, new MinPorNivelParams(200L, 1))));
         var desligado = RegrasDoMinisterio.de(List.of(new RegraVigente(
-                TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO, Rigidez.HARD, 1, false, new MaxPorNivelParams(200L, 1))));
+                TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO, Rigidez.HARD, 1, false, new MinPorNivelParams(200L, 1))));
 
-        assertThat(ligado.maximoPorNivel()).contains(new MaxPorNivelParams(200L, 1));
-        assertThat(desligado.maximoPorNivel()).isEmpty();
+        assertThat(ligado.minimoPorNivel()).contains(new MinPorNivelParams(200L, 1));
+        assertThat(desligado.minimoPorNivel()).isEmpty();
     }
 }

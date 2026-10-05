@@ -84,13 +84,13 @@ class RegraControllerTest {
                                 true,
                                 "limite"),
                         new RegraResumo(
-                                "MAX_POR_NIVEL_NO_EVENTO",
-                                "Máximo por nível",
-                                "Limita quantas pessoas de um nível servem no mesmo evento.",
+                                "MIN_POR_NIVEL_NO_EVENTO",
+                                "Mínimo por nível",
+                                "Todo evento com alguém escalado tem pelo menos esse número de pessoas do nível.",
                                 "Rígida",
                                 "Desligada",
                                 false,
-                                "maximo-por-nivel")));
+                                "minimo-por-nivel")));
     }
 
     @Test
@@ -98,28 +98,28 @@ class RegraControllerTest {
         mvc.perform(get("/ministerios/1/regras").with(user(MEMBRO))).andExpect(status().isForbidden());
         mvc.perform(get("/ministerios/1/regras/limite").with(user(MEMBRO))).andExpect(status().isForbidden());
         mvc.perform(limite(1, "4").with(user(MEMBRO))).andExpect(status().isForbidden());
-        mvc.perform(maximo(1, "true", "200", "1").with(user(MEMBRO))).andExpect(status().isForbidden());
+        mvc.perform(minimo(1, "true", "200", "1").with(user(MEMBRO))).andExpect(status().isForbidden());
         verify(regras, never()).alterarLimite(anyLong(), anyInt(), any());
-        verify(regras, never()).alterarMaximoPorNivel(anyLong(), anyBoolean(), any(), anyInt(), any());
+        verify(regras, never()).alterarMinimoPorNivel(anyLong(), anyBoolean(), any(), anyInt(), any());
     }
 
     @Test
     void gerenteDaMidiaNaoMudaAsRegrasDoLouvorNemPorPostDireto() throws Exception {
         mvc.perform(get("/ministerios/2/regras").with(user(GERENTE_DA_MIDIA))).andExpect(status().isForbidden());
-        mvc.perform(get("/ministerios/2/regras/maximo-por-nivel").with(user(GERENTE_DA_MIDIA)))
+        mvc.perform(get("/ministerios/2/regras/minimo-por-nivel").with(user(GERENTE_DA_MIDIA)))
                 .andExpect(status().isForbidden());
         mvc.perform(limite(2, "4").with(user(GERENTE_DA_MIDIA))).andExpect(status().isForbidden());
-        mvc.perform(maximo(2, "true", "200", "1").with(user(GERENTE_DA_MIDIA))).andExpect(status().isForbidden());
+        mvc.perform(minimo(2, "true", "200", "1").with(user(GERENTE_DA_MIDIA))).andExpect(status().isForbidden());
         verify(regras, never()).alterarLimite(anyLong(), anyInt(), any());
-        verify(regras, never()).alterarMaximoPorNivel(anyLong(), anyBoolean(), any(), anyInt(), any());
+        verify(regras, never()).alterarMinimoPorNivel(anyLong(), anyBoolean(), any(), anyInt(), any());
     }
 
     @Test
     void ministerioQueNaoExisteENivelDeOutroMinisterioSao404() throws Exception {
         mvc.perform(get("/ministerios/9/regras").with(user(ADMIN))).andExpect(status().isNotFound());
-        when(regras.alterarMaximoPorNivel(1L, true, 900L, 1, GERENTE_DA_MIDIA))
+        when(regras.alterarMinimoPorNivel(1L, true, 900L, 1, GERENTE_DA_MIDIA))
                 .thenThrow(new NaoEncontradoException("Nível 900"));
-        mvc.perform(maximo(1, "true", "900", "1").with(user(GERENTE_DA_MIDIA))).andExpect(status().isNotFound());
+        mvc.perform(minimo(1, "true", "900", "1").with(user(GERENTE_DA_MIDIA))).andExpect(status().isNotFound());
     }
 
     @Test
@@ -135,7 +135,7 @@ class RegraControllerTest {
                 .contains("<h1 class=\"text-title\">Mídia — Regras</h1>")
                 .contains("Habilitação", "HABILITACAO", "Sempre ativa", "Rígida")
                 .contains("Limite do mês", "Cada pessoa serve em no máximo 3 eventos no mês.")
-                .contains("href=\"/ministerios/1/regras/limite\"", "href=\"/ministerios/1/regras/maximo-por-nivel\"")
+                .contains("href=\"/ministerios/1/regras/limite\"", "href=\"/ministerios/1/regras/minimo-por-nivel\"")
                 .contains("aria-label=\"Editar Limite do mês\"", "Desligada")
                 .doesNotContain("rt-btn--primary", "href=\"/ministerios/1/regras/null\"");
     }
@@ -166,40 +166,40 @@ class RegraControllerTest {
     }
 
     @Test
-    void formularioDoMaximoPorNivelTemOsNiveisDoMinisterio() throws Exception {
+    void formularioDoMinimoPorNivelTemOsNiveisDoMinisterio() throws Exception {
         assertThat(pagina(
-                        get("/ministerios/1/regras/maximo-por-nivel").with(user(GERENTE_DA_MIDIA)),
-                        RegraController.MAXIMO_POR_NIVEL))
-                .contains("Ligar o máximo por nível", "name=\"ligada\"", "name=\"_ligada\"")
+                        get("/ministerios/1/regras/minimo-por-nivel").with(user(GERENTE_DA_MIDIA)),
+                        RegraController.MINIMO_POR_NIVEL))
+                .contains("Ligar o mínimo por nível", "name=\"ligada\"", "name=\"_ligada\"")
                 .contains("<option value=\"\">Escolha o nível</option>")
                 .contains("<option value=\"200\">Iniciante</option>", "<option value=\"201\">Experiente</option>")
-                .contains("name=\"maximo\"", "value=\"1\"");
+                .contains("name=\"minimo\"", "value=\"1\"");
     }
 
     @Test
     void ligarSemNivelVoltaComOErroNoCampo() throws Exception {
-        when(regras.alterarMaximoPorNivel(1L, true, null, 1, GERENTE_DA_MIDIA))
+        when(regras.alterarMinimoPorNivel(1L, true, null, 1, GERENTE_DA_MIDIA))
                 .thenThrow(new RegraVioladaException("nivelId", "Escolha o nível."));
 
-        assertThat(pagina(maximo(1, "true", "", "1").with(user(GERENTE_DA_MIDIA)), RegraController.MAXIMO_POR_NIVEL))
+        assertThat(pagina(minimo(1, "true", "", "1").with(user(GERENTE_DA_MIDIA)), RegraController.MINIMO_POR_NIVEL))
                 .contains("id=\"nivelId-erro\"", "Escolha o nível.");
     }
 
     @Test
-    void ligaODesligaOMaximoPorNivel() throws Exception {
-        when(regras.alterarMaximoPorNivel(1L, true, 200L, 1, GERENTE_DA_MIDIA)).thenReturn(true);
-        when(regras.alterarMaximoPorNivel(1L, false, 200L, 1, GERENTE_DA_MIDIA)).thenReturn(true);
+    void ligaODesligaOMinimoPorNivel() throws Exception {
+        when(regras.alterarMinimoPorNivel(1L, true, 200L, 1, GERENTE_DA_MIDIA)).thenReturn(true);
+        when(regras.alterarMinimoPorNivel(1L, false, 200L, 1, GERENTE_DA_MIDIA)).thenReturn(true);
 
-        mvc.perform(maximo(1, "true", "200", "1").with(user(GERENTE_DA_MIDIA)))
+        mvc.perform(minimo(1, "true", "200", "1").with(user(GERENTE_DA_MIDIA)))
                 .andExpect(redirectedUrl("/ministerios/1/regras"))
-                .andExpect(flash().attribute("sucesso", "Máximo por nível ligado"));
-        mvc.perform(post("/ministerios/1/regras/maximo-por-nivel")
+                .andExpect(flash().attribute("sucesso", "Mínimo por nível ligado"));
+        mvc.perform(post("/ministerios/1/regras/minimo-por-nivel")
                         .param("_ligada", "on")
                         .param("nivelId", "200")
-                        .param("maximo", "1")
+                        .param("minimo", "1")
                         .with(csrf())
                         .with(user(GERENTE_DA_MIDIA)))
-                .andExpect(flash().attribute("sucesso", "Máximo por nível desligado"));
+                .andExpect(flash().attribute("sucesso", "Mínimo por nível desligado"));
     }
 
     private String pagina(MockHttpServletRequestBuilder requisicao, String visao) throws Exception {
@@ -218,13 +218,13 @@ class RegraControllerTest {
                 .with(csrf());
     }
 
-    private static MockHttpServletRequestBuilder maximo(
-            long ministerioId, String ligada, String nivelId, String maximo) {
-        return post("/ministerios/{m}/regras/maximo-por-nivel", ministerioId)
+    private static MockHttpServletRequestBuilder minimo(
+            long ministerioId, String ligada, String nivelId, String minimo) {
+        return post("/ministerios/{m}/regras/minimo-por-nivel", ministerioId)
                 .param("ligada", ligada)
                 .param("_ligada", "on")
                 .param("nivelId", nivelId)
-                .param("maximo", maximo)
+                .param("minimo", minimo)
                 .with(csrf());
     }
 }
