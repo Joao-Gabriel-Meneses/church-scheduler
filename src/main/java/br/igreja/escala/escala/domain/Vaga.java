@@ -7,12 +7,15 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
  * Uma vaga da escala: evento × função × posição, com a pessoa escalada ou vazia. Evento, função e pessoa são de outros
- * módulos, então ficam só os ids. A geração mexe só nas vagas que não estão fixadas nem forçadas.
+ * módulos, então ficam só os ids. A geração mexe só nas vagas que não estão fixadas nem forçadas; toda alteração do
+ * gerente fixa a vaga, e a forçada (que viola uma regra forçável, com justificativa) é sempre fixada. A versão é o
+ * controle de concorrência: quem edita manda a versão que viu.
  */
 @Entity
 @Table(name = "vaga")
@@ -49,6 +52,10 @@ public class Vaga {
     @Column(name = "atualizado_em", nullable = false)
     private Instant atualizadoEm;
 
+    @Version
+    @Column(nullable = false)
+    private long versao;
+
     protected Vaga() {}
 
     /** Vaga vazia. */
@@ -68,6 +75,38 @@ public class Vaga {
             throw new IllegalStateException("vaga " + id + " está fixada ou forçada");
         }
         this.usuarioId = usuarioId;
+    }
+
+    /** O gerente põe a pessoa (ou ninguém, com nulo) sem violar regra: a vaga fica fixada e deixa de ser forçada. */
+    public void ajustar(Long usuarioId) {
+        this.usuarioId = usuarioId;
+        this.fixada = true;
+        this.forcada = false;
+        this.justificativa = null;
+    }
+
+    /**
+     * O gerente põe a pessoa contra uma regra forçável: a vaga fica forçada e fixada, com a justificativa.
+     *
+     * @throws IllegalArgumentException sem pessoa ou sem justificativa
+     */
+    public void forcar(Long usuarioId, String justificativa) {
+        this.usuarioId = Exigencias.presente(usuarioId, "usuarioId");
+        this.justificativa = Exigencias.texto(justificativa, "justificativa", TAMANHO_JUSTIFICATIVA);
+        this.fixada = true;
+        this.forcada = true;
+    }
+
+    /** Fixa a vaga como está, preenchida ou vazia: gerar de novo não a muda. */
+    public void fixar() {
+        this.fixada = true;
+    }
+
+    /** Solta a vaga para a próxima geração. A forçada deixa de ser forçada; a pessoa fica até gerar de novo. */
+    public void desafixar() {
+        this.fixada = false;
+        this.forcada = false;
+        this.justificativa = null;
     }
 
     /** Fixada ou forçada: gerar de novo não muda a pessoa (@PlanningPin). */
@@ -109,5 +148,9 @@ public class Vaga {
 
     public String getJustificativa() {
         return justificativa;
+    }
+
+    public long getVersao() {
+        return versao;
     }
 }
