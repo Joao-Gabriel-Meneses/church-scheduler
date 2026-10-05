@@ -83,4 +83,17 @@ class PeriodoServiceTest {
 
         assertThatThrownBy(() -> servico.bloquearParaAlterar(9L)).isInstanceOf(NaoEncontradoException.class);
     }
+
+    @Test
+    void publicaEReabreComALinhaBloqueada() {
+        when(periodos.findById(400L)).thenReturn(Optional.of(outubro));
+
+        assertThat(servico.publicarEscala(400L)).isTrue();
+        assertThat(outubro.isEscalaPublicada()).isTrue();
+        assertThat(servico.publicarEscala(400L)).as("já publicada").isFalse();
+        assertThat(servico.reabrirEscala(400L)).isTrue();
+        assertThat(outubro.isEscalaPublicada()).isFalse();
+        assertThat(servico.reabrirEscala(400L)).as("já rascunho").isFalse();
+        verify(entityManager, times(4)).refresh(outubro, LockModeType.PESSIMISTIC_WRITE);
+    }
 }

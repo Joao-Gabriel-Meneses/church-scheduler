@@ -68,6 +68,28 @@ public class PeriodoService {
         return bloquearDoMes(ministerioId, mes, "destravar").destravarDisponibilidade();
     }
 
+    /**
+     * Publica a escala do período, com a linha bloqueada (a geração e o ajuste também bloqueiam).
+     *
+     * @return se publicou agora; falso se já estava publicada
+     * @throws NaoEncontradoException se o período não existe
+     */
+    @Transactional
+    public boolean publicarEscala(Long periodoId) {
+        return bloquearParaAlterar(periodoId).publicarEscala();
+    }
+
+    /**
+     * Volta a escala do período para rascunho, com a linha bloqueada.
+     *
+     * @return se reabriu agora; falso se já era rascunho
+     * @throws NaoEncontradoException se o período não existe
+     */
+    @Transactional
+    public boolean reabrirEscala(Long periodoId) {
+        return bloquearParaAlterar(periodoId).reabrirEscala();
+    }
+
     private Periodo bloquearDoMes(Long ministerioId, YearMonth mes, String acao) {
         var periodo = doMes(ministerioId, mes)
                 .orElseThrow(() -> RegraVioladaException.geral(Datas.mesPorExtenso(mes)
