@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <!--/*
-    A escala do mês para o gerente. A Toolbar troca o mês, mostra a trava, leva às regras e tem "Gerar escala", o
-    único primário da tela (durante a geração vira "Gerando escala" e o painel de andamento atualiza por htmx). Em
+    A escala do mês para o gerente. A Toolbar troca o mês, mostra a trava, leva às regras e tem a ação do estado da
+    escala: "Gerar escala" (primário) sem rascunho; "Publicar" (primário, abre o resumo) e "Regerar não fixadas"
+    (contorno, com confirmação) com rascunho; "Reabrir para rascunho" (contorno, com confirmação) depois de publicada.
+    Durante a geração vira "Gerando escala", o painel de andamento atualiza por htmx e as vagas não se abrem. Em
     cima, os alertas, o mais próximo primeiro: disponibilidade aberta, vagas vazias com o motivo e quem saiu da escala.
     Depois o resumo (StatCards), a grade (componentes/grade) e as escalas por pessoa, na região #escala
     (escala/fragments/escala), que o ajuste de uma vaga troca inteira por htmx.
@@ -16,8 +18,14 @@
         anteriorHref=@{/ministerios/{m}/escalas(m=${ministerio.id}, mes=${mesAnterior})},
         proximoHref=@{/ministerios/{m}/escalas(m=${ministerio.id}, mes=${proximoMes})},
         travada=${pagina.travada}, regrasHref=@{/ministerios/{m}/regras(m=${ministerio.id})},
-        acaoTexto=${pagina.temPeriodo and geracao == null ? 'Gerar escala' : null}, acaoIcone='sparkles',
-        acaoVariante=null, acaoFormulario='gerar-escala', acaoHref=null,
+        acaoTexto=${geracao != null or !pagina.temPeriodo ? null
+                : (!pagina.gerada ? 'Gerar escala' : (pagina.publicada ? 'Reabrir para rascunho' : 'Publicar'))},
+        acaoIcone=${!pagina.gerada ? 'sparkles' : (pagina.publicada ? 'rotate-ccw' : 'send')},
+        acaoVariante=${pagina.publicada ? 'outline' : null},
+        acaoFormulario=${pagina.gerada ? null : 'gerar-escala'}, acaoHref=null,
+        acaoAlvo=${!pagina.gerada ? null : (pagina.publicada ? 'reabrir-sheet' : 'publicar-sheet')},
+        outraTexto=${geracao == null and pagina.gerada and !pagina.publicada ? 'Regerar não fixadas' : null},
+        outraIcone='sparkles', outraAlvo='regerar-sheet',
         progresso=${geracao != null ? 'Gerando escala' : null})}"></div>
 
 <main class="flex flex-col gap-6">
@@ -37,6 +45,17 @@
             th:replace="~{escala/fragments/andamento :: andamento}"></section></th:block>
 
     <div th:replace="~{escala/fragments/escala :: regiao}"></div>
+
+    <th:block th:if="${pagina.gerada and !pagina.publicada and geracao == null}"><div th:replace="~{componentes/sheet ::
+            confirmacao(id='regerar-sheet', titulo='Regerar as vagas não fixadas?',
+            texto=|A geração refaz as vagas soltas de ${#strings.toLowerCase(nomeDoMes)}. As fixadas e as forçadas ficam
+            como estão.|, acao=@{/ministerios/{m}/escalas/gerar(m=${ministerio.id}, mes=${mes})},
+            confirmar='Regerar')}"></div></th:block>
+    <th:block th:if="${pagina.publicada}"><div th:replace="~{componentes/sheet :: confirmacao(id='reabrir-sheet',
+            titulo='Reabrir a escala para rascunho?',
+            texto=|A escala de ${#strings.toLowerCase(nomeDoMes)} sai da visão dos membros até você publicar de novo, e
+            a geração automática volta a valer.|,
+            acao=@{/ministerios/{m}/escalas/reabrir(m=${ministerio.id}, mes=${mes})}, confirmar='Reabrir')}"></div></th:block>
 </main>
 </body>
 </html>

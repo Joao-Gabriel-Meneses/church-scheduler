@@ -83,7 +83,8 @@ public class GeracaoDaEscala {
     /**
      * Começa a geração, ou devolve a que já está rodando no período (o segundo clique não dispara outra).
      *
-     * @throws RegraVioladaException se o mês não tem eventos por vir ou se a disponibilidade não está travada
+     * @throws RegraVioladaException se o mês não tem eventos por vir, se a disponibilidade não está travada ou se a
+     *     escala está publicada (a geração automática só volta depois de reabrir para rascunho)
      */
     public Andamento iniciar(Long ministerioId, YearMonth mes, UsuarioAutenticado autor) {
         var periodo = exigirPronto(ministerioId, mes);
@@ -119,6 +120,9 @@ public class GeracaoDaEscala {
         if (!periodo.isDisponibilidadeTravada()) {
             throw RegraVioladaException.geral("Trave a disponibilidade de " + nomeDoMes
                     + " antes de gerar a escala: a geração usa as respostas travadas.");
+        }
+        if (periodo.isEscalaPublicada()) {
+            throw RegraVioladaException.geral(publicada(nomeDoMes));
         }
         if (eventos.porVirDoMes(ministerioId, mes).isEmpty()) {
             throw RegraVioladaException.geral("Não há eventos por vir em " + nomeDoMes + ": não há escala para gerar.");
@@ -179,6 +183,12 @@ public class GeracaoDaEscala {
         } catch (RuntimeException erro) {
             falhou(andamento, erro);
         }
+    }
+
+    /** A recusa de gerar a escala publicada, aqui e na gravação. */
+    static String publicada(String nomeDoMes) {
+        return "A escala de " + nomeDoMes + " está publicada. Reabra para rascunho antes de gerar de novo: a geração"
+                + " automática não mexe na escala que os membros veem.";
     }
 
     private void falhou(Andamento andamento, Throwable erro) {

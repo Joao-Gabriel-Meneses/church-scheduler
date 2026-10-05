@@ -26,6 +26,22 @@ final class PaginasDeExemplo {
         return pagina(mes, true, true, true);
     }
 
+    /** O mês tem eventos, mas a escala ainda não foi gerada. */
+    static PaginaDaEscala naoGerada(YearMonth mes) {
+        return new PaginaDaEscala(
+                mes,
+                true,
+                true,
+                false,
+                "Rascunho",
+                false,
+                false,
+                List.of("Projeção", "Transmissão"),
+                List.of(),
+                List.of(),
+                new ResumoDaEscala(0, 0, 0, 1, 0, List.of()));
+    }
+
     static PaginaDaEscala semPeriodo(YearMonth mes) {
         return new PaginaDaEscala(
                 mes,

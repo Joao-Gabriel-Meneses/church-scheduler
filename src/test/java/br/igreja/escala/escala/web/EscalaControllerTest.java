@@ -29,6 +29,9 @@ import br.igreja.escala.escala.service.Andamento;
 import br.igreja.escala.escala.service.ConsultaDaEscala;
 import br.igreja.escala.escala.service.GeracaoDaEscala;
 import br.igreja.escala.escala.service.PaginaDaEscala;
+import br.igreja.escala.escala.service.PublicacaoDaEscala;
+import br.igreja.escala.escala.service.ResumoDaPublicacao;
+import br.igreja.escala.escala.service.ResumoDaPublicacao.Item;
 import br.igreja.escala.evento.service.EventoService;
 import br.igreja.escala.ministerio.Exemplos;
 import br.igreja.escala.ministerio.repository.MembresiaRepository;
@@ -37,6 +40,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,6 +73,9 @@ class EscalaControllerTest {
     GeracaoDaEscala geracao;
 
     @MockitoBean
+    PublicacaoDaEscala publicacao;
+
+    @MockitoBean
     MinisterioService ministerios;
 
     @MockitoBean
@@ -91,6 +98,17 @@ class EscalaControllerTest {
         when(consulta.doMes(1L, NOVEMBRO)).thenReturn(rascunho(true));
         when(geracao.andamento(anyLong(), any())).thenReturn(Optional.empty());
         when(geracao.retirarTerminada(anyLong(), any())).thenReturn(Optional.empty());
+        when(publicacao.resumo(1L, NOVEMBRO))
+                .thenReturn(new ResumoDaPublicacao(
+                        List.of(new Item(
+                                "Transmissão, 01/11 · Dom · 18h00 · Culto de domingo",
+                                "Ninguém habilitado em Transmissão marcou Pode.")),
+                        List.of(new Item(
+                                "Carla Dias em Projeção, 05/11 · Qui · 19h30 · Culto de quinta",
+                                "DISPONIBILIDADE · Combinou por telefone")),
+                        List.of(new Item(
+                                "Equilíbrio · EQUILIBRIO_DE_CARGA",
+                                "Quem mais serve tem 2 escalas por vir; quem menos, 0."))));
     }
 
     @Test
@@ -127,16 +145,88 @@ class EscalaControllerTest {
     }
 
     @Test
-    void paginaMostraOGerarEscalaComoPrimarioAGradeEOsAlertas() throws Exception {
+    void semRascunhoOGerarEscalaEOPrimario() throws Exception {
+        when(consulta.doMes(1L, NOVEMBRO)).thenReturn(PaginasDeExemplo.naoGerada(NOVEMBRO));
+
+        assertThat(pagina(get("/ministerios/1/escalas").with(user(GERENTE_DA_MIDIA))))
+                .contains("<button type=\"submit\" class=\"rt-btn rt-btn--primary\" form=\"gerar-escala\">")
+                .contains("Gerar escala", "A escala de novembro ainda não foi gerada.")
+                .contains("<form id=\"gerar-escala\" action=\"/ministerios/1/escalas/gerar\" method=\"post\" hidden>")
+                .doesNotContain("Publicar", "Regerar não fixadas", "publicar-sheet");
+        verify(publicacao, never()).resumo(anyLong(), any());
+    }
+
+    @Test
+    void comRascunhoPublicarEOPrimarioERegerarPedeConfirmacao() throws Exception {
+        String html = pagina(get("/ministerios/1/escalas").with(user(GERENTE_DA_MIDIA)));
+
+        assertThat(html)
+                .contains("<button type=\"button\" class=\"rt-btn rt-btn--primary\" popovertarget=\"publicar-sheet\">")
+                .contains("<button type=\"button\" class=\"rt-btn rt-btn--outline\" popovertarget=\"regerar-sheet\">")
+                .contains("Regerar não fixadas", "Regerar as vagas não fixadas?")
+                .contains("As fixadas e as forçadas ficam como estão.")
+                .contains("action=\"/ministerios/1/escalas/gerar?mes=2026-11\"")
+                .doesNotContain("Gerar escala", "reabrir-sheet");
+    }
+
+    @Test
+    void resumoAntesDePublicarMostraVaziasForcadasERegras() throws Exception {
+        assertThat(pagina(get("/ministerios/1/escalas").with(user(GERENTE_DA_MIDIA))))
+                .contains("<div id=\"publicar-sheet\" popover", "Publicar a escala de novembro?")
+                .contains("Vagas vazias (1)", "Transmissão, 01/11 · Dom · 18h00 · Culto de domingo")
+                .contains("Vagas forçadas (1)", "Carla Dias em Projeção", "DISPONIBILIDADE · Combinou por telefone")
+                .contains("Equilíbrio · EQUILIBRIO_DE_CARGA")
+                .contains("action=\"/ministerios/1/escalas/publicar?mes=2026-11\"", "Publicar mesmo assim");
+    }
+
+    @Test
+    void publicadaMostraOBadgeEReabrirComConfirmacaoSemPrimario() throws Exception {
+        when(consulta.doMes(1L, NOVEMBRO)).thenReturn(PaginasDeExemplo.publicada(NOVEMBRO));
+
+        assertThat(pagina(get("/ministerios/1/escalas").with(user(GERENTE_DA_MIDIA))))
+                .contains("class=\"rt-badge rt-badge--published\"", "Publicada")
+                .contains("<button type=\"button\" class=\"rt-btn rt-btn--outline\" popovertarget=\"reabrir-sheet\">")
+                .contains("Reabrir para rascunho", "sai da visão dos membros")
+                .contains("action=\"/ministerios/1/escalas/reabrir?mes=2026-11\"")
+                .doesNotContain("rt-btn--primary", "publicar-sheet", "regerar-sheet");
+        verify(publicacao, never()).resumo(anyLong(), any());
+    }
+
+    @Test
+    void publicarEReabrirVoltamParaAPaginaComOAviso() throws Exception {
+        when(publicacao.publicar(1L, NOVEMBRO, GERENTE_DA_MIDIA)).thenReturn("Escala de novembro publicada");
+        when(publicacao.reabrir(1L, NOVEMBRO, GERENTE_DA_MIDIA))
+                .thenThrow(RegraVioladaException.geral("Novembro 2026 ainda não tem eventos."));
+
+        mvc.perform(acao(1, "publicar").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(redirectedUrl("/ministerios/1/escalas?mes=2026-11"))
+                .andExpect(flash().attribute("sucesso", "Escala de novembro publicada"));
+        mvc.perform(acao(1, "reabrir").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(flash().attribute("recusa", "Novembro 2026 ainda não tem eventos."));
+    }
+
+    @Test
+    void soOGerenteDoMinisterioPublicaOuReabreInclusivePorPostDireto() throws Exception {
+        for (String acao : List.of("publicar", "reabrir")) {
+            mvc.perform(acao(1, acao).with(user(MEMBRO))).andExpect(status().isForbidden());
+            mvc.perform(acao(2, acao).with(user(GERENTE_DA_MIDIA))).andExpect(status().isForbidden());
+            mvc.perform(post("/ministerios/1/escalas/" + acao)
+                            .param("mes", "2026-11")
+                            .with(user(GERENTE_DA_MIDIA)))
+                    .andExpect(status().isForbidden());
+        }
+        verify(publicacao, never()).publicar(anyLong(), any(), any());
+        verify(publicacao, never()).reabrir(anyLong(), any(), any());
+    }
+
+    @Test
+    void paginaMostraAGradeEOsAlertas() throws Exception {
         String html = pagina(get("/ministerios/1/escalas").with(user(GERENTE_DA_MIDIA)));
 
         assertThat(html)
                 .contains("<title>Mídia — Novembro · Escala</title>", "<h1 class=\"text-title\">Mídia — Novembro</h1>")
                 .contains("class=\"rt-badge rt-badge--draft\"", "Rascunho")
-                .contains("<button type=\"submit\" class=\"rt-btn rt-btn--primary\" form=\"gerar-escala\">")
-                .contains("Gerar escala", "Disponibilidade travada")
-                .contains("<form id=\"gerar-escala\" action=\"/ministerios/1/escalas/gerar\" method=\"post\" hidden>")
-                .contains("name=\"mes\" value=\"2026-11\"")
+                .contains("Disponibilidade travada")
                 .contains("href=\"/ministerios/1/regras\"")
                 .contains("href=\"/ministerios/1/escalas?mes=2026-10\"", "href=\"/ministerios/1/escalas?mes=2026-12\"")
                 .contains("Transmissão, 01/11 · Dom · 18h00 · Culto de domingo")
@@ -295,6 +385,12 @@ class EscalaControllerTest {
 
     private static MockHttpServletRequestBuilder gerar(long ministerioId) {
         return post("/ministerios/{m}/escalas/gerar", ministerioId)
+                .param("mes", "2026-11")
+                .with(csrf());
+    }
+
+    private static MockHttpServletRequestBuilder acao(long ministerioId, String acao) {
+        return post("/ministerios/{m}/escalas/" + acao, ministerioId)
                 .param("mes", "2026-11")
                 .with(csrf());
     }

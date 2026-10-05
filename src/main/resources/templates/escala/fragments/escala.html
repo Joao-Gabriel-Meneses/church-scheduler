@@ -86,6 +86,54 @@
         </div>
     </div>
 
+    <div th:if="${resumoDaPublicacao != null}" id="publicar-sheet" popover class="rt-sheet md:mx-auto md:max-w-lg"
+         role="dialog" aria-labelledby="publicar-titulo">
+        <div class="rt-sheet__cabeca">
+            <p id="publicar-titulo" class="rt-sheet__titulo"
+               th:text="|Publicar a escala de ${#strings.toLowerCase(nomeDoMes)}?|">Publicar a escala de outubro?</p>
+            <button type="button" class="rt-icon-btn" popovertarget="publicar-sheet" popovertargetaction="hide"
+                    aria-label="Fechar" title="Fechar"><svg th:replace="~{componentes/icone :: icone('x')}"></svg></button>
+        </div>
+        <p class="text-ink-muted">Os membros passam a ver a escala. Depois de publicada, cada ajuste vale na hora e fica
+            na auditoria; a geração automática só volta se você reabrir para rascunho.</p>
+        <section class="flex flex-col gap-1" aria-labelledby="resumo-vazias">
+            <h2 id="resumo-vazias" class="text-label text-ink-muted"
+                th:text="|Vagas vazias (${resumoDaPublicacao.vazias.size()})|">Vagas vazias (1)</h2>
+            <p th:unless="${resumoDaPublicacao.temVazias()}">Nenhuma vaga obrigatória vazia.</p>
+            <ul class="flex flex-col gap-1">
+                <li th:each="item : ${resumoDaPublicacao.vazias}"><span th:text="${item.titulo}">Transmissão, 12/10 ·
+                        Dom · 18h00</span><br><span class="text-label text-ink-muted" th:text="${item.detalhe}">Ninguém
+                        marcou Pode.</span></li>
+            </ul>
+        </section>
+        <section class="flex flex-col gap-1" aria-labelledby="resumo-forcadas">
+            <h2 id="resumo-forcadas" class="text-label text-ink-muted"
+                th:text="|Vagas forçadas (${resumoDaPublicacao.forcadas.size()})|">Vagas forçadas (0)</h2>
+            <p th:if="${resumoDaPublicacao.forcadas.isEmpty()}">Nenhuma vaga forçada.</p>
+            <ul class="flex flex-col gap-1">
+                <li th:each="item : ${resumoDaPublicacao.forcadas}"><span th:text="${item.titulo}">Ana Souza em
+                        Projeção</span><br><span class="text-label text-ink-muted" th:text="${item.detalhe}">LIMITE ·
+                        justificativa</span></li>
+            </ul>
+        </section>
+        <section th:unless="${resumoDaPublicacao.regras.isEmpty()}" class="flex flex-col gap-1"
+                 aria-labelledby="resumo-regras">
+            <h2 id="resumo-regras" class="text-label text-ink-muted">Regras de prioridade e preferência mais
+                pesadas</h2>
+            <ul class="flex flex-col gap-1">
+                <li th:each="item : ${resumoDaPublicacao.regras}"><span th:text="${item.titulo}">Equilíbrio</span><br><span
+                        class="text-label text-ink-muted" th:text="${item.detalhe}">Quem mais serve tem 4.</span></li>
+            </ul>
+        </section>
+        <form th:action="@{/ministerios/{m}/escalas/publicar(m=${ministerio.id}, mes=${mes})}" method="post"
+              class="flex flex-col gap-2">
+            <button type="button" class="rt-btn rt-btn--secondary w-full justify-center" popovertarget="publicar-sheet"
+                    popovertargetaction="hide">Cancelar</button>
+            <button type="submit" class="rt-btn rt-btn--dark w-full justify-center"
+                    th:text="${resumoDaPublicacao.temVazias()} ? 'Publicar mesmo assim' : 'Publicar'">Publicar</button>
+        </form>
+    </div>
+
     <th:block th:if="${toast != null}"><div th:replace="~{componentes/toast :: toastOob(${toast})}"></div></th:block>
 </div>
 </body>

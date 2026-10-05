@@ -5,6 +5,7 @@ import br.igreja.escala.compartilhado.EdicaoConcorrenteException;
 import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.escala.service.AjusteDaEscala;
 import br.igreja.escala.escala.service.ConsultaDaEscala;
+import br.igreja.escala.escala.service.PublicacaoDaEscala;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import br.igreja.escala.ministerio.web.GerenteDoMinisterio;
@@ -42,11 +43,17 @@ class VagaController {
 
     private final AjusteDaEscala ajuste;
     private final ConsultaDaEscala consulta;
+    private final PublicacaoDaEscala publicacao;
     private final MinisterioService ministerios;
 
-    VagaController(AjusteDaEscala ajuste, ConsultaDaEscala consulta, MinisterioService ministerios) {
+    VagaController(
+            AjusteDaEscala ajuste,
+            ConsultaDaEscala consulta,
+            PublicacaoDaEscala publicacao,
+            MinisterioService ministerios) {
         this.ajuste = ajuste;
         this.consulta = consulta;
+        this.publicacao = publicacao;
         this.ministerios = ministerios;
     }
 
@@ -191,7 +198,9 @@ class VagaController {
         model.addAttribute("ministerio", ministerios.buscar(pedido.ministerioId()));
         model.addAttribute("mes", pedido.mes());
         model.addAttribute("nomeDoMes", Datas.nomeDoMes(pedido.mes()));
-        model.addAttribute("pagina", consulta.doMes(pedido.ministerioId(), pedido.mes()));
+        var pagina = consulta.doMes(pedido.ministerioId(), pedido.mes());
+        model.addAttribute("pagina", pagina);
+        EscalaController.adicionarResumoDaPublicacao(pedido.ministerioId(), pagina, publicacao, model);
     }
 
     private static String escalas(Pedido pedido) {

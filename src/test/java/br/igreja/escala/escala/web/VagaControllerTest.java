@@ -28,6 +28,7 @@ import br.igreja.escala.escala.domain.TipoDeRegra;
 import br.igreja.escala.escala.service.AjusteDaEscala;
 import br.igreja.escala.escala.service.Candidato;
 import br.igreja.escala.escala.service.ConsultaDaEscala;
+import br.igreja.escala.escala.service.PublicacaoDaEscala;
 import br.igreja.escala.escala.service.VagaEmAjuste;
 import br.igreja.escala.escala.solver.ValidacaoDaVaga.Violacao;
 import br.igreja.escala.ministerio.Exemplos;
@@ -60,6 +61,9 @@ class VagaControllerTest {
 
     @MockitoBean
     ConsultaDaEscala consulta;
+
+    @MockitoBean
+    PublicacaoDaEscala publicacao;
 
     @MockitoBean
     MinisterioService ministerios;

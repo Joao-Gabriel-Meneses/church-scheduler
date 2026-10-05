@@ -46,10 +46,19 @@ class GravacaoDaEscala {
 
     /**
      * Cria as vagas que faltam nos eventos por vir, apaga as que saíram da escala e monta o problema com as vagas soltas
-     * vazias. Roda na fila das gerações, quando chega a vez desta, então lê o que as anteriores já gravaram.
+     * vazias. Roda na fila das gerações, quando chega a vez desta, então lê o que as anteriores já gravaram. Bloqueia o
+     * período antes de ler, como o ajuste manual: um ajuste que estava gravando termina antes, e a geração o enxerga.
+     *
+     * @throws RegraVioladaException se a escala foi publicada depois do clique em gerar
      */
     @Transactional
     public EscalaDoPeriodo preparar(Long ministerioId, YearMonth mes) {
+        var periodo = periodos.doMes(ministerioId, mes);
+        if (periodo.isPresent()
+                && periodos.bloquearParaAlterar(periodo.get().getId()).isEscalaPublicada()) {
+            throw RegraVioladaException.geral(
+                    GeracaoDaEscala.publicada(Datas.nomeDoMes(mes).toLowerCase(Locale.ROOT)));
+        }
         var dados = leitura.ler(ministerioId, mes);
         var reconciliacao = MontagemDaEscala.reconciliar(dados);
         vagas.deleteAll(reconciliacao.apagar());
@@ -64,7 +73,7 @@ class GravacaoDaEscala {
      * disponibilidade foi destravada durante a geração, nada muda.
      *
      * @return quantas vagas ficaram preenchidas
-     * @throws RegraVioladaException se a disponibilidade foi destravada no meio
+     * @throws RegraVioladaException se a disponibilidade foi destravada ou a escala publicada no meio
      */
     @Transactional
     public int gravar(EscalaDoPeriodo solucao, Andamento andamento, Duration duracao) {
@@ -73,6 +82,9 @@ class GravacaoDaEscala {
         if (!periodo.isDisponibilidadeTravada()) {
             throw RegraVioladaException.geral("A disponibilidade de " + nomeDoMes
                     + " foi destravada durante a geração, e a escala não mudou. Trave de novo e gere a escala.");
+        }
+        if (periodo.isEscalaPublicada()) {
+            throw RegraVioladaException.geral(GeracaoDaEscala.publicada(nomeDoMes));
         }
         Map<Long, Vaga> gravadas = vagas
                 .findAllById(solucao.getVagas().stream()
