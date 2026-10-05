@@ -110,13 +110,26 @@ class VagasIT {
     void forcadaSoComPessoaEJustificativa() {
         var vaga = vagas.saveAndFlush(new Vaga(eventoId, funcaoId, 1));
 
-        assertThatThrownBy(() -> jdbc.update("update vaga set forcada = 1 where id = ?", vaga.getId()))
+        assertThatThrownBy(() -> jdbc.update("update vaga set forcada = 1, fixada = 1 where id = ?", vaga.getId()))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("CK_VAGA_FORCADA_JUSTIFICADA");
         jdbc.update(
-                "update vaga set forcada = 1, usuario_id = ?, justificativa = 'Só ela opera a mesa nova' where id = ?",
+                "update vaga set forcada = 1, fixada = 1, usuario_id = ?, justificativa = 'Só ela opera a mesa nova'"
+                        + " where id = ?",
                 anaId,
                 vaga.getId());
+    }
+
+    @Test
+    void forcadaESempreFixada() {
+        var vaga = vagas.saveAndFlush(new Vaga(eventoId, funcaoId, 1));
+
+        assertThatThrownBy(() -> jdbc.update(
+                        "update vaga set forcada = 1, fixada = 0, usuario_id = ?, justificativa = 'Motivo' where id = ?",
+                        anaId,
+                        vaga.getId()))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("CK_VAGA_FORCADA_FIXADA");
     }
 
     @Test
