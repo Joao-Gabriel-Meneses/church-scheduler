@@ -25,16 +25,10 @@ import br.igreja.escala.TesteDeRotaDoGerente;
 import br.igreja.escala.compartilhado.Fuso;
 import br.igreja.escala.compartilhado.NaoEncontradoException;
 import br.igreja.escala.compartilhado.RegraVioladaException;
-import br.igreja.escala.escala.service.AlertaDaEscala;
 import br.igreja.escala.escala.service.Andamento;
-import br.igreja.escala.escala.service.CargaDaPessoa;
-import br.igreja.escala.escala.service.CelulaDaGrade;
 import br.igreja.escala.escala.service.ConsultaDaEscala;
 import br.igreja.escala.escala.service.GeracaoDaEscala;
-import br.igreja.escala.escala.service.LinhaDaGrade;
 import br.igreja.escala.escala.service.PaginaDaEscala;
-import br.igreja.escala.escala.service.ResumoDaEscala;
-import br.igreja.escala.escala.service.SlotDaGrade;
 import br.igreja.escala.evento.service.EventoService;
 import br.igreja.escala.ministerio.Exemplos;
 import br.igreja.escala.ministerio.repository.MembresiaRepository;
@@ -43,7 +37,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZonedDateTime;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -152,6 +145,24 @@ class EscalaControllerTest {
                 .contains("<table class=\"rt-table rt-sched\">", "<tr class=\"is-alert\">", "Ana Souza")
                 .contains("Escalas por pessoa", "1 escala")
                 .doesNotContain("Disponibilidade de novembro aberta", "id=\"andamento\"");
+    }
+
+    @Test
+    void cadaVagaAjustavelAbreNoSheetPorHtmxOuNaPaginaDaVaga() throws Exception {
+        assertThat(pagina(get("/ministerios/1/escalas").with(user(GERENTE_DA_MIDIA))))
+                .contains("<a class=\"rt-slot\" href=\"/ministerios/1/escalas/vagas/7?mes=2026-11\"")
+                .contains("hx-get=\"/ministerios/1/escalas/vagas/8?mes=2026-11\" hx-target=\"#vaga-conteudo\"")
+                .contains("aria-label=\"Vaga vazia. Ajustar a vaga\"")
+                .contains("<div id=\"vaga-sheet\" popover", "id=\"vaga-conteudo\"");
+    }
+
+    @Test
+    void semAjusteAsVagasNaoSaoLinks() throws Exception {
+        when(consulta.doMes(1L, NOVEMBRO)).thenReturn(PaginasDeExemplo.rascunho(NOVEMBRO, true, false));
+
+        assertThat(pagina(get("/ministerios/1/escalas").with(user(GERENTE_DA_MIDIA))))
+                .doesNotContain("/escalas/vagas/")
+                .contains("<span class=\"rt-slot rt-slot--empty\">");
     }
 
     @Test
@@ -265,42 +276,11 @@ class EscalaControllerTest {
     }
 
     private static PaginaDaEscala rascunho(boolean travada) {
-        var linha = new LinhaDaGrade(
-                "01",
-                "Dom",
-                "Culto de domingo",
-                "18h00",
-                true,
-                List.of(
-                        new CelulaDaGrade(
-                                "Projeção", true, List.of(SlotDaGrade.de("Ana Souza", "Experiente", false, false))),
-                        new CelulaDaGrade("Transmissão", true, List.of(SlotDaGrade.vazia(true)))));
-        return new PaginaDaEscala(
-                NOVEMBRO,
-                true,
-                travada,
-                true,
-                "Rascunho",
-                List.of("Projeção", "Transmissão"),
-                List.of(linha),
-                List.of(new AlertaDaEscala(
-                        "Transmissão, 01/11 · Dom · 18h00 · Culto de domingo",
-                        "Ninguém habilitado em Transmissão marcou Pode.",
-                        "Regra: DISPONIBILIDADE")),
-                new ResumoDaEscala(2, 1, 1, 1, 1, List.of(new CargaDaPessoa("Ana Souza", "AS", 1))));
+        return PaginasDeExemplo.rascunho(NOVEMBRO, travada, true);
     }
 
     private static PaginaDaEscala semPeriodo() {
-        return new PaginaDaEscala(
-                NOVEMBRO,
-                false,
-                false,
-                false,
-                null,
-                List.of(),
-                List.of(),
-                List.of(),
-                new ResumoDaEscala(0, 0, 0, 0, 0, List.of()));
+        return PaginasDeExemplo.semPeriodo(NOVEMBRO);
     }
 
     private String pagina(MockHttpServletRequestBuilder requisicao) throws Exception {

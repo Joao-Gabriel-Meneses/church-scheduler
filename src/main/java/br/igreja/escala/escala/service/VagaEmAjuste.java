@@ -38,6 +38,11 @@ public record VagaEmAjuste(
         return ocupante == null;
     }
 
+    /** As iniciais de quem está na vaga, para o avatar; nulo se vazia. */
+    public String iniciais() {
+        return ocupante == null ? null : SlotDaGrade.iniciais(ocupante);
+    }
+
     /** "Projeção, 12/10 · Dom · 18h00". */
     public String titulo() {
         return funcao + ", " + quando;

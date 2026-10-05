@@ -3,7 +3,8 @@
     A escala do mês para o gerente. A Toolbar troca o mês, mostra a trava, leva às regras e tem "Gerar escala", o
     único primário da tela (durante a geração vira "Gerando escala" e o painel de andamento atualiza por htmx). Em
     cima, os alertas, o mais próximo primeiro: disponibilidade aberta, vagas vazias com o motivo e quem saiu da escala.
-    Depois o resumo (StatCards), a grade (componentes/grade, só leitura nesta fase) e as escalas por pessoa.
+    Depois o resumo (StatCards), a grade (componentes/grade) e as escalas por pessoa, na região #escala
+    (escala/fragments/escala), que o ajuste de uma vaga troca inteira por htmx.
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layouts/gerente :: pagina(~{::title}, ~{::#barra}, ~{::main})}">
@@ -35,70 +36,7 @@
     <th:block th:if="${geracao != null}"><section
             th:replace="~{escala/fragments/andamento :: andamento}"></section></th:block>
 
-    <div th:if="${recusa != null or (pagina.temPeriodo and !pagina.travada) or !pagina.alertas.isEmpty()}"
-         class="flex flex-col gap-2">
-        <th:block th:if="${recusa != null}"><div th:replace="~{componentes/alerta :: alerta(titulo=${recusa},
-                corpo=null, regra=null, acaoTexto=null, icone=null)}"></div></th:block>
-        <th:block th:if="${pagina.temPeriodo and !pagina.travada}"><div th:replace="~{componentes/alerta ::
-                alerta(titulo=|Disponibilidade de ${#strings.toLowerCase(nomeDoMes)} aberta|,
-                corpo='Trave a disponibilidade para gerar a escala: a geração usa as respostas travadas.',
-                regra=null, acaoTexto='Ver disponibilidade',
-                acaoHref=@{/ministerios/{m}/disponibilidade(m=${ministerio.id}, mes=${mes})}, icone='lock-open')}"></div></th:block>
-        <th:block th:each="alerta : ${pagina.alertas}"><div th:replace="~{componentes/alerta ::
-                alerta(titulo=${alerta.titulo}, corpo=${alerta.corpo}, regra=${alerta.regra}, acaoTexto=null,
-                icone=null)}"></div></th:block>
-    </div>
-
-    <div th:unless="${pagina.temPeriodo}" class="rt-panel flex flex-col items-start gap-3 p-6">
-        <p class="text-ink-muted" th:text="|${nomeDoMes} ainda não tem eventos. Crie os eventos do mês para gerar a
-                escala.|">Outubro ainda não tem eventos.</p>
-        <a th:replace="~{componentes/botao :: botao(texto='Ver eventos', variante='outline',
-                href=@{/ministerios/{m}/eventos(m=${ministerio.id}, mes=${mes})}, icone=null, classe=null)}"></a>
-    </div>
-
-    <p th:if="${pagina.temPeriodo and !pagina.gerada}" class="rt-panel p-6 text-ink-muted"
-       th:text="|A escala de ${#strings.toLowerCase(nomeDoMes)} ainda não foi gerada.|">A escala de outubro ainda não foi
-        gerada.</p>
-
-    <th:block th:if="${pagina.gerada}">
-        <div class="rt-stats">
-            <div th:replace="~{componentes/estatistica :: cartao(rotulo='Vagas preenchidas',
-                    valor=${pagina.resumo.preenchidas},
-                    sub=|de ${pagina.resumo.vagas} · ${pagina.resumo.vazias} ${pagina.resumo.vazias == 1 ? 'vazia' : 'vazias'}|,
-                    href=null)}"></div>
-            <div th:replace="~{componentes/estatistica :: cartao(rotulo='Eventos no mês', valor=${pagina.resumo.eventos},
-                    sub=|em ${#strings.toLowerCase(nomeDoMes)}|, href=null)}"></div>
-            <div th:replace="~{componentes/estatistica :: cartao(rotulo='Maior carga', valor=${pagina.resumo.maiorCarga},
-                    sub='escalas de uma pessoa no mês', href='#por-pessoa')}"></div>
-        </div>
-
-        <div th:replace="~{componentes/grade :: grade(funcoes=${pagina.funcoes}, linhas=${pagina.linhas})}"></div>
-
-        <section class="flex flex-col gap-3" aria-labelledby="por-pessoa">
-            <h2 id="por-pessoa" class="text-heading">Escalas por pessoa</h2>
-            <ul class="rt-list md:hidden">
-                <li th:each="carga : ${pagina.resumo.porPessoa}"><div th:replace="~{componentes/lista :: linha(
-                        titulo=${carga.nome}, sub=${carga.descricao()}, icone='user', href=null,
-                        selecionada=false)}"></div></li>
-            </ul>
-            <div class="rt-panel hidden md:block">
-                <table class="rt-table">
-                    <thead>
-                    <tr>
-                        <th scope="col">Pessoa</th>
-                        <th scope="col">Escalas no mês</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="carga : ${pagina.resumo.porPessoa}">
-                        <td><div th:replace="~{componentes/tabela :: pessoa(${carga.nome}, ${carga.iniciais})}"></div></td>
-                        <td th:text="${carga.escalas}">3</td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    </th:block>
+    <div th:replace="~{escala/fragments/escala :: regiao}"></div>
 </main>
 </body>
 </html>

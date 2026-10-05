@@ -1,8 +1,14 @@
 package br.igreja.escala.escala.service;
 
+import ai.timefold.solver.core.api.score.HardMediumSoftScore;
+import ai.timefold.solver.core.api.solver.SolutionManager;
+import ai.timefold.solver.core.api.solver.SolverManager;
 import br.igreja.escala.compartilhado.Datas;
 import br.igreja.escala.escala.domain.Vaga;
 import br.igreja.escala.escala.solver.DiagnosticoDaVaga;
+import br.igreja.escala.escala.solver.EscalaDoPeriodo;
+import br.igreja.escala.escala.solver.ValidacaoDaVaga;
+import br.igreja.escala.escala.solver.ValidacaoDaVaga.Violacao;
 import br.igreja.escala.evento.domain.Evento;
 import br.igreja.escala.evento.domain.StatusDaEscala;
 import br.igreja.escala.identidade.service.UsuarioResumo;
@@ -19,20 +25,35 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * A página de escalas: a grade do mês (só leitura nesta fase), os alertas (vagas vazias explicadas e quem saiu da
- * escala) e o resumo. A explicação é calculada na hora, com os dados de agora.
+ * A página de escalas: a grade do mês, os alertas (vagas vazias explicadas, vagas cuja pessoa viola uma regra e quem
+ * saiu da escala) e o resumo. A explicação e os avisos são calculados na hora, com os dados de agora; os avisos vêm do
+ * solver (ValidacaoDaVaga).
  */
 @Service
 public class ConsultaDaEscala {
 
     private final LeituraDoPeriodo leitura;
+    private final GeracoesEmAndamento andamentos;
+    private final SolutionManager<EscalaDoPeriodo, HardMediumSoftScore> solutionManager;
 
-    ConsultaDaEscala(LeituraDoPeriodo leitura) {
+    @Autowired
+    ConsultaDaEscala(
+            LeituraDoPeriodo leitura, GeracoesEmAndamento andamentos, SolverManager<EscalaDoPeriodo> solverManager) {
+        this(leitura, andamentos, SolutionManager.create(solverManager));
+    }
+
+    ConsultaDaEscala(
+            LeituraDoPeriodo leitura,
+            GeracoesEmAndamento andamentos,
+            SolutionManager<EscalaDoPeriodo, HardMediumSoftScore> solutionManager) {
         this.leitura = leitura;
+        this.andamentos = andamentos;
+        this.solutionManager = solutionManager;
     }
 
     /**
@@ -40,10 +61,29 @@ public class ConsultaDaEscala {
      */
     @Transactional(readOnly = true)
     public PaginaDaEscala doMes(Long ministerioId, YearMonth mes) {
-        return montar(leitura.ler(ministerioId, mes));
+        var dados = leitura.ler(ministerioId, mes);
+        if (dados.periodo() == null) {
+            return montar(dados);
+        }
+        var escala = MontagemDaEscala.montar(dados, false);
+        var avisos = new ValidacaoDaVaga(solutionManager, escala, dados.regras(), dados.nomesDosNiveis()).avisos();
+        boolean gerando = andamentos
+                .doPeriodo(dados.periodo().getId())
+                .filter(Andamento::isGerando)
+                .isPresent();
+        return montar(dados, avisos, !gerando);
     }
 
+    /** Sem avisos e sem ajuste (a grade como o membro a vê). */
     static PaginaDaEscala montar(DadosDoPeriodo dados) {
+        return montar(dados, Map.of(), false);
+    }
+
+    /**
+     * @param avisos por vaga, as regras que a pessoa dela viola agora
+     * @param ajustavel as vagas por vir se abrem para o ajuste manual
+     */
+    static PaginaDaEscala montar(DadosDoPeriodo dados, Map<Long, List<Violacao>> avisos, boolean ajustavel) {
         if (dados.periodo() == null) {
             return PaginaDaEscala.semPeriodo(dados.mes());
         }
@@ -74,7 +114,14 @@ public class ConsultaDaEscala {
                         .filter(vaga -> vaga.getEventoId().equals(evento.getId())
                                 && vaga.getFuncaoId().equals(funcao.getId()))
                         .sorted(Comparator.comparing(Vaga::getPosicao))
-                        .map(vaga -> slot(vaga, funcao, pessoas, niveis, dados.nomesDosNiveis()))
+                        .map(vaga -> slot(
+                                vaga,
+                                funcao,
+                                pessoas,
+                                niveis,
+                                dados.nomesDosNiveis(),
+                                avisos.getOrDefault(vaga.getId(), List.of()),
+                                ajustavel && dados.porVir(evento)))
                         .toList();
                 comVagaVazia |=
                         dados.porVir(evento) && slots.stream().anyMatch(slot -> slot.vazia() && slot.obrigatoria());
@@ -91,16 +138,20 @@ public class ConsultaDaEscala {
 
         var alertas = new ArrayList<Alerta>();
         alertas.addAll(vagasVazias(dados));
+        alertas.addAll(foraDaRegra(dados, eventos, funcoes, pessoas, avisos));
         alertas.addAll(quemSaiu(dados, eventos, funcoes, pessoas));
         alertas.sort(Comparator.comparing(Alerta::quando));
 
         var periodo = dados.periodo();
+        boolean gerada = !vigentes.isEmpty();
         return new PaginaDaEscala(
                 dados.mes(),
                 true,
                 periodo.isDisponibilidadeTravada(),
-                !vigentes.isEmpty(),
+                gerada,
                 periodo.getStatusDaEscala() == StatusDaEscala.PUBLICADA ? "Publicada" : "Rascunho",
+                periodo.isEscalaPublicada(),
+                gerada && ajustavel,
                 dados.funcoes().stream().map(Funcao::getNome).toList(),
                 linhas,
                 alertas.stream().map(Alerta::alerta).toList(),
@@ -112,17 +163,60 @@ public class ConsultaDaEscala {
             Funcao funcao,
             Map<Long, UsuarioResumo> pessoas,
             Map<String, Long> niveis,
-            Map<Long, String> nomesDosNiveis) {
+            Map<Long, String> nomesDosNiveis,
+            List<Violacao> avisos,
+            boolean editavel) {
         if (vaga.isVazia()) {
-            return SlotDaGrade.vazia(vaga.getPosicao() <= funcao.getQtdMin());
+            return SlotDaGrade.vazia(
+                    vaga.getId(), vaga.getVersao(), vaga.getPosicao() <= funcao.getQtdMin(), vaga.isFixada(), editavel);
         }
         var pessoa = pessoas.get(vaga.getUsuarioId());
         Long nivel = niveis.get(vaga.getUsuarioId() + "/" + funcao.getId());
         return SlotDaGrade.de(
+                vaga.getId(),
+                vaga.getVersao(),
                 pessoa == null ? "Pessoa removida" : pessoa.nome(),
                 nivel == null ? null : nomesDosNiveis.get(nivel),
                 vaga.isFixada(),
-                vaga.isForcada());
+                vaga.isForcada(),
+                vaga.getJustificativa(),
+                avisos.isEmpty() ? null : regras(avisos),
+                editavel);
+    }
+
+    /**
+     * As vagas dos eventos por vir cuja pessoa viola uma regra rígida como a escala está, sem contar as forçadas (o
+     * gerente já justificou): uma alteração em outra vaga, ou uma regra que mudou.
+     */
+    private static List<Alerta> foraDaRegra(
+            DadosDoPeriodo dados,
+            Map<Long, Evento> eventos,
+            Map<Long, Funcao> funcoes,
+            Map<Long, UsuarioResumo> pessoas,
+            Map<Long, List<Violacao>> avisos) {
+        var alertas = new ArrayList<Alerta>();
+        for (Vaga vaga : dados.vagas()) {
+            var violacoes = avisos.get(vaga.getId());
+            var evento = eventos.get(vaga.getEventoId());
+            if (violacoes == null || vaga.isForcada() || evento == null || !dados.porVir(evento)) {
+                continue;
+            }
+            alertas.add(new Alerta(
+                    evento.getInicio(),
+                    new AlertaDaEscala(
+                            funcoes.get(vaga.getFuncaoId()).getNome() + ", " + quando(evento.getInicio()) + " · "
+                                    + evento.getNome() + " — " + nome(pessoas.get(vaga.getUsuarioId()))
+                                    + " fora da regra",
+                            violacoes.stream().map(Violacao::porQue).collect(Collectors.joining(" "))
+                                    + " Troque a pessoa ou force a vaga com uma justificativa.",
+                            (violacoes.size() == 1 ? "Regra: " : "Regras: ") + regras(violacoes))));
+        }
+        return alertas;
+    }
+
+    /** "LIMITE_POR_PERIODO · DISPONIBILIDADE". */
+    private static String regras(List<Violacao> violacoes) {
+        return violacoes.stream().map(violacao -> violacao.regra().name()).collect(Collectors.joining(" · "));
     }
 
     /** As vagas obrigatórias vazias dos eventos por vir, com o motivo (DiagnosticoDaVaga). */

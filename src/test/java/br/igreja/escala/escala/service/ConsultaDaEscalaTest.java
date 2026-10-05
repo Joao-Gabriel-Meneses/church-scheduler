@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
 
 import br.igreja.escala.escala.domain.RegrasDoMinisterio;
+import br.igreja.escala.escala.domain.TipoDeRegra;
 import br.igreja.escala.escala.domain.Vaga;
+import br.igreja.escala.escala.solver.ValidacaoDaVaga.Violacao;
 import br.igreja.escala.evento.ExemplosDeEvento;
 import br.igreja.escala.evento.domain.Evento;
 import br.igreja.escala.evento.domain.Periodo;
@@ -78,8 +80,9 @@ class ConsultaDaEscalaTest {
                         tuple("11", "Dom", "18h00", true),
                         tuple("24", "Sáb", "18h00", false));
         var domingo11 = pagina.linhas().get(1).celulas();
-        assertThat(domingo11.get(0).vagas()).containsExactly(SlotDaGrade.de("Bruno Alves", "Iniciante", false, false));
-        assertThat(domingo11.get(1).vagas()).containsExactly(SlotDaGrade.vazia(true));
+        assertThat(domingo11.get(0).vagas())
+                .containsExactly(SlotDaGrade.de(3L, 0, "Bruno Alves", "Iniciante", false, false, null, null, false));
+        assertThat(domingo11.get(1).vagas()).containsExactly(SlotDaGrade.vazia(4L, 0, true, false, false));
         var casamento24 = pagina.linhas().get(2).celulas();
         assertThat(casamento24.get(1).exigida()).as("casamento só com Projeção").isFalse();
     }
@@ -99,6 +102,51 @@ class ConsultaDaEscalaTest {
                                 "Bruno Alves (Projeção) saiu da escala. As vagas somem quando você gerar a escala de"
                                         + " novo.",
                                 null));
+    }
+
+    @Test
+    void avisosDoSolverViramAMetaDaVagaEUmAlertaEAsVagasPorVirSeAbrem() {
+        var avisos = Map.of(
+                3L, List.of(new Violacao(TipoDeRegra.LIMITE_POR_PERIODO, "Já tem 3 escalas no mês, e o limite é 3.")));
+
+        var pagina = ConsultaDaEscala.montar(dados(outubro, vagas()), avisos, true);
+
+        assertThat(pagina.ajustavel()).isTrue();
+        var doBruno = pagina.linhas().get(1).celulas().get(0).vagas().getFirst();
+        assertThat(doBruno.meta()).isEqualTo("LIMITE_POR_PERIODO");
+        assertThat(doBruno.isAlerta()).isTrue();
+        assertThat(doBruno.editavel()).isTrue();
+        assertThat(pagina.linhas()
+                        .getFirst()
+                        .celulas()
+                        .getFirst()
+                        .vagas()
+                        .getFirst()
+                        .editavel())
+                .as("o evento do dia 4 já passou")
+                .isFalse();
+        assertThat(pagina.alertas())
+                .contains(new AlertaDaEscala(
+                        "Projeção, 11/10 · Dom · 18h00 · Culto 11 — Bruno Alves fora da regra",
+                        "Já tem 3 escalas no mês, e o limite é 3. Troque a pessoa ou force a vaga com uma"
+                                + " justificativa.",
+                        "Regra: LIMITE_POR_PERIODO"));
+    }
+
+    @Test
+    void vagaForcadaMostraARegraEAJustificativaSemAlerta() {
+        var vagas = new java.util.ArrayList<>(vagas());
+        vagas.get(2).forcar(bruno.id(), "Combinou por telefone");
+        var avisos = Map.of(3L, List.of(new Violacao(TipoDeRegra.DISPONIBILIDADE, "Não marcou Pode neste evento.")));
+
+        var pagina = ConsultaDaEscala.montar(dados(outubro, vagas), avisos, true);
+
+        var doBruno = pagina.linhas().get(1).celulas().get(0).vagas().getFirst();
+        assertThat(doBruno.meta()).isEqualTo("Forçada · DISPONIBILIDADE");
+        assertThat(doBruno.justificativa()).isEqualTo("Combinou por telefone");
+        assertThat(doBruno.descricao())
+                .isEqualTo("Bruno Alves, Forçada · DISPONIBILIDADE. Justificativa: Combinou por telefone");
+        assertThat(pagina.alertas()).noneMatch(alerta -> alerta.titulo().contains("fora da regra"));
     }
 
     @Test

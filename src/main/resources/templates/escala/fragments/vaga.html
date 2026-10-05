@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<!--/*
+    Uma vaga aberta para o ajuste manual (${aberta}, VagaEmAjuste): no Sheet #vaga-sheet da página de escalas, por
+    htmx, ou na página da vaga (escala/vaga), sem JS. Mostra quem está na vaga (fixada, forçada com a justificativa,
+    vazia com o motivo, ou com o aviso da regra que a pessoa viola agora), as ações da vaga e os candidatos da função
+    em três grupos: quem pode servir, quem só entra com justificativa (forçar) e quem não pode (regra que nunca se
+    força, sem botão). Cada ação devolve a região #escala inteira; a recusa volta aqui, com a mensagem no campo.
+    ${recusa}: mensagem geral; ${recusaDe} e ${justificativaDigitada}: o candidato cujo campo de justificativa tem erro.
+    ${htmx}: resposta ao htmx (o título do Sheet vem junto, fora da banda).
+    Sem primário: o da página é "Publicar".
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="conteudo"
+          th:with="_base=@{/ministerios/{m}/escalas/vagas/{v}(m=${aberta.ministerioId}, v=${aberta.vagaId})}">
+    <p th:if="${htmx == true}" id="vaga-titulo" hx-swap-oob="true" class="rt-sheet__titulo"
+       th:text="${aberta.titulo()}">Projeção, 12/10 · Dom · 18h00</p>
+    <p class="text-ink-muted" th:text="${aberta.evento}">Culto de domingo</p>
+
+    <th:block th:if="${recusa != null and recusaDe == null}"><div th:replace="~{componentes/alerta ::
+            alerta(titulo=${recusa}, corpo=null, regra=null, acaoTexto=null, icone=null)}"></div></th:block>
+    <th:block th:unless="${aberta.editavel}"><div th:replace="~{componentes/alerta :: alerta(titulo=${aberta.bloqueio},
+            corpo=null, regra=null, acaoTexto=null, icone='lock')}"></div></th:block>
+
+    <section class="flex flex-col gap-2" aria-labelledby="na-vaga">
+        <h2 id="na-vaga" class="text-label text-ink-muted">Na vaga</h2>
+        <div class="flex flex-wrap items-center gap-2">
+            <span th:if="${aberta.vazia}" class="rt-slot rt-slot--empty"><svg
+                    th:replace="~{componentes/icone :: icone('triangle-alert')}"></svg>Vaga vazia</span>
+            <span th:unless="${aberta.vazia}"
+                  th:class="|rt-slot${aberta.forcada or !aberta.avisos.isEmpty() ? ' rt-slot--forced' : (aberta.fixada ? ' rt-slot--pinned' : '')}|"><span
+                    class="rt-avatar" aria-hidden="true"
+                    th:text="${aberta.iniciais()}">AS</span><th:block
+                    th:text="${aberta.ocupante}">Ana Souza</th:block></span>
+            <th:block th:if="${aberta.forcada}"><span th:replace="~{componentes/badge :: badge(texto='Forçada',
+                    variante='alert', icone=null, tint=null, classe=null)}"></span></th:block>
+            <th:block th:if="${aberta.fixada and !aberta.forcada}"><span th:replace="~{componentes/badge ::
+                    badge(texto='Fixada', variante=null, icone='pin', tint=null, classe=null)}"></span></th:block>
+        </div>
+        <p th:if="${aberta.forcada and aberta.justificativa != null}" class="text-ink-muted"
+           th:text="|Justificativa: ${aberta.justificativa}|">Justificativa: combinou por telefone</p>
+        <p th:if="${aberta.motivoDaVazia != null}" class="text-ink-muted" th:text="${aberta.motivoDaVazia}">Ninguém
+            habilitado marcou Pode.</p>
+        <ul th:unless="${aberta.avisos.isEmpty()}" class="flex flex-col gap-1">
+            <li th:each="aviso : ${aberta.avisos}" class="text-label"><span class="text-alert"
+                    th:text="${aviso.regra().name()}">LIMITE_POR_PERIODO</span> · <th:block
+                    th:text="${aviso.porQue()}">Já tem 3 escalas no mês.</th:block></li>
+        </ul>
+        <div th:if="${aberta.editavel}" class="flex flex-wrap gap-2">
+            <form th:unless="${aberta.fixada}" method="post" th:action="|${_base}/fixar|" th:hx-post="|${_base}/fixar|"
+                  hx-target="#escala" hx-swap="outerHTML">
+                <input type="hidden" name="versao" th:value="${aberta.versao}">
+                <input type="hidden" name="mes" th:value="${aberta.mes}">
+                <button th:replace="~{componentes/botao :: botao(texto='Fixar', variante='secondary', icone='pin',
+                        classe=null, tipo=null)}"></button>
+            </form>
+            <form th:if="${aberta.fixada}" method="post" th:action="|${_base}/desafixar|"
+                  th:hx-post="|${_base}/desafixar|" hx-target="#escala" hx-swap="outerHTML">
+                <input type="hidden" name="versao" th:value="${aberta.versao}">
+                <input type="hidden" name="mes" th:value="${aberta.mes}">
+                <button th:replace="~{componentes/botao :: botao(texto='Desafixar', variante='secondary',
+                        icone='pin-off', classe=null, tipo=null)}"></button>
+            </form>
+            <form th:unless="${aberta.vazia}" method="post" th:action="|${_base}/esvaziar|"
+                  th:hx-post="|${_base}/esvaziar|" hx-target="#escala" hx-swap="outerHTML">
+                <input type="hidden" name="versao" th:value="${aberta.versao}">
+                <input type="hidden" name="mes" th:value="${aberta.mes}">
+                <button th:replace="~{componentes/botao :: botao(texto='Esvaziar vaga', variante='secondary',
+                        icone='user-minus', classe=null, tipo=null)}"></button>
+            </form>
+        </div>
+        <p th:if="${aberta.editavel}" class="text-label text-ink-muted">Toda mudança fixa a vaga: gerar de novo não a
+            muda.</p>
+    </section>
+
+    <th:block th:if="${aberta.editavel}"
+              th:with="_livres=${aberta.candidatos.?[livre]}, _forcaveis=${aberta.candidatos.?[forcavel]},
+                       _bloqueados=${aberta.candidatos.?[bloqueado]}">
+        <section class="flex flex-col gap-2" aria-labelledby="podem-servir">
+            <h2 id="podem-servir" class="text-label text-ink-muted">Podem servir</h2>
+            <p th:if="${_livres.isEmpty()}" class="text-ink-muted">Ninguém cabe aqui sem violar uma regra.</p>
+            <ul class="flex flex-col gap-2">
+                <li th:each="candidato : ${_livres}" class="flex flex-wrap items-center gap-3 rounded-md bg-surface p-3">
+                    <div th:replace="~{escala/fragments/vaga :: quem(${candidato})}"></div>
+                    <form th:unless="${candidato.atual}" method="post" th:action="|${_base}/escalar|"
+                          th:hx-post="|${_base}/escalar|" hx-target="#escala" hx-swap="outerHTML">
+                        <input type="hidden" name="usuarioId" th:value="${candidato.usuarioId}">
+                        <input type="hidden" name="versao" th:value="${aberta.versao}">
+                        <input type="hidden" name="mes" th:value="${aberta.mes}">
+                        <button th:replace="~{componentes/botao :: botao(texto='Escalar', variante='outline',
+                                icone='user-plus', classe=null, tipo=null)}"></button>
+                    </form>
+                </li>
+            </ul>
+        </section>
+
+        <section th:unless="${_forcaveis.isEmpty()}" class="flex flex-col gap-2" aria-labelledby="com-justificativa">
+            <h2 id="com-justificativa" class="text-label text-ink-muted">Só com justificativa</h2>
+            <ul class="flex flex-col gap-2">
+                <li th:each="candidato : ${_forcaveis}" class="flex flex-col gap-2 rounded-md bg-surface p-3">
+                    <div th:replace="~{escala/fragments/vaga :: quem(${candidato})}"></div>
+                    <div th:replace="~{escala/fragments/vaga :: porQue(${candidato})}"></div>
+                    <form th:unless="${candidato.atual}" method="post" th:action="|${_base}/escalar|"
+                          th:hx-post="|${_base}/escalar|" hx-target="#escala" hx-swap="outerHTML"
+                          class="flex flex-col gap-2">
+                        <input type="hidden" name="usuarioId" th:value="${candidato.usuarioId}">
+                        <input type="hidden" name="versao" th:value="${aberta.versao}">
+                        <input type="hidden" name="mes" th:value="${aberta.mes}">
+                        <div th:replace="~{componentes/formulario :: campo(rotulo='Justificativa', nome='justificativa',
+                                campoId=|justificativa-${candidato.usuarioId}|, obrigatorio=true, maxlength=500,
+                                valor=${recusaDe == candidato.usuarioId ? justificativaDigitada : null},
+                                erro=${recusaDe == candidato.usuarioId ? recusa : null},
+                                dica='Fica na vaga e na auditoria.')}"></div>
+                        <button th:replace="~{componentes/botao :: botao(texto='Forçar', variante='dark',
+                                icone='triangle-alert', classe='self-start', tipo=null)}"></button>
+                    </form>
+                </li>
+            </ul>
+        </section>
+
+        <section th:unless="${_bloqueados.isEmpty()}" class="flex flex-col gap-2" aria-labelledby="nao-podem">
+            <h2 id="nao-podem" class="text-label text-ink-muted">Não podem</h2>
+            <ul class="flex flex-col gap-2">
+                <li th:each="candidato : ${_bloqueados}" class="flex flex-col gap-2 rounded-md bg-surface p-3">
+                    <div th:replace="~{escala/fragments/vaga :: quem(${candidato})}"></div>
+                    <div th:replace="~{escala/fragments/vaga :: porQue(${candidato})}"></div>
+                </li>
+            </ul>
+        </section>
+    </th:block>
+</th:block>
+
+<div th:fragment="quem(candidato)" class="flex min-w-0 flex-1 items-center gap-3">
+    <span class="rt-avatar" aria-hidden="true" th:text="${candidato.iniciais}">AS</span>
+    <span class="rt-list-row__text"><span class="rt-list-row__title" th:text="${candidato.nome}">Ana Souza</span><span
+            class="rt-list-row__sub" th:text="${candidato.descricao()}">Experiente · 2 escalas no mês</span></span>
+    <th:block th:if="${candidato.atual}"><span th:replace="~{componentes/badge :: badge(texto='Na vaga',
+            variante=null, icone=null, tint=null, classe=null)}"></span></th:block>
+</div>
+
+<div th:fragment="porQue(candidato)" class="flex flex-col gap-1">
+    <p class="text-ink-muted" th:text="${candidato.porQue()}">Não marcou Pode neste evento.</p>
+    <p class="text-label text-alert" th:text="|Regra: ${candidato.regras()}|">Regra: DISPONIBILIDADE</p>
+</div>
+</body>
+</html>

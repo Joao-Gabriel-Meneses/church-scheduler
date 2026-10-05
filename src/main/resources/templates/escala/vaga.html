@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<!--/*
+    A vaga aberta para o ajuste manual, em página inteira: é o que o link da vaga abre sem JS (com htmx, o mesmo
+    conteúdo entra no Sheet da página de escalas). O conteúdo é escala/fragments/vaga :: conteudo.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">
+<head>
+    <title th:text="|${aberta.titulo()} · ${ministerio.nome} · Escala|">Projeção, 12/10 · Dom · 18h00 · Mídia ·
+        Escala</title>
+</head>
+<body>
+<main class="flex max-w-lg flex-col gap-4">
+    <header class="flex flex-col gap-1">
+        <p class="text-ink-muted"><a class="underline"
+                th:href="@{/ministerios/{m}/escalas(m=${ministerio.id}, mes=${aberta.mes})}"
+                th:text="|${ministerio.nome} — ${nomeDoMes}|">Mídia — Outubro</a></p>
+        <h1 class="text-title" th:text="${aberta.titulo()}">Projeção, 12/10 · Dom · 18h00</h1>
+    </header>
+    <th:block th:replace="~{escala/fragments/vaga :: conteudo}"></th:block>
+</main>
+</body>
+</html>

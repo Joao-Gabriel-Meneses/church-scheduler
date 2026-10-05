@@ -103,3 +103,12 @@ document.addEventListener("keydown", (evento) => {
     menu.querySelector("summary").focus();
   }
 });
+
+// Sheet da vaga (escala/fragments/escala): o htmx põe a vaga tocada na grade dentro do Sheet e o abre. Sem JS, o link
+// da vaga abre a página dela. A recusa de uma ação volta para o Sheet já aberto.
+document.addEventListener("htmx:afterSwap", (evento) => {
+  const sheet = document.getElementById("vaga-sheet");
+  if (evento.detail.target.id === "vaga-conteudo" && sheet && !sheet.matches(":popover-open")) {
+    sheet.showPopover();
+  }
+});

@@ -398,8 +398,8 @@ class ComponentesTest {
         String grade = secao("grade");
 
         assertThat(grade)
-                .contains("<span class=\"rt-slot\"><span class=\"rt-avatar\" aria-hidden=\"true\">AS</span><span>Ana"
-                        + " Souza<span class=\"rt-slot__meta\">Experiente</span></span></span>")
+                .contains("<span class=\"rt-slot\"> <span class=\"rt-avatar\" aria-hidden=\"true\">AS</span><span>Ana"
+                        + " Souza<span class=\"rt-slot__meta\">Experiente</span></span> </span>")
                 .contains("<span class=\"rt-slot rt-slot--pinned\">", "#pin\"")
                 .contains("<span class=\"rt-slot rt-slot--forced\">", "<span class=\"rt-slot__meta\">Forçada</span>")
                 .contains("<span class=\"rt-slot rt-slot--empty\">", "Vaga vazia", "Opcional, vazia")
@@ -445,12 +445,29 @@ class ComponentesTest {
                                             new CelulaDaGrade(
                                                     "Projeção",
                                                     true,
-                                                    List.of(SlotDaGrade.de("Ana Souza", "Experiente", false, false))),
+                                                    List.of(SlotDaGrade.de(
+                                                            null,
+                                                            0,
+                                                            "Ana Souza",
+                                                            "Experiente",
+                                                            false,
+                                                            false,
+                                                            null,
+                                                            null,
+                                                            false))),
                                             new CelulaDaGrade(
                                                     "Transmissão",
                                                     true,
                                                     List.of(SlotDaGrade.de(
-                                                            "Pedro Alves", "Experiente", true, false))))),
+                                                            null,
+                                                            0,
+                                                            "Pedro Alves",
+                                                            "Experiente",
+                                                            true,
+                                                            false,
+                                                            null,
+                                                            null,
+                                                            false))))),
                             new LinhaDaGrade(
                                     "12",
                                     "Dom",
@@ -461,11 +478,22 @@ class ComponentesTest {
                                             new CelulaDaGrade(
                                                     "Projeção",
                                                     true,
-                                                    List.of(SlotDaGrade.de("Carla Dias", "Iniciante", false, true))),
+                                                    List.of(SlotDaGrade.de(
+                                                            null,
+                                                            0,
+                                                            "Carla Dias",
+                                                            "Iniciante",
+                                                            false,
+                                                            true,
+                                                            null,
+                                                            null,
+                                                            false))),
                                             new CelulaDaGrade(
                                                     "Transmissão",
                                                     true,
-                                                    List.of(SlotDaGrade.vazia(true), SlotDaGrade.vazia(false))))),
+                                                    List.of(
+                                                            SlotDaGrade.vazia(null, 0, true, false, false),
+                                                            SlotDaGrade.vazia(null, 0, false, false, false))))),
                             new LinhaDaGrade(
                                     "16",
                                     "Qui",
@@ -476,7 +504,16 @@ class ComponentesTest {
                                             new CelulaDaGrade(
                                                     "Projeção",
                                                     true,
-                                                    List.of(SlotDaGrade.de("Lucas Lima", null, false, false))),
+                                                    List.of(SlotDaGrade.de(
+                                                            null,
+                                                            0,
+                                                            "Lucas Lima",
+                                                            null,
+                                                            false,
+                                                            false,
+                                                            null,
+                                                            null,
+                                                            false))),
                                             new CelulaDaGrade("Transmissão", false, List.of())))));
             model.addAttribute(
                     "linhaRespondida",
