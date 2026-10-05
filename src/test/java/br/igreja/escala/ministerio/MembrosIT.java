@@ -214,9 +214,10 @@ class MembrosIT {
                         .with(csrf())
                         .param("senha", "provisoria-123"))
                 .andExpect(redirectedUrl("/ministerios/" + midia.getId() + "/membros/" + admin.getId()))
-                .andExpect(flash().attribute(
-                                "recusa",
-                                "Sua senha não mudou: para trocar a sua própria senha, use Trocar senha no início."));
+                .andExpect(
+                        flash().attribute(
+                                        "recusa",
+                                        "Sua senha não mudou: para trocar a sua própria senha, use Trocar senha no menu da sua conta, no alto da página."));
 
         entityManager.flush();
         entityManager.clear();

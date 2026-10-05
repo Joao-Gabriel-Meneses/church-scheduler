@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <!--/*
     Layout do gerente, desktop (docs/design/README.md, "Forma, espaço e layout"): SideRail de ministérios à esquerda,
-    NavPills no topo, Toolbar do período (opcional) e o conteúdo. No celular, a rail vira seletor no topo e a navegação
-    vira barra inferior. Uso:
+    cabeçalho comum com as abas (layouts/base :: cabecalho), Toolbar do período (opcional) e o conteúdo, até
+    max-w-7xl. No celular, a rail vira seletor no topo e a navegação vira barra inferior. Uso:
         <html th:replace="~{layouts/gerente :: pagina(~{::title}, ~{::#barra}, ~{::main})}">
         <html th:replace="~{layouts/gerente :: pagina(~{::title}, ~{}, ~{::main})}">   (sem Toolbar)
     A Toolbar é um <div id="barra" class="rt-toolbar"> na página. A navegação vem de ${navegacao} (NavegacaoAdvice) e
     os ministérios de ${ministerios}; a rail só aparece com dois ou mais.
 */-->
-<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
       th:fragment="pagina(titulo, barra, conteudo)">
 <head th:replace="~{layouts/base :: cabeca(${titulo})}"></head>
 <body class="rt min-h-dvh bg-canvas"
@@ -24,25 +24,8 @@
     </aside>
 
     <div class="flex min-w-0 flex-1 flex-col">
-        <div class="flex flex-1 flex-col gap-6 p-4 lg:p-8">
-            <header class="flex items-center justify-between gap-2">
-                <div class="flex min-w-0 items-center gap-2 lg:hidden">
-                    <th:block th:if="${_comMinisterios}">
-                        <details th:replace="~{componentes/navegacao :: seletorDeMinisterio(${ministerios})}"></details>
-                    </th:block>
-                    <p th:unless="${_comMinisterios}" class="text-heading">Escala</p>
-                </div>
-                <div th:if="${_comNavegacao}" class="hidden md:block">
-                    <nav th:replace="~{componentes/navegacao :: navPills(${navegacao})}"></nav>
-                </div>
-                <div class="flex items-center gap-2" sec:authorize="isAuthenticated()">
-                    <span class="hidden text-ink-muted md:inline" sec:authentication="principal.nome">Nome</span>
-                    <form th:action="@{/logout}" method="post">
-                        <button th:replace="~{componentes/botao :: botaoIcone(icone='log-out', rotulo='Sair',
-                                tipo='submit', variante=null, tamanho=null, href=null, classe=null)}"></button>
-                    </form>
-                </div>
-            </header>
+        <div class="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 p-4 lg:p-8">
+            <header th:replace="~{layouts/base :: cabecalho}"></header>
 
             <th:block th:replace="${barra}"></th:block>
 

@@ -1,4 +1,4 @@
-Escala é o sistema visual do app de escalas dos ministérios da igreja: fundo cinza-névoa, superfícies brancas, tinta grafite e um único azul que marca o que importa. Tudo é arredondado — pílulas, círculos e painéis de canto largo — e quase nada tem sombra. É mobile-first: o membro marca o mês inteiro no celular em menos de um minuto; o gerente monta e publica no desktop.
+Escala é o sistema visual do app de escalas dos ministérios da igreja: fundo cinza-névoa, superfícies brancas, tinta grafite e um único azul que marca o que importa. Tudo é arredondado — botões e abas de canto suave, pílulas nas etiquetas, círculos e painéis de canto largo — e quase nada tem sombra. É mobile-first: o membro marca o mês inteiro no celular em menos de um minuto; o gerente monta e publica no desktop.
 
 ## Conteúdo e voz
 
@@ -27,10 +27,12 @@ Escala é o sistema visual do app de escalas dos ministérios da igreja: fundo c
 
 ## Forma, espaço e layout
 
-- `radius-pill` para todo controle e para as vagas (Slot); `radius-lg` para painéis; `radius-md` para linhas; `radius-sm` para tiles de ícone.
+- `radius-control` (8px) para botões, IconButton, abas (NavPills e NavMenu), Toolbar e menus; `radius-pill` para Badge, vagas (Slot), avatares e o seletor Pode/Não pode; `radius-lg` para painéis; `radius-md` para linhas; `radius-sm` para tiles de ícone.
 - Alvo de toque mínimo `size-control` (44px) no celular; `size-control-lg` na toolbar do desktop.
-- **Membro (celular):** título do mês, `AvailabilityPicker`, "Minhas escalas" em `ListRow`, pedir troca em sheet inferior com `shadow-float`.
-- **Gerente (desktop):** `SideRail` de ministérios, `NavPills` no topo, `Toolbar` de período, `AlertBanner`s, linha de `StatCard`s e `ScheduleGrid`.
+- **Navegação:** as abas são sempre as mesmas, em qualquer página: Início, Disponibilidade e, para quem gerencia, o `NavMenu` "Gerenciar", que abre a lista das páginas do gerente. Só muda qual está atual. A conta (Minha conta, Trocar senha, Sair) fica no menu do usuário, no canto direito.
+- **Início:** "Minhas escalas" e a disponibilidade do mês na mesma tela, sem aba própria. No desktop, duas colunas (escalas na larga); no celular, a disponibilidade vem primeiro.
+- **Membro (celular):** título do mês, `AvailabilityPicker`, "Minhas escalas" em `ListRow`, pedir troca em sheet inferior com `shadow-float`. No desktop, a página usa a largura (até 1152px).
+- **Gerente (desktop):** `SideRail` de ministérios, abas no topo, `Toolbar` de período, `AlertBanner`s, linha de `StatCard`s e `ScheduleGrid`, até 1280px.
 - Estados da escala com `Badge`: Rascunho → Publicada; trava com `Badge --locked`.
 - Movimento: transições de cor de 150ms; a geração (até 30s) mostra progresso na própria Toolbar, sem tela de carregamento cheia.
 

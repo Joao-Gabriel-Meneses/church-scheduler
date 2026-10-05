@@ -1,0 +1,20 @@
+/* NavMenu — aba que abre uma lista de opções. Não veio do Claude Design: criado no app seguindo tokens.css (ver
+   README.md ao lado). É um <details> nativo: abre e fecha sem JS; o app.js só fecha com Esc e com clique fora. */
+.rt-nav-menu{position:relative}
+.rt-nav-menu>summary{list-style:none;cursor:pointer}
+.rt-nav-menu>summary::-webkit-details-marker{display:none}
+.rt-nav-menu__seta{transition:transform .15s}
+.rt-nav-menu[open] .rt-nav-menu__seta{transform:rotate(180deg)}
+.rt-nav-menu--atual>.rt-nav__item{background:var(--ink);color:var(--on-ink)}
+.rt-nav-menu__painel{position:absolute;top:calc(100% + var(--space-2));left:0;z-index:30;min-width:240px;padding:var(--space-2);display:flex;flex-direction:column;gap:2px;background:var(--canvas);border:2px solid var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-float)}
+.rt-nav-menu--fim .rt-nav-menu__painel{left:auto;right:0}
+.rt-nav-menu__item{display:flex;align-items:center;gap:var(--space-3);min-height:var(--size-control);padding:0 var(--space-3);border-radius:var(--radius-control);color:var(--ink);font-size:var(--text-body);line-height:var(--text-body--line-height);text-align:left;width:100%;transition:background .15s}
+.rt-nav-menu__item .rt-i{width:20px;height:20px;flex:none}
+.rt-nav-menu__item:hover{background:var(--surface)}
+.rt-nav-menu__item[aria-current="page"]{background:var(--ink);color:var(--on-ink)}
+.rt-nav-menu__sep{height:2px;margin:var(--space-1) 0;background:var(--surface)}
+/* Na barra inferior do celular: o painel sobe da barra, na largura toda, como um Sheet. */
+.rt-nav-menu--folha{position:static;display:flex;min-width:0;flex:1 1 auto}
+.rt-nav-menu--folha>.rt-nav__item{width:100%}
+.rt-nav-menu--folha .rt-nav-menu__painel{top:auto;bottom:100%;left:0;right:0;min-width:0;padding:var(--space-4);border:0;border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+.rt-nav-menu--folha .rt-nav-menu__item{min-height:var(--size-control-lg);font-size:var(--text-body-lg)}

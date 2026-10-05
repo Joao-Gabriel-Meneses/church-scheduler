@@ -394,7 +394,7 @@ class MembroControllerTest {
         assertThat(pagina(
                         get("/ministerios/1/membros/10").with(user(GERENTE_DA_MIDIA)),
                         MembroController.PAGINA_DO_MEMBRO))
-                .contains("Esta é a sua conta.", "use Minha conta ou Trocar senha no início")
+                .contains("Esta é a sua conta.", "use Minha conta ou Trocar senha no menu da sua conta")
                 .doesNotContain("id=\"redefinir-senha\"", "id=\"remover-membro\"", "/membros/10/editar");
     }
 

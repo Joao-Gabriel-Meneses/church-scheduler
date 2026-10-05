@@ -75,8 +75,9 @@ Gerente e admin também servem e aparecem na escala. Um usuário pode estar em v
 - Editar a conta de outra pessoa, redefinir a senha, desativar e reativar registram `Auditoria`. A edição guarda só quais campos mudaram, sem os valores; desativar e reativar ficam sem ministério.
 - A `Auditoria` guarda o IP de quem fez a ação (`IpDoCliente`): o `CF-Connecting-IP` que o Cloudflare manda ou, sem ele, o IP da requisição. Ação sem requisição (a gravação da geração, na fila) fica sem IP.
 - Cadastrar um e-mail que já tem conta só cria a membresia; a conta não muda (se estiver desativada, o gerente é avisado).
-- **Navegação do gerente:** Escalas (rascunho e geração), Eventos (mês e modelos), Disponibilidade (painel e trava), Membros (e habilitações), Funções (funções e níveis) e Regras, mais Ministérios para o admin. "Gerenciar" e a SideRail abrem as Escalas (`Navegacao.SECAO_INICIAL`).
-- **Navegação do membro:** Minhas escalas e Disponibilidade (como no README do NavPills). O início tem o botão "Marcar disponibilidade".
+- **Abas fixas:** são as mesmas em toda página (`Navegacao.PRINCIPAL`); só muda a atual. Início e Disponibilidade para todos, mais o NavMenu **Gerenciar** para quem gerencia algum ministério ou é admin (README do NavPills e do NavMenu).
+- **Menu Gerenciar:** Escalas (rascunho e geração), Eventos (mês e modelos), Disponibilidade (painel e trava), Membros (e habilitações), Funções (funções e níveis) e Regras, mais Ministérios para o admin, separado. Dentro de um ministério, os itens levam às páginas dele; fora, às do primeiro gerenciado. A SideRail abre a mesma seção no outro ministério, e as Escalas são a seção padrão (`Navegacao.SECAO_INICIAL`).
+- **Início:** "Minhas escalas" (sem aba própria) e a disponibilidade do próximo mês por ministério (`DisponibilidadeNoInicio`), com o primário "Marcar disponibilidade". Minha conta, Trocar senha e Sair ficam no menu do usuário, no cabeçalho comum (`layouts/base :: cabecalho`).
 
 ## Modelo de dados (resumo)
 
@@ -266,13 +267,14 @@ O design system "Escala" (feito no Claude Design) está em `docs/design/`. O `do
 
 - **Tokens:** `docs/design/tokens.css` é gerado de `tokens.json` por `python3 docs/design/gerar_tokens_css.py`. Nunca edite o `.css` à mão; token novo entra no `tokens.json`.
 - **Tailwind só para layout e ajustes.** O `src/main/frontend/app.css` liga o Tailwind aos tokens (`@theme inline reference`) e apaga o tema padrão: só existem utilitários dos tokens (`bg-brand`, `p-4` = `space-4`, `h-control`, `text-title`, `rounded-pill`...). Uma classe fora deles (`bg-slate-50`, `p-5`, `font-bold`) não gera CSS, sem erro nenhum.
-- **Componentes:** as classes `.rt-*` vêm de `docs/design/components/bundle.css` e dos componentes criados no app (Field, Toast, Sheet e a Toolbar no celular, com README na pasta de cada um). Não reescreva componentes em utilitários do Tailwind.
-- **Telas usam só os fragmentos de `templates/componentes/`** (botao, badge, lista, tabela, alerta, formulario, toast, navegacao, toolbar, sheet, icone, disponibilidade, estatistica, grade) e os layouts de `templates/layouts/`: `simples` (sem navegação), `membro` (celular) e `gerente` (desktop). Cada fragmento documenta as opções no topo do arquivo.
+- **Componentes:** as classes `.rt-*` vêm de `docs/design/components/bundle.css` e dos componentes criados no app (Field, Toast, Sheet, NavMenu e a Toolbar no celular, com README na pasta de cada um). Não reescreva componentes em utilitários do Tailwind.
+- **Telas usam só os fragmentos de `templates/componentes/`** (botao, badge, lista, tabela, alerta, formulario, toast, navegacao (NavPills, NavMenu, barra inferior, menu do usuário, SideRail), toolbar, sheet, icone, disponibilidade, estatistica, grade) e os layouts de `templates/layouts/`: `simples` (sem navegação), `membro` (celular) e `gerente` (desktop). Cada fragmento documenta as opções no topo do arquivo.
 - **Nenhuma cor ou tamanho fixo fora dos tokens:** nada de `style=`, `<style>`, valor arbitrário do Tailwind (`w-[37px]`) ou cor hexadecimal. O `TemplatesUsamSoTokensTest` falha nesses casos.
 - **Voz:** português, tratando por "você", sentence case, botões com verbo no infinitivo ("Gerar escala", "Salvar"), sem emoji. Títulos no padrão "Ministério — Período". Todo alerta diz o quê, onde e por quê.
 - **Listas de cadastro:** ListRow no celular (`rt-list md:hidden`) e DataTable no desktop (`rt-panel hidden md:block`).
 - **Nomes reservados no model:** o layout lê `${navegacao}`, `${ministerios}` (a SideRail) e `${sucesso}`. Uma página que ponha outra coisa nesses nomes quebra o layout; a lista do admin, por exemplo, é `${cadastrados}`. Opção omitida de um fragmento herda a variável de mesmo nome da página (ver o topo de cada fragmento).
 - **Ação que não se desfaz** (excluir, remover do ministério, cancelar evento) pede confirmação num Sheet: `componentes/sheet :: confirmacao`.
+- **Raios:** botões, IconButton, abas e menus usam `radius-control` (8px); pílula (`radius-pill`) só em Badge, Slot, avatar e no seletor Pode/Não pode.
 - **Um botão primário por tela.** A Toolbar do gerente é contextual: "Gerar escala" só é primário na página de escalas. O `UmPrimarioPorTela` confere toda página renderizada nos testes de controller e de integração.
 - **Ícones:** Lucide com traço 1.5, via `componentes/icone`. Um ícone novo entra em `src/main/frontend/icones.json`; o `IconesTest` pega nome fora da lista.
 - **Fonte e ícones hospedados no app** (Urbanist OFL-1.1 e Lucide ISC, do npm com versão fixa). O `copiar-assets.mjs` gera tudo em `target/classes/static` junto com as licenças. Nada de CDN.

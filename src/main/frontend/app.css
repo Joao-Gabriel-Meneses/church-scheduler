@@ -4,7 +4,7 @@
  * Design system "Escala" (docs/design/README.md é a fonte da verdade).
  * - tokens.css: variáveis geradas de tokens.json por gerar_tokens_css.py. Não edite à mão.
  * - bundle.css: componentes .rt-* em @layer components, então os utilitários do Tailwind vencem nos ajustes.
- * - Field, Toast, Sheet, Tooltip, a Toolbar no celular e os avisos do AvailabilityPicker: criados no app, fora do
+ * - Field, Toast, Sheet, NavMenu, Tooltip, a Toolbar no celular e os avisos do AvailabilityPicker: criados no app, fora do
  *   bundle.css (ver o README.md de cada um).
  */
 @import "../../../docs/design/tokens.css" layer(theme);
@@ -12,6 +12,7 @@
 @import "../../../docs/design/components/Field/field.css" layer(components);
 @import "../../../docs/design/components/Toast/toast.css" layer(components);
 @import "../../../docs/design/components/Sheet/sheet.css" layer(components);
+@import "../../../docs/design/components/NavMenu/nav-menu.css" layer(components);
 @import "../../../docs/design/components/Toolbar/toolbar-celular.css" layer(components);
 @import "../../../docs/design/components/Tooltip/tooltip.css" layer(components);
 @import "../../../docs/design/components/AvailabilityPicker/disponibilidade.css" layer(components);
@@ -66,6 +67,7 @@
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
+  --radius-control: var(--radius-control);
   --radius-pill: var(--radius-pill);
 
   --shadow-*: initial;

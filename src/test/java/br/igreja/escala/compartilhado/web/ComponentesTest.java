@@ -200,12 +200,31 @@ class ComponentesTest {
     void navegacaoMarcaAPaginaAtual() {
         assertThat(secao("nav"))
                 .contains("<nav class=\"rt-nav flex-wrap\" aria-label=\"Principal\">")
-                .contains("<a class=\"rt-nav__item\" href=\"/\" aria-current=\"page\">", "Minhas escalas")
+                .contains("<a class=\"rt-nav__item\" href=\"/\" aria-current=\"page\">", "Início")
                 .contains("<a class=\"rt-nav__item\" href=\"/disponibilidade\">", "#calendar\"");
         assertThat(secao("barra"))
                 .contains("<span class=\"max-w-full truncate\">Disponib.</span>")
                 .contains("class=\"rt-nav__item h-auto min-w-0 flex-auto")
                 .doesNotContain("Disponibilidade<");
+    }
+
+    @Test
+    void abaComFilhosViraMenuQueAbreAListaSemJs() {
+        assertThat(secao("nav"))
+                .contains("<details class=\"rt-nav-menu\">", "<summary class=\"rt-nav__item\">", "Gerenciar")
+                .contains("<div class=\"rt-nav-menu__painel\">")
+                .contains("<a class=\"rt-nav-menu__item\" href=\"/ministerios/1/membros\">", "Membros")
+                .contains("<div class=\"rt-nav-menu__sep\" role=\"separator\"></div>")
+                .contains("href=\"/admin/ministerios\">", "#chevron-down\"");
+        assertThat(secao("barra")).contains("<details class=\"rt-nav-menu rt-nav-menu--folha\">");
+    }
+
+    @Test
+    void menuDoUsuarioTemContaSenhaESairPorPost() {
+        assertThat(secao("menu-usuario"))
+                .contains("<details class=\"rt-nav-menu rt-nav-menu--fim\">", "Ana Souza")
+                .contains("href=\"/conta\">", "Minha conta", "href=\"/conta/senha\">", "Trocar senha")
+                .contains("<form action=\"/logout\" method=\"post\">", "name=\"_csrf\"", "Sair");
     }
 
     @Test
@@ -478,9 +497,23 @@ class ComponentesTest {
             model.addAttribute(
                     "itens",
                     List.of(
-                            new ItemDeNavegacao("Minhas escalas", "Escalas", "calendar-check", "/", true),
-                            new ItemDeNavegacao(
-                                    "Disponibilidade", "Disponib.", "calendar", "/disponibilidade", false)));
+                            new ItemDeNavegacao("Início", "Início", "house", "/", true),
+                            new ItemDeNavegacao("Disponibilidade", "Disponib.", "calendar", "/disponibilidade", false),
+                            ItemDeNavegacao.menu(
+                                    "Gerenciar",
+                                    "Gerenciar",
+                                    "layout-dashboard",
+                                    List.of(
+                                            new ItemDeNavegacao(
+                                                    "Membros", "Membros", "users", "/ministerios/1/membros", false),
+                                            new ItemDeNavegacao(
+                                                    "Ministérios",
+                                                    "Ministérios",
+                                                    "church",
+                                                    "/admin/ministerios",
+                                                    false,
+                                                    true,
+                                                    List.of())))));
             model.addAttribute(
                     "ministerios",
                     List.of(

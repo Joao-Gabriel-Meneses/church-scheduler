@@ -4,9 +4,11 @@
     List<ItemDeNavegacao>; o layout recebe a navegação principal do NavegacaoAdvice (${navegacao}) e os ministérios
     em ${ministerios}.
 
-    navPills(itens): pílulas no topo; a atual fica escura (aria-current="page").
-    barraInferior(itens): no celular a navegação vira barra inferior, com ícone + rótulo curto. Cabem os 8 itens do admin
-        num ministério em 390px; numa tela mais estreita o rótulo encolhe com reticências, sem rolagem lateral.
+    navPills(itens): abas no topo; a atual fica escura (aria-current="page"). Item com filhos vira NavMenu: a aba abre
+        a lista de opções num <details> (docs/design/components/NavMenu), escura quando um filho é a página atual.
+    barraInferior(itens): no celular a navegação vira barra inferior, com ícone + rótulo curto. São sempre as mesmas
+        abas (no máximo 3); o NavMenu sobe da barra como uma folha, na largura toda.
+    menuDoUsuario(nome): no canto direito, o nome com seta abre Minha conta, Trocar senha e Sair (POST com CSRF).
     rail(ministerios): SideRail de ministérios no desktop, com aria-label e Tooltip com o nome em cada item;
         escondida com menos de dois.
     seletorDeMinisterio(ministerios): no celular, a rail vira um seletor no topo (sem JS).
@@ -15,20 +17,65 @@
 <body>
 
 <nav th:fragment="navPills(itens)" class="rt-nav flex-wrap" aria-label="Principal">
-    <a th:each="item : ${itens}" class="rt-nav__item" th:href="@{${item.url}}"
-       th:aria-current="${item.atual} ? 'page' : null"><svg
-            th:replace="~{componentes/icone :: icone(${item.icone})}"></svg><th:block
-            th:text="${item.rotulo}">Escalas</th:block></a>
+    <th:block th:each="item : ${itens}">
+        <details th:if="${item.menu}" class="rt-nav-menu" th:classappend="${item.atual} ? 'rt-nav-menu--atual'">
+            <summary class="rt-nav__item"><svg th:replace="~{componentes/icone :: icone(${item.icone})}"></svg><th:block
+                    th:text="${item.rotulo}">Gerenciar</th:block><span
+                    class="rt-nav-menu__seta inline-flex"><svg
+                    th:replace="~{componentes/icone :: icone('chevron-down')}"></svg></span></summary>
+            <div th:replace="~{::painelDoMenu(${item.filhos})}"></div>
+        </details>
+        <a th:unless="${item.menu}" class="rt-nav__item" th:href="@{${item.url}}"
+           th:aria-current="${item.atual} ? 'page' : null"><svg
+                th:replace="~{componentes/icone :: icone(${item.icone})}"></svg><th:block
+                th:text="${item.rotulo}">Início</th:block></a>
+    </th:block>
 </nav>
 
 <nav th:fragment="barraInferior(itens)" class="rt-nav gap-1 border-t-2 border-surface bg-canvas px-1 py-2"
      aria-label="Principal">
-    <a th:each="item : ${itens}"
-       class="rt-nav__item h-auto min-w-0 flex-auto flex-col justify-center gap-1 px-0 py-2 text-label"
-       th:href="@{${item.url}}" th:aria-current="${item.atual} ? 'page' : null"><svg
-            th:replace="~{componentes/icone :: icone(${item.icone})}"></svg><span class="max-w-full truncate"
-            th:text="${item.rotuloCurto}">Escalas</span></a>
+    <th:block th:each="item : ${itens}">
+        <details th:if="${item.menu}" class="rt-nav-menu rt-nav-menu--folha"
+                 th:classappend="${item.atual} ? 'rt-nav-menu--atual'">
+            <summary class="rt-nav__item h-auto min-w-0 flex-col justify-center gap-1 px-0 py-2 text-label"><svg
+                    th:replace="~{componentes/icone :: icone(${item.icone})}"></svg><span class="max-w-full truncate"
+                    th:text="${item.rotuloCurto}">Gerenciar</span></summary>
+            <div th:replace="~{::painelDoMenu(${item.filhos})}"></div>
+        </details>
+        <a th:unless="${item.menu}"
+           class="rt-nav__item h-auto min-w-0 flex-auto flex-col justify-center gap-1 px-0 py-2 text-label"
+           th:href="@{${item.url}}" th:aria-current="${item.atual} ? 'page' : null"><svg
+                th:replace="~{componentes/icone :: icone(${item.icone})}"></svg><span class="max-w-full truncate"
+                th:text="${item.rotuloCurto}">Início</span></a>
+    </th:block>
 </nav>
+
+<div th:fragment="painelDoMenu(filhos)" class="rt-nav-menu__painel">
+    <th:block th:each="filho : ${filhos}">
+        <div th:if="${filho.separado}" class="rt-nav-menu__sep" role="separator"></div>
+        <a class="rt-nav-menu__item" th:href="@{${filho.url}}" th:aria-current="${filho.atual} ? 'page' : null"><svg
+                th:replace="~{componentes/icone :: icone(${filho.icone})}"></svg><th:block
+                th:text="${filho.rotulo}">Escalas</th:block></a>
+    </th:block>
+</div>
+
+<details th:fragment="menuDoUsuario(nome)" class="rt-nav-menu rt-nav-menu--fim">
+    <summary class="rt-nav__item"><svg th:replace="~{componentes/icone :: icone('user')}"></svg><span
+            class="max-w-3xs truncate max-md:sr-only" th:text="${nome}">Nome</span><span
+            class="rt-nav-menu__seta inline-flex"><svg
+            th:replace="~{componentes/icone :: icone('chevron-down')}"></svg></span></summary>
+    <div class="rt-nav-menu__painel">
+        <a class="rt-nav-menu__item" th:href="@{/conta}"><svg
+                th:replace="~{componentes/icone :: icone('user')}"></svg>Minha conta</a>
+        <a class="rt-nav-menu__item" th:href="@{/conta/senha}"><svg
+                th:replace="~{componentes/icone :: icone('lock')}"></svg>Trocar senha</a>
+        <div class="rt-nav-menu__sep" role="separator"></div>
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="rt-nav-menu__item"><svg
+                    th:replace="~{componentes/icone :: icone('log-out')}"></svg>Sair</button>
+        </form>
+    </div>
+</details>
 
 <nav th:fragment="rail(ministerios)" th:if="${ministerios != null and ministerios.size() > 1}" class="rt-rail"
      aria-label="Ministérios">

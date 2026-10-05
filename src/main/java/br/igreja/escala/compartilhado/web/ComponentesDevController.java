@@ -24,7 +24,7 @@ class ComponentesDevController {
     @GetMapping
     String componentes(Model model) {
         model.addAttribute("ministerios", ministerios());
-        model.addAttribute("abas", abasDoGerente("Escalas"));
+        model.addAttribute("abas", abas("Escalas"));
         model.addAttribute(
                 "niveis", List.of(new Opcao("INICIANTE", "Iniciante"), new Opcao("EXPERIENTE", "Experiente")));
         model.addAttribute("disponibilidade", disponibilidade());
@@ -128,13 +128,7 @@ class ComponentesDevController {
 
     @GetMapping("/membro")
     String membro(Model model) {
-        model.addAttribute(
-                "navegacao",
-                List.of(
-                        new ItemDeNavegacao(
-                                "Minhas escalas", "Escalas", "calendar-check", "/dev/componentes/membro", true),
-                        new ItemDeNavegacao(
-                                "Disponibilidade", "Disponibilidade", "calendar", "/dev/componentes/membro#", false)));
+        model.addAttribute("navegacao", abas(null));
         model.addAttribute("ministerios", ministerios());
         model.addAttribute("sucesso", "Disponibilidade de outubro salva");
         return "dev/layout-membro";
@@ -143,7 +137,7 @@ class ComponentesDevController {
     /** Página de escalas: a única com "Gerar escala" como primário na Toolbar. */
     @GetMapping("/gerente")
     String gerenteEscalas(Model model) {
-        model.addAttribute("navegacao", abasDoGerente("Escalas"));
+        model.addAttribute("navegacao", abas("Escalas"));
         model.addAttribute("ministerios", ministerios());
         model.addAttribute("funcoesDaGrade", List.of("Projeção", "Transmissão"));
         model.addAttribute("linhasDaGrade", grade());
@@ -153,7 +147,7 @@ class ComponentesDevController {
     /** Página de membros: a Toolbar só tem período e trava; o primário é "Convidar membro". */
     @GetMapping("/gerente/membros")
     String gerenteMembros(Model model) {
-        model.addAttribute("navegacao", abasDoGerente("Membros"));
+        model.addAttribute("navegacao", abas("Membros"));
         model.addAttribute("ministerios", ministerios());
         return "dev/gerente-membros";
     }
@@ -168,20 +162,30 @@ class ComponentesDevController {
                         "Relatórios", "Relatórios", "chart-pie", "/dev/componentes/gerente#relatorios", false));
     }
 
-    /** NavPills do gerente (README do NavPills): Escalas, Disponibilidade, Membros e Regras. */
-    private static List<ItemDeNavegacao> abasDoGerente(String atual) {
+    /**
+     * NavPills (README do NavPills): Início, Disponibilidade e o menu Gerenciar, iguais em toda página. Com
+     * {@code atual}, o item do menu com esse rótulo é a página atual.
+     */
+    static List<ItemDeNavegacao> abas(String atual) {
+        String gerente = "/dev/componentes/gerente";
         return List.of(
-                new ItemDeNavegacao(
-                        "Escalas", "Escalas", "layout-dashboard", "/dev/componentes/gerente", "Escalas".equals(atual)),
-                new ItemDeNavegacao(
-                        "Disponibilidade",
-                        "Disponibilidade",
-                        "calendar",
-                        "/dev/componentes/gerente#",
-                        "Disponibilidade".equals(atual)),
-                new ItemDeNavegacao(
-                        "Membros", "Membros", "users", "/dev/componentes/gerente/membros", "Membros".equals(atual)),
-                new ItemDeNavegacao(
-                        "Regras", "Regras", "settings-2", "/dev/componentes/gerente#", "Regras".equals(atual)));
+                new ItemDeNavegacao("Início", "Início", "house", "/dev/componentes/membro", atual == null),
+                new ItemDeNavegacao("Disponibilidade", "Disponib.", "list-checks", "/dev/componentes/membro#", false),
+                ItemDeNavegacao.menu(
+                        "Gerenciar",
+                        "Gerenciar",
+                        "layout-dashboard",
+                        List.of(
+                                filho("Escalas", "layout-dashboard", gerente, atual, false),
+                                filho("Eventos", "calendar", gerente + "#", atual, false),
+                                filho("Disponibilidade", "list-checks", gerente + "#", atual, false),
+                                filho("Membros", "users", gerente + "/membros", atual, false),
+                                filho("Funções", "layers", gerente + "#", atual, false),
+                                filho("Regras", "settings-2", gerente + "#", atual, false),
+                                filho("Ministérios", "church", gerente + "#", atual, true))));
+    }
+
+    private static ItemDeNavegacao filho(String rotulo, String icone, String url, String atual, boolean separado) {
+        return new ItemDeNavegacao(rotulo, rotulo, icone, url, rotulo.equals(atual), separado, List.of());
     }
 }
