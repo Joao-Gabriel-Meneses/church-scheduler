@@ -259,8 +259,9 @@ class PaginasDoGerenteIT {
         abre("/ministerios/{m}/escalas", ministerioId);
         mvc.perform(get("/ministerios/{m}/regras", ministerioId).with(user(gerente)))
                 .andExpect(status().isOk())
-                .andExpect(
-                        content().string(Matchers.containsString("No máximo 1 pessoa do nível Iniciante por evento.")));
+                .andExpect(content()
+                        .string(Matchers.containsString(
+                                "Pelo menos 1 pessoa do nível Iniciante em cada evento com alguém escalado.")));
         abre("/ministerios/{m}/regras/limite", ministerioId);
         abre("/ministerios/{m}/regras/minimo-por-nivel", ministerioId);
     }
