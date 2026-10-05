@@ -84,6 +84,14 @@ public enum TipoDeRegra {
         return this != LIMITE_POR_PERIODO && this != MIN_POR_NIVEL_NO_EVENTO && this != EQUILIBRIO_DE_CARGA;
     }
 
+    /**
+     * O gerente pode pôr alguém que viola esta regra, com justificativa (vaga forçada): o limite do mês e a
+     * disponibilidade. Habilitação, uma função por evento, sobreposição e mínimo por nível nunca se forçam.
+     */
+    public boolean isForcavel() {
+        return this == LIMITE_POR_PERIODO || this == DISPONIBILIDADE;
+    }
+
     public String rotulo() {
         return rotulo;
     }
