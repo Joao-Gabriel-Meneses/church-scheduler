@@ -1,0 +1,55 @@
+# Produção na VM Oracle Cloud (ARM64): Internet → Cloudflare → Tunnel → cloudflared → app. Nenhuma porta no host.
+# Na VM, em /opt/escala: este arquivo, o .env (a partir do .env.example) e a wallet/ do Autonomous DB.
+# O .env define COMPOSE_FILE=compose.prod.yaml, então basta: docker compose pull && docker compose up -d
+# Roteiro completo: docs/deploy.md.
+services:
+  app:
+    # Sempre por tag (o SHA do commit publicado pelo CI), nunca latest: o rollback é voltar a tag anterior.
+    image: ghcr.io/joao-gabriel-meneses/escala:${ESCALA_TAG:?defina ESCALA_TAG no .env (SHA do commit)}
+    restart: unless-stopped
+    # Só as chaves do app; o token do túnel não entra aqui.
+    environment:
+      DB_URL: ${DB_URL:?defina DB_URL no .env}
+      DB_USUARIO: ${DB_USUARIO:?defina DB_USUARIO no .env}
+      DB_SENHA: ${DB_SENHA:?defina DB_SENHA no .env}
+      DOMINIO: ${DOMINIO:?defina DOMINIO no .env}
+      ESCALA_CHAVE_LEMBRAR_ME: ${ESCALA_CHAVE_LEMBRAR_ME:?defina ESCALA_CHAVE_LEMBRAR_ME no .env}
+      ESCALA_ADMIN_NOME: ${ESCALA_ADMIN_NOME:-}
+      ESCALA_ADMIN_EMAIL: ${ESCALA_ADMIN_EMAIL:-}
+      ESCALA_ADMIN_SENHA: ${ESCALA_ADMIN_SENHA:-}
+      # Heap alto de propósito: a Oracle recupera VMs Always Free com CPU, rede e memória abaixo de 20% por 7 dias.
+      # AlwaysPreTouch ocupa o heap inicial de fato; sem ele o Linux não conta as páginas não usadas.
+      JAVA_TOOL_OPTIONS: -Xms2g -Xmx3g -XX:+AlwaysPreTouch
+    volumes:
+      # Wallet fora da imagem, somente leitura (DB_URL usa TNS_ADMIN=/wallet).
+      - ./wallet:/wallet:ro
+    # O health consulta o banco: também mantém o Autonomous DB ativo (ele para com 7 dias sem conexão).
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8080/actuator/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    networks: [escala]
+    logging: &logs
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.9.3
+    restart: unless-stopped
+    # Túnel gerenciado no painel do Cloudflare: lá o hostname escala.ibrp.com.br aponta para http://app:8080.
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?defina CLOUDFLARE_TUNNEL_TOKEN no .env}
+    depends_on:
+      app:
+        condition: service_healthy
+    networks: [escala]
+    logging: *logs
+
+# Rede só dos dois serviços. Não é internal: o cloudflared sai para o Cloudflare e o app para o banco e o Gmail.
+networks:
+  escala:

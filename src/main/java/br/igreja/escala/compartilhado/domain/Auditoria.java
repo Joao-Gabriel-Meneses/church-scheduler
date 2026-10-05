@@ -39,6 +39,9 @@ public class Auditoria {
     @Column(nullable = false, length = TAMANHO_DESCRICAO, updatable = false)
     private String descricao;
 
+    @Column(length = 45, updatable = false)
+    private String ip;
+
     @CreationTimestamp
     @Column(name = "criado_em", nullable = false, updatable = false)
     private Instant criadoEm;
@@ -46,6 +49,12 @@ public class Auditoria {
     protected Auditoria() {}
 
     public Auditoria(RegistroDeAuditoria registro) {
+        this(registro, null);
+    }
+
+    /** @param ip de onde veio a ação; {@code null} se não veio de uma requisição */
+    public Auditoria(RegistroDeAuditoria registro, String ip) {
+        this.ip = ip;
         this.acao = Exigencias.presente(registro.acao(), "acao");
         this.autorId = Exigencias.presente(registro.autorId(), "autorId");
         this.ministerioId = registro.ministerioId();
@@ -75,6 +84,10 @@ public class Auditoria {
 
     public String getDescricao() {
         return descricao;
+    }
+
+    public String getIp() {
+        return ip;
     }
 
     public Instant getCriadoEm() {

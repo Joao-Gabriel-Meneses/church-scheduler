@@ -30,7 +30,7 @@ Objetivos do autor: servir o ministério, compor portfólio e aprender Java/Spri
 | Qualidade | pre-commit (gitleaks, arquivos grandes, segredos), Spotless com palantir-java-format |
 | E-mail | Spring Mail via SMTP do Gmail (`smtp.gmail.com:587`, senha de app) |
 | Build | Maven (`./mvnw`) |
-| Deploy | Docker Compose (Caddy + app) em VM Oracle Cloud Always Free Ampere A1 (**ARM64**), região São Paulo |
+| Deploy | Docker Compose (`compose.prod.yaml`: cloudflared + app) em VM Oracle Cloud Always Free Ampere A1 (**ARM64**), região São Paulo, atrás de um **Cloudflare Tunnel** em `escala.ibrp.com.br` |
 | CI | GitHub Actions, imagens multiarquitetura com `docker buildx` |
 
 Não troque nenhuma dessas escolhas sem perguntar.
@@ -73,6 +73,7 @@ Gerente e admin também servem e aparecem na escala. Um usuário pode estar em v
 - **Desativar e reativar conta é só do admin**, e ele não desativa a própria. A conta vale para todos os ministérios; o gerente só remove do ministério dele. Conta desativada não entra, continua nos ministérios e aparece com Badge. Pendente: conta que saiu de todos os ministérios ainda não tem tela para o admin editar ou desativar.
 - **Sessões:** redefinir a senha de alguém ou desativar a conta encerra na hora todas as sessões abertas da pessoa, inclusive o "continuar conectado" (`SessoesAbertas`, depois do commit). Trocar a própria senha encerra as outras sessões e mantém a atual.
 - Editar a conta de outra pessoa, redefinir a senha, desativar e reativar registram `Auditoria`. A edição guarda só quais campos mudaram, sem os valores; desativar e reativar ficam sem ministério.
+- A `Auditoria` guarda o IP de quem fez a ação (`IpDoCliente`): o `CF-Connecting-IP` que o Cloudflare manda ou, sem ele, o IP da requisição. Ação sem requisição (a gravação da geração, na fila) fica sem IP.
 - Cadastrar um e-mail que já tem conta só cria a membresia; a conta não muda (se estiver desativada, o gerente é avisado).
 - **Navegação do gerente:** Escalas (rascunho e geração), Eventos (mês e modelos), Disponibilidade (painel e trava), Membros (e habilitações), Funções (funções e níveis) e Regras, mais Ministérios para o admin. "Gerenciar" e a SideRail abrem as Escalas (`Navegacao.SECAO_INICIAL`).
 - **Navegação do membro:** Minhas escalas e Disponibilidade (como no README do NavPills). O início tem o botão "Marcar disponibilidade".
@@ -193,13 +194,15 @@ A Fase 3 foi dividida. A **3a** (feita) gera a escala com o Timefold e mostra o 
 
 ## Infraestrutura e restrições do ambiente
 
-- **VM:** `VM.Standard.A1.Flex` com 1 OCPU e 6 GB. A cota Always Free total é de 2 OCPUs e 12 GB; nunca proponha ultrapassar.
+- **VM:** `VM.Standard.A1.Flex` com 2 OCPUs e 12 GB, que é a cota Always Free inteira; nunca proponha ultrapassar.
+- **Rede:** Internet → Cloudflare (DNS, WAF, TLS) → Tunnel → `cloudflared` na VM → `http://app:8080`. Sem Caddy e sem porta publicada no host; a Security List só abre a 22 para o IP do autor. O perfil `prod` (`application-prod.properties`) usa `server.forward-headers-strategy=native` e cookie `Secure`; o `ConfiguracaoDeProducaoTest` guarda que ele não tem segredo e confere a configuração efetiva.
+- **Imagem:** o CI publica `ghcr.io/joao-gabriel-meneses/escala:<sha completo>` (e `latest`) da `main` e confere a variante arm64. O deploy é manual, por SSH, com `ESCALA_TAG` no `.env`; o rollback é voltar a tag.
 - **ARM64:** toda imagem Docker deve ter variante `linux/arm64`. Use a base Eclipse Temurin 21.
-- **VM ociosa:** a Oracle pode recuperar a VM se CPU, rede e memória ficarem abaixo de 20% por 7 dias. A JVM roda com `-Xms2g -Xmx3g -XX:+AlwaysPreTouch` para manter a memória acima do limite (sem o pre-touch o heap reservado não conta como uso).
+- **VM ociosa:** a Oracle pode recuperar a VM se CPU, rede e memória ficarem abaixo de 20% por 7 dias. A JVM roda com `-Xms2g -Xmx3g -XX:+AlwaysPreTouch` para manter a memória acima do limite (sem o pre-touch o heap reservado não conta como uso). Com 12 GB isso fica perto do limite; o `docs/deploy.md` mostra como conferir.
 - **Autonomous DB Always Free:**
   - 20 GB de armazenamento e **30 sessões**. Mantenha o HikariCP em `maximum-pool-size` ≤ 10.
-  - Para após 7 dias sem conexão; o pool ativo e o health check que consulta o banco evitam isso.
-  - **Não tem backup manual nem restore.** O backup é um export diário com Data Pump para o Object Storage.
+  - Para após 7 dias sem conexão e é apagado com 90 dias parado; o pool ativo, o health check que consulta o banco e o monitoramento externo evitam isso.
+  - **Não tem backup manual nem restore.** O backup é um export diário com Data Pump para o Object Storage (`infra/backup`). Credencial, procedure (`AUTHID DEFINER`) e job pertencem ao `ESCALA_APP`, com privilégios concedidos direto (role não vale dentro de procedure). O backup só conta depois de um restore testado num schema vazio.
   - Conexão por TLS com a wallet, montada como volume e fora da imagem.
 - **Gmail:** exige verificação em duas etapas e senha de app. O limite é de 500 destinatários por dia. Falhas de envio devem ser registradas e notificadas ao admin.
 - **Segredos** (senha do banco, wallet, senha de app do Gmail) só via variáveis de ambiente ou arquivos montados. **Nunca commitar.**
@@ -242,7 +245,7 @@ Por isso a garantia final é **rodar as migrações no Autonomous DB 19c real** 
 
 - Mobile-first: marcar a disponibilidade do mês em menos de 1 minuto pelo celular.
 - Páginas em até 2 s; geração da escala do mês em até 30 s.
-- Senhas com BCrypt, CSRF ativo, HTTPS (Caddy).
+- Senhas com BCrypt, CSRF ativo, HTTPS (Cloudflare).
 - LGPD: coletar só nome, e-mail e telefone; o membro pode excluir a conta.
 - Interface em **pt-BR**, datas no fuso **America/Sao_Paulo** (use `ZoneId.of("America/Sao_Paulo")`, nunca o fuso padrão da JVM).
 
@@ -306,7 +309,7 @@ pre-commit install              # uma vez por clone: ativa os hooks
 ./mvnw spotless:apply           # formatar o código Java
 pre-commit run --all-files      # rodar todos os hooks
 docker buildx build --platform linux/amd64,linux/arm64 -t escala:latest .
-docker compose up -d            # produção (Caddy + app)
+docker compose up -d            # produção, na VM (o COMPOSE_FILE do .env aponta o compose.prod.yaml)
 ```
 
 ## Roadmap
@@ -330,7 +333,6 @@ docker compose up -d            # produção (Caddy + app)
 
 ## Em aberto (pergunte antes de assumir)
 
-- **Domínio do sistema:** um subdomínio gratuito (ex.: DuckDNS) ou um `.com.br`?
 - **Conta de e-mail:** o Gmail pessoal do líder ou um Gmail dedicado ao ministério?
 - **Pacote base:** hoje é o provisório `br.igreja.escala` (groupId `br.igreja`, artifactId `escala`). Trocar em um único commit de refatoração quando for decidido.
 
