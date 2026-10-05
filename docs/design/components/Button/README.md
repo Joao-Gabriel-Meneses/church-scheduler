@@ -1,5 +1,5 @@
 # Button
-Botão em pílula com texto, opcionalmente com ícone à esquerda.
+Botão com texto, cantos `radius-control` (8px), opcionalmente com ícone à esquerda.
 
 - `rt-btn--primary`: uma por tela, a ação que faz o trabalho ("Gerar escala", "Salvar disponibilidade"). Fundo `brand-strong`; hover `brand-deep` (6.49:1 com texto branco; `brand` daria 3.39:1).
 - `rt-btn--dark`: ação que torna algo definitivo e dispara e-mails — "Publicar", "Republicar", "Confirmar desistência".
