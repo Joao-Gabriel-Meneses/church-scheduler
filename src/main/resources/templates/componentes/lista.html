@@ -11,6 +11,7 @@
         icone        ícone do tile de 48px
         href         linha clicável (<a> com chevron); sem href é só informação (<div>)
         selecionada  true: fundo brand-tint e aria-current
+        etiqueta     Badge à direita do texto, com etiquetaTint (mint | rose | lemon): o ministério da linha
     Opção omitida herda a variável de mesmo nome do contexto: passe null quando precisar.
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
@@ -33,6 +34,8 @@
         <span class="rt-list-row__title" th:text="${titulo}">Projeção</span>
         <span th:if="${sub != null}" class="rt-list-row__sub" th:text="${sub}">Experiente · 3 escalas em outubro</span>
     </span>
+    <th:block th:if="${etiqueta != null}"><span th:replace="~{componentes/badge :: badge(texto=${etiqueta},
+            variante=null, icone=null, tint=${etiquetaTint}, classe='flex-none')}"></span></th:block>
 </th:block>
 
 </body>

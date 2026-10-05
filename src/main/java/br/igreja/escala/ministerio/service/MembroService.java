@@ -130,6 +130,18 @@ public class MembroService {
                 .toList();
     }
 
+    /** Ministérios de que a pessoa é membro (com ou sem habilitação), em ordem de nome. */
+    @Transactional(readOnly = true)
+    public List<Ministerio> ministeriosDe(Long usuarioId) {
+        return membresias.ministeriosDe(usuarioId);
+    }
+
+    /** Se a pessoa é membro do ministério (a escala publicada dele é dela também). */
+    @Transactional(readOnly = true)
+    public boolean participa(Long usuarioId, Long ministerioId) {
+        return membresias.existsByUsuarioIdAndMinisterioId(usuarioId, ministerioId);
+    }
+
     /** Se o gerente que está logado pode redefinir a senha deste membro (para mostrar ou não o botão). */
     @Transactional(readOnly = true)
     public boolean podeMexerNaConta(MembroResumo membro, UsuarioAutenticado autor) {

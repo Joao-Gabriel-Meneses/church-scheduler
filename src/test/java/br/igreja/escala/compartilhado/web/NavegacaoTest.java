@@ -108,6 +108,16 @@ class NavegacaoTest {
     }
 
     @Test
+    void aEscalaDoMinisterioDoMembroFicaNoInicio() {
+        assertThat(navegacao.itens(membro(), "/escalas/1", NENHUM))
+                .extracting(ItemDeNavegacao::atual)
+                .containsExactly(true);
+        assertThat(navegacao.itens(membro(), "/escalasx", NENHUM))
+                .extracting(ItemDeNavegacao::atual)
+                .containsExactly(false);
+    }
+
+    @Test
     void sideRailMostraOsMinisteriosNaMesmaSecaoSoDentroDeUmMinisterio() {
         assertThat(Navegacao.ministerios("/ministerios/1/membros/7", MIDIA_E_LOUVOR))
                 .extracting(ItemDeNavegacao::rotulo, ItemDeNavegacao::url, ItemDeNavegacao::atual)

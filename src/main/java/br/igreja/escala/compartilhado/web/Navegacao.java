@@ -138,7 +138,8 @@ public final class Navegacao {
     /** "/" só vale para o início; as outras seções valem também para as subpáginas ("/membros/3"). */
     private static boolean estaEm(String caminho, String url) {
         if (url.equals("/")) {
-            return caminho.equals("/");
+            // A escala do ministério (/escalas/{id}) se abre de "Minhas escalas", que fica no início.
+            return caminho.equals("/") || caminho.startsWith("/escalas/");
         }
         return caminho.equals(url) || caminho.startsWith(url + "/");
     }

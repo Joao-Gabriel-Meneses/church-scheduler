@@ -74,9 +74,17 @@ public class ConsultaDaEscala {
         return montar(dados, avisos, !gerando);
     }
 
-    /** Sem avisos e sem ajuste (a grade como o membro a vê). */
+    /** A página do gerente sem avisos e sem ajuste. */
     static PaginaDaEscala montar(DadosDoPeriodo dados) {
         return montar(dados, Map.of(), false);
+    }
+
+    /**
+     * A grade como o membro a vê: as pessoas e o nível, sem fixada, forçada nem justificativa (isso é do gerente). Os
+     * alertas e o resumo vêm junto, mas a página do membro não os mostra.
+     */
+    static PaginaDaEscala paraOMembro(DadosDoPeriodo dados) {
+        return montar(dados, Map.of(), false, false);
     }
 
     /**
@@ -84,6 +92,11 @@ public class ConsultaDaEscala {
      * @param ajustavel as vagas por vir se abrem para o ajuste manual
      */
     static PaginaDaEscala montar(DadosDoPeriodo dados, Map<Long, List<Violacao>> avisos, boolean ajustavel) {
+        return montar(dados, avisos, ajustavel, true);
+    }
+
+    private static PaginaDaEscala montar(
+            DadosDoPeriodo dados, Map<Long, List<Violacao>> avisos, boolean ajustavel, boolean doGerente) {
         if (dados.periodo() == null) {
             return PaginaDaEscala.semPeriodo(dados.mes());
         }
@@ -121,7 +134,8 @@ public class ConsultaDaEscala {
                                 niveis,
                                 dados.nomesDosNiveis(),
                                 avisos.getOrDefault(vaga.getId(), List.of()),
-                                ajustavel && dados.porVir(evento)))
+                                ajustavel && dados.porVir(evento),
+                                doGerente))
                         .toList();
                 comVagaVazia |=
                         dados.porVir(evento) && slots.stream().anyMatch(slot -> slot.vazia() && slot.obrigatoria());
@@ -165,10 +179,15 @@ public class ConsultaDaEscala {
             Map<String, Long> niveis,
             Map<Long, String> nomesDosNiveis,
             List<Violacao> avisos,
-            boolean editavel) {
+            boolean editavel,
+            boolean doGerente) {
         if (vaga.isVazia()) {
             return SlotDaGrade.vazia(
-                    vaga.getId(), vaga.getVersao(), vaga.getPosicao() <= funcao.getQtdMin(), vaga.isFixada(), editavel);
+                    vaga.getId(),
+                    vaga.getVersao(),
+                    vaga.getPosicao() <= funcao.getQtdMin(),
+                    doGerente && vaga.isFixada(),
+                    editavel);
         }
         var pessoa = pessoas.get(vaga.getUsuarioId());
         Long nivel = niveis.get(vaga.getUsuarioId() + "/" + funcao.getId());
@@ -177,9 +196,9 @@ public class ConsultaDaEscala {
                 vaga.getVersao(),
                 pessoa == null ? "Pessoa removida" : pessoa.nome(),
                 nivel == null ? null : nomesDosNiveis.get(nivel),
-                vaga.isFixada(),
-                vaga.isForcada(),
-                vaga.getJustificativa(),
+                doGerente && vaga.isFixada(),
+                doGerente && vaga.isForcada(),
+                doGerente ? vaga.getJustificativa() : null,
                 avisos.isEmpty() ? null : regras(avisos),
                 editavel);
     }

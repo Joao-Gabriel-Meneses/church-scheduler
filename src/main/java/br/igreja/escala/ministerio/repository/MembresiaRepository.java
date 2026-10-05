@@ -43,4 +43,11 @@ public interface MembresiaRepository extends JpaRepository<Membresia, Long> {
              order by m.ministerio.nome
             """)
     List<Ministerio> ministeriosGerenciadosPor(Long usuarioId);
+
+    @Query("""
+            select m.ministerio from Membresia m
+             where m.usuarioId = :usuarioId
+             order by m.ministerio.nome
+            """)
+    List<Ministerio> ministeriosDe(Long usuarioId);
 }

@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
@@ -184,6 +185,12 @@ public class EventoService {
     public Evento buscar(Long ministerioId, Long eventoId) {
         return eventos.findByIdAndMinisterioId(eventoId, ministerioId)
                 .orElseThrow(() -> new NaoEncontradoException("Evento " + eventoId + " no ministério " + ministerioId));
+    }
+
+    /** Os eventos, de qualquer ministério, com as funções exigidas e o período já carregados. */
+    @Transactional(readOnly = true)
+    public List<Evento> porIds(Collection<Long> ids) {
+        return ids.isEmpty() ? List.of() : eventos.findComFuncoesEPeriodoByIdIn(ids);
     }
 
     private void exigirFuncoes(Long ministerioId, Evento evento, DadosDoEvento dados) {

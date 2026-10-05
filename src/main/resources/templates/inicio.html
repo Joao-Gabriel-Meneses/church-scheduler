@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <!--/*
     Início: "Minhas escalas" e a disponibilidade do próximo mês na mesma tela. No desktop, duas colunas (escalas na
-    larga); no celular, a disponibilidade vem primeiro, porque é o que a pessoa faz todo mês.
+    larga); no celular, a disponibilidade vem primeiro, porque é o que a pessoa faz todo mês. Minhas escalas: só das
+    escalas publicadas, as próximas primeiro ("12/10 · Dom · 18h00", função, evento e a etiqueta do ministério), as
+    passadas recolhidas, e os atalhos para a escala de cada ministério.
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layouts/membro :: pagina(~{::title}, ~{::main})}">
@@ -19,10 +21,32 @@
     <div class="grid gap-6 lg:grid-cols-3">
         <section class="flex flex-col gap-3 lg:col-span-2" aria-labelledby="minhas-escalas">
             <h2 id="minhas-escalas" class="text-heading">Minhas escalas</h2>
-            <div class="rt-panel flex items-center gap-3 p-6 text-ink-muted">
+            <ul th:unless="${minhasEscalas.proximas.isEmpty()}" class="rt-list">
+                <li th:each="escala : ${minhasEscalas.proximas}"><a th:replace="~{componentes/lista :: linha(
+                        titulo=${escala.quando}, sub=${escala.descricao()}, icone='calendar-check',
+                        href=@{${escala.url}}, selecionada=null, etiqueta=${escala.ministerio},
+                        etiquetaTint=${escala.tint})}"></a></li>
+            </ul>
+            <div th:if="${minhasEscalas.proximas.isEmpty()}" class="rt-panel flex items-center gap-3 p-6 text-ink-muted">
                 <svg th:replace="~{componentes/icone :: icone('calendar-check')}"></svg>
                 <p>Suas próximas escalas vão aparecer aqui depois que o gerente publicar.</p>
             </div>
+            <details th:unless="${minhasEscalas.passadas.isEmpty()}" class="flex flex-col gap-2">
+                <summary class="flex h-control cursor-pointer items-center text-ink-muted"
+                         th:text="|Escalas passadas (${minhasEscalas.passadas.size()})|">Escalas passadas (2)</summary>
+                <ul class="rt-list">
+                    <li th:each="escala : ${minhasEscalas.passadas}"><a th:replace="~{componentes/lista :: linha(
+                            titulo=${escala.quando}, sub=${escala.descricao()}, icone='calendar',
+                            href=@{${escala.url}}, selecionada=null, etiqueta=${escala.ministerio},
+                            etiquetaTint=${escala.tint})}"></a></li>
+                </ul>
+            </details>
+            <p th:unless="${minhasEscalas.ministerios.isEmpty()}" class="flex flex-wrap items-center gap-2">
+                <span class="text-ink-muted">Escala do ministério:</span>
+                <th:block th:each="ministerio : ${minhasEscalas.ministerios}"><a th:replace="~{componentes/botao ::
+                        botao(texto=${ministerio.nome}, variante='secondary', icone='users', href=@{${ministerio.url}},
+                        classe=null)}"></a></th:block>
+            </p>
         </section>
 
         <section class="order-first flex flex-col gap-3 lg:order-none" aria-labelledby="disponibilidade-do-mes">
