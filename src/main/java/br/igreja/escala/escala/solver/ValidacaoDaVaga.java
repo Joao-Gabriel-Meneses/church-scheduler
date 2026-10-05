@@ -233,7 +233,9 @@ public final class ValidacaoDaVaga {
                 String dela = nomesDosNiveis.get(pessoa.nivelEm(vaga.getFuncao().id()));
                 yield "O evento precisa de pelo menos " + parametros.minimoDoNivel()
                         + (parametros.minimoDoNivel() == 1 ? " pessoa" : " pessoas") + " do nível " + nivel
-                        + (dela == null || dela.equals(nivel) ? ", e ainda não tem." : ", e ela é " + dela + ".");
+                        + (dela == null || dela.equals(nivel)
+                                ? ", e ainda não tem."
+                                : ", e " + pessoa.nome() + " é " + dela + ".");
             }
             case PESSOAS_POR_FUNCAO -> vaga.getFuncao().nome() + " já tem o máximo de pessoas neste evento.";
             default -> tipo.descricao();

@@ -180,7 +180,7 @@ class ValidacaoDaVagaTest {
                         assertThat(violacao.regra()).isEqualTo(TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO);
                         assertThat(violacao.forcavel()).isFalse();
                         assertThat(violacao.porQue())
-                                .isEqualTo("O evento precisa de pelo menos 1 pessoa do nível Experiente, e ela é"
+                                .isEqualTo("O evento precisa de pelo menos 1 pessoa do nível Experiente, e Pessoa 32 é"
                                         + " Iniciante.");
                     });
         }
