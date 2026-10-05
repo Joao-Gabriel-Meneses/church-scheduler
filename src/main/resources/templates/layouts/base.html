@@ -3,6 +3,9 @@
     Partes comuns aos layouts (simples, membro e gerente).
     cabeca(titulo): <head> com CSRF para o htmx, CSS, fonte pré-carregada, htmx e app.js.
     pularParaConteudo: link "Pular para o conteúdo", visível só no foco do teclado.
+    cabecalho: barra do topo, igual nos layouts membro e gerente. À esquerda a marca (no celular, o seletor de
+            ministério quando há mais de um), no meio as abas (${navegacao}, só a partir de md; no celular elas ficam
+            na barra inferior) e à direita o menu do usuário.
     toasts: região aria-live dos toasts; mostra o flash attribute ${sucesso} e recebe toasts OOB do htmx.
             Fica colada acima do que vier depois dela (barra inferior no celular) e à direita no desktop.
 */-->
@@ -26,6 +29,27 @@
 <a th:fragment="pularParaConteudo" href="#conteudo"
    class="rt-btn rt-btn--secondary sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-20">Pular
     para o conteúdo</a>
+
+<header th:fragment="cabecalho" class="flex items-center gap-4"
+        xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+        th:with="_comMinisterios=${ministerios != null and ministerios.size() > 1}">
+    <div class="flex min-w-0 items-center gap-2">
+        <th:block th:if="${_comMinisterios}">
+            <div class="lg:hidden">
+                <details th:replace="~{componentes/navegacao :: seletorDeMinisterio(${ministerios})}"></details>
+            </div>
+        </th:block>
+        <a th:href="@{/}" class="text-heading" th:classappend="${_comMinisterios} ? 'hidden lg:inline'">Escala</a>
+    </div>
+    <div class="hidden min-w-0 flex-1 md:block">
+        <th:block th:if="${navegacao != null and navegacao.size() > 1}">
+            <nav th:replace="~{componentes/navegacao :: navPills(${navegacao})}"></nav>
+        </th:block>
+    </div>
+    <div class="ml-auto" sec:authorize="isAuthenticated()">
+        <details th:replace="~{componentes/navegacao :: menuDoUsuario(${#authentication.principal.nome})}"></details>
+    </div>
+</header>
 
 <div th:fragment="toasts" id="toasts" aria-live="polite"
      class="pointer-events-none absolute inset-x-0 bottom-full flex flex-col items-center gap-2 p-4 md:items-end md:px-8">

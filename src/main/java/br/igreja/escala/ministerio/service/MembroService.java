@@ -177,7 +177,7 @@ public class MembroService {
         var membro = buscar(ministerioId, usuarioId);
         if (autor.getId().equals(usuarioId)) {
             throw RegraVioladaException.geral(
-                    "Sua senha não mudou: para trocar a sua própria senha, use Trocar senha no início.");
+                    "Sua senha não mudou: para trocar a sua própria senha, use Trocar senha no menu da sua conta, no alto da página.");
         }
         if (!podeMexerNaConta(membro, autor)) {
             throw RegraVioladaException.geral("A senha de " + membro.nome()
@@ -207,7 +207,8 @@ public class MembroService {
     public MembroResumo buscarParaEditar(Long ministerioId, Long usuarioId, UsuarioAutenticado autor) {
         var membro = buscar(ministerioId, usuarioId);
         if (autor.getId().equals(usuarioId)) {
-            throw RegraVioladaException.geral("Para mudar os seus dados, use Minha conta no início.");
+            throw RegraVioladaException.geral(
+                    "Para mudar os seus dados, use Minha conta no menu da sua conta, no alto da página.");
         }
         if (!podeMexerNaConta(membro, autor)) {
             throw RegraVioladaException.geral("Os dados de " + membro.nome()

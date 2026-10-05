@@ -1,26 +1,48 @@
 <!DOCTYPE html>
+<!--/*
+    Início: "Minhas escalas" e a disponibilidade do próximo mês na mesma tela. No desktop, duas colunas (escalas na
+    larga); no celular, a disponibilidade vem primeiro, porque é o que a pessoa faz todo mês.
+*/-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layouts/membro :: pagina(~{::title}, ~{::main})}">
 <head>
     <title>Início · Escala</title>
 </head>
 <body>
-<main class="flex flex-col gap-4">
-    <h1 class="text-title">Olá, <span sec:authentication="principal.nome">Nome</span>!</h1>
-    <p class="text-ink-muted">Suas próximas escalas vão aparecer aqui.</p>
-    <p>
-        <a th:replace="~{componentes/botao :: botao(texto='Marcar disponibilidade', icone='list-checks',
-                href=@{/disponibilidade}, variante=null, classe='w-full justify-center md:w-auto')}"></a>
-    </p>
-    <p sec:authorize="hasRole('ADMIN')">
-        <span th:replace="~{componentes/badge :: badge('Administrador')}"></span>
-    </p>
-    <p class="flex flex-wrap gap-2">
-        <a th:replace="~{componentes/botao :: botao(texto='Minha conta', variante='outline', href=@{/conta},
-                icone='user', classe=null)}"></a>
-        <a th:replace="~{componentes/botao :: botao(texto='Trocar senha', variante='outline', href=@{/conta/senha},
-                icone='lock', classe=null)}"></a>
-    </p>
+<main class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-center gap-3">
+        <h1 class="text-title">Olá, <span sec:authentication="principal.nome">Nome</span>!</h1>
+        <span sec:authorize="hasRole('ADMIN')"><span
+                th:replace="~{componentes/badge :: badge('Administrador')}"></span></span>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-3">
+        <section class="flex flex-col gap-3 lg:col-span-2" aria-labelledby="minhas-escalas">
+            <h2 id="minhas-escalas" class="text-heading">Minhas escalas</h2>
+            <div class="rt-panel flex items-center gap-3 p-6 text-ink-muted">
+                <svg th:replace="~{componentes/icone :: icone('calendar-check')}"></svg>
+                <p>Suas próximas escalas vão aparecer aqui depois que o gerente publicar.</p>
+            </div>
+        </section>
+
+        <section class="order-first flex flex-col gap-3 lg:order-none" aria-labelledby="disponibilidade-do-mes">
+            <h2 id="disponibilidade-do-mes" class="text-heading"
+                th:text="${disponibilidade.mes.isEmpty()} ? 'Disponibilidade' : |Disponibilidade — ${disponibilidade.mes}|">
+                Disponibilidade — Novembro</h2>
+            <ul th:unless="${disponibilidade.ministerios.isEmpty()}" class="rt-list">
+                <li th:each="ministerio : ${disponibilidade.ministerios}"><a th:replace="~{componentes/lista :: linha(
+                        titulo=${ministerio.nome}, sub=${ministerio.resumo()},
+                        icone=${ministerio.travado ? 'lock' : 'list-checks'}, href=@{${disponibilidade.url}},
+                        selecionada=null)}"></a></li>
+            </ul>
+            <p th:if="${disponibilidade.ministerios.isEmpty()}" class="text-ink-muted">Marque os dias em que você pode
+                servir.</p>
+            <p>
+                <a th:replace="~{componentes/botao :: botao(texto='Marcar disponibilidade', icone='list-checks',
+                        href=@{${disponibilidade.url}}, variante=null, classe='w-full justify-center')}"></a>
+            </p>
+        </section>
+    </div>
 </main>
 </body>
 </html>

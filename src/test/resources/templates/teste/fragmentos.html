@@ -55,6 +55,7 @@
 
 <section id="nav"><nav th:replace="~{componentes/navegacao :: navPills(${itens})}"></nav></section>
 <section id="barra"><nav th:replace="~{componentes/navegacao :: barraInferior(${itens})}"></nav></section>
+<section id="menu-usuario"><details th:replace="~{componentes/navegacao :: menuDoUsuario('Ana Souza')}"></details></section>
 <section id="rail"><nav th:replace="~{componentes/navegacao :: rail(${ministerios})}"></nav></section>
 <section id="rail-unica"><nav th:replace="~{componentes/navegacao :: rail(${ministerios.subList(0, 1)})}"></nav></section>
 <section id="seletor"><details th:replace="~{componentes/navegacao :: seletorDeMinisterio(${ministerios})}"></details></section>

@@ -5,11 +5,11 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import br.igreja.escala.compartilhado.web.Navegacao.Area;
 import br.igreja.escala.compartilhado.web.Navegacao.Entrada;
 import br.igreja.escala.identidade.domain.Perfil;
 import br.igreja.escala.visual.IconesTest;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -27,60 +27,58 @@ class NavegacaoTest {
             new MinisterioNaNavegacao(1L, "Mídia", "monitor"), new MinisterioNaNavegacao(2L, "Louvor", "music"));
 
     private final Navegacao navegacao = new Navegacao(List.of(
-            new Entrada(Area.MEMBRO, "Minhas escalas", "Escalas", "calendar-check", "/", Perfil.MEMBRO),
-            new Entrada(
-                    Area.MEMBRO,
+            Entrada.de("Início", "Início", "house", "/", Perfil.MEMBRO),
+            Entrada.menu(
                     "Gerenciar",
                     "Gerenciar",
                     "layout-dashboard",
-                    "/ministerios/{ministerio}/eventos",
-                    Perfil.MEMBRO),
-            new Entrada(Area.MEMBRO, "Ministérios", "Ministérios", "church", "/admin/ministerios", Perfil.ADMIN),
-            new Entrada(
-                    Area.MINISTERIO,
-                    "Eventos",
-                    "Eventos",
-                    "calendar",
-                    "/ministerios/{ministerio}/eventos",
-                    Perfil.MEMBRO),
-            new Entrada(
-                    Area.MINISTERIO,
-                    "Membros",
-                    "Membros",
-                    "users",
-                    "/ministerios/{ministerio}/membros",
-                    Perfil.MEMBRO)));
+                    List.of(
+                            Entrada.de(
+                                    "Eventos",
+                                    "Eventos",
+                                    "calendar",
+                                    "/ministerios/{ministerio}/eventos",
+                                    Perfil.MEMBRO),
+                            Entrada.de(
+                                    "Membros", "Membros", "users", "/ministerios/{ministerio}/membros", Perfil.MEMBRO),
+                            Entrada.de("Ministérios", "Ministérios", "church", "/admin/ministerios", Perfil.ADMIN)
+                                    .comSeparador()))));
 
     @Test
-    void membroQueNaoGerenciaNadaVeSoAAreaDele() {
+    void membroQueNaoGerenciaNadaVeSoOInicioSemMenu() {
         var itens = navegacao.itens(membro(), "/", NENHUM);
 
-        assertThat(itens).extracting(ItemDeNavegacao::rotulo).containsExactly("Minhas escalas");
+        assertThat(itens).extracting(ItemDeNavegacao::rotulo).containsExactly("Início");
     }
 
     @Test
-    void quemGerenciaGanhaOAtalhoParaOPrimeiroMinisterio() {
-        var itens = navegacao.itens(membro(), "/", MIDIA_E_LOUVOR);
+    void asAbasSaoAsMesmasDentroEForaDeUmMinisterio() {
+        var noInicio = navegacao.itens(membro(), "/", MIDIA_E_LOUVOR);
+        var noMinisterio = navegacao.itens(membro(), "/ministerios/2/membros/7", MIDIA_E_LOUVOR);
 
-        assertThat(itens)
+        assertThat(noInicio).extracting(ItemDeNavegacao::rotulo).containsExactly("Início", "Gerenciar");
+        assertThat(noMinisterio).extracting(ItemDeNavegacao::rotulo).containsExactly("Início", "Gerenciar");
+    }
+
+    @Test
+    void foraDeUmMinisterioOMenuLevaAoPrimeiroGerenciado() {
+        var gerenciar = navegacao.itens(membro(), "/", MIDIA_E_LOUVOR).get(1);
+
+        assertThat(gerenciar.isMenu()).isTrue();
+        assertThat(gerenciar.atual()).isFalse();
+        assertThat(gerenciar.url()).isEqualTo("/ministerios/1/eventos");
+        assertThat(gerenciar.filhos())
                 .extracting(ItemDeNavegacao::rotulo, ItemDeNavegacao::url)
-                .containsExactly(tuple("Minhas escalas", "/"), tuple("Gerenciar", "/ministerios/1/eventos"));
+                .containsExactly(
+                        tuple("Eventos", "/ministerios/1/eventos"), tuple("Membros", "/ministerios/1/membros"));
     }
 
     @Test
-    void adminGanhaOsMinisteriosNaOrdemDoCatalogo() {
-        var itens = navegacao.itens(admin(), "/admin/ministerios/novo", MIDIA_E_LOUVOR);
-
-        assertThat(itens)
-                .extracting(ItemDeNavegacao::rotulo, ItemDeNavegacao::atual)
-                .containsExactly(tuple("Minhas escalas", false), tuple("Gerenciar", false), tuple("Ministérios", true));
-    }
-
-    @Test
-    void dentroDeUmMinisterioAsPaginasSaoDoGerenteDaqueleMinisterio() {
+    void dentroDeUmMinisterioOMenuFicaAtualEMarcaASecao() {
         var itens = navegacao.itens(membro(), "/ministerios/2/membros/7", MIDIA_E_LOUVOR);
 
-        assertThat(itens)
+        assertThat(itens).extracting(ItemDeNavegacao::atual).containsExactly(false, true);
+        assertThat(itens.get(1).filhos())
                 .extracting(ItemDeNavegacao::rotulo, ItemDeNavegacao::url, ItemDeNavegacao::atual)
                 .containsExactly(
                         tuple("Eventos", "/ministerios/2/eventos", false),
@@ -88,10 +86,22 @@ class NavegacaoTest {
     }
 
     @Test
+    void adminGanhaMinisteriosNoMenuSeparadoMesmoSemGerenciarNenhum() {
+        var itens = navegacao.itens(admin(), "/admin/ministerios/novo", NENHUM);
+
+        assertThat(itens)
+                .extracting(ItemDeNavegacao::rotulo, ItemDeNavegacao::atual)
+                .containsExactly(tuple("Início", false), tuple("Gerenciar", true));
+        assertThat(itens.get(1).filhos())
+                .extracting(ItemDeNavegacao::rotulo, ItemDeNavegacao::separado, ItemDeNavegacao::atual)
+                .containsExactly(tuple("Ministérios", true, true));
+    }
+
+    @Test
     void inicioSoEAtualNaRaizESecaoNaoCasaPorPrefixoDePalavra() {
-        assertThat(navegacao.itens(membro(), "/ministerios/1/eventosx", NENHUM))
-                .extracting(ItemDeNavegacao::atual)
-                .containsExactly(false, false);
+        var itens = navegacao.itens(membro(), "/ministerios/1/eventosx", NENHUM);
+        assertThat(itens).extracting(ItemDeNavegacao::atual).containsExactly(false, false);
+        assertThat(itens.get(1).filhos()).extracting(ItemDeNavegacao::atual).containsExactly(false, false);
         assertThat(navegacao.itens(membro(), "/", NENHUM))
                 .extracting(ItemDeNavegacao::atual)
                 .containsExactly(true);
@@ -112,29 +122,25 @@ class NavegacaoTest {
     }
 
     @Test
-    void navegacaoPrincipalUsaSoIconesDoSprite() {
+    void navegacaoPrincipalTemTresAbasEUsaSoIconesDoSprite() {
         var todos = AuthorityUtils.createAuthorityList("ROLE_MEMBRO", "ROLE_ADMIN");
 
-        assertThat(Navegacao.PRINCIPAL.itens(todos, "/", MIDIA_E_LOUVOR))
+        for (String caminho : List.of("/", "/disponibilidade", "/ministerios/1/funcoes", "/admin/ministerios")) {
+            var itens = Navegacao.PRINCIPAL.itens(todos, caminho, MIDIA_E_LOUVOR);
+            assertThat(itens)
+                    .extracting(ItemDeNavegacao::rotulo)
+                    .containsExactly("Início", "Disponibilidade", "Gerenciar");
+            assertThat(itens.get(2).filhos())
+                    .extracting(ItemDeNavegacao::rotulo)
+                    .containsExactly(
+                            "Escalas", "Eventos", "Disponibilidade", "Membros", "Funções", "Regras", "Ministérios");
+            assertThat(itens.stream().flatMap(item -> Stream.concat(Stream.of(item), item.filhos().stream())))
+                    .extracting(ItemDeNavegacao::icone)
+                    .isSubsetOf(IconesTest.disponiveis());
+        }
+        assertThat(Navegacao.PRINCIPAL.itens(membro(), "/", NENHUM))
                 .extracting(ItemDeNavegacao::rotulo)
-                .containsExactly("Minhas escalas", "Disponibilidade", "Gerenciar", "Ministérios");
-        assertThat(Navegacao.PRINCIPAL.itens(todos, "/", MIDIA_E_LOUVOR))
-                .extracting(ItemDeNavegacao::icone)
-                .isSubsetOf(IconesTest.disponiveis());
-        assertThat(Navegacao.PRINCIPAL.itens(todos, "/ministerios/1/funcoes", MIDIA_E_LOUVOR))
-                .extracting(ItemDeNavegacao::rotulo)
-                .containsExactly(
-                        "Escalas",
-                        "Eventos",
-                        "Disponibilidade",
-                        "Membros",
-                        "Funções",
-                        "Regras",
-                        "Ministérios",
-                        "Minhas escalas");
-        assertThat(Navegacao.PRINCIPAL.itens(todos, "/ministerios/1/funcoes", MIDIA_E_LOUVOR))
-                .extracting(ItemDeNavegacao::icone)
-                .isSubsetOf(IconesTest.disponiveis());
+                .containsExactly("Início", "Disponibilidade");
     }
 
     @Test
@@ -147,6 +153,9 @@ class NavegacaoTest {
         advice(MIDIA_E_LOUVOR, logado).navegacao(logado, requisicao, model);
 
         assertThat(lista(model, "navegacao"))
+                .extracting(ItemDeNavegacao::rotulo, ItemDeNavegacao::atual)
+                .containsExactly(tuple("Início", false), tuple("Disponibilidade", false), tuple("Gerenciar", true));
+        assertThat(lista(model, "navegacao").get(2).filhos())
                 .extracting(ItemDeNavegacao::rotulo, ItemDeNavegacao::atual)
                 .contains(tuple("Membros", true));
         assertThat(lista(model, "ministerios"))
@@ -163,7 +172,7 @@ class NavegacaoTest {
 
         assertThat(lista(model, "navegacao"))
                 .extracting(ItemDeNavegacao::rotulo)
-                .containsExactly("Minhas escalas", "Disponibilidade");
+                .containsExactly("Início", "Disponibilidade");
         assertThat(lista(model, "ministerios")).isEmpty();
     }
 

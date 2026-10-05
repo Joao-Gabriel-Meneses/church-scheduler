@@ -10,14 +10,14 @@
 :where(.rt) button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
 :where(.rt) :focus-visible{outline:2px solid var(--brand-strong);outline-offset:2px}
 /* IconButton */
-.rt-icon-btn{width:var(--size-control);height:var(--size-control);border-radius:var(--radius-pill);display:inline-grid;place-items:center;background:var(--surface);color:var(--ink);transition:background .15s}
+.rt-icon-btn{width:var(--size-control);height:var(--size-control);border-radius:var(--radius-control);display:inline-grid;place-items:center;background:var(--surface);color:var(--ink);transition:background .15s}
 .rt-icon-btn:hover{background:var(--brand-tint)}
 .rt-icon-btn--dark{background:var(--ink);color:var(--on-ink)}
 .rt-icon-btn--dark:hover{background:var(--ink-raised)}
 .rt-icon-btn--sm{width:var(--size-control-sm);height:var(--size-control-sm)}
 .rt-icon-btn--lg{width:var(--size-control-lg);height:var(--size-control-lg)}
 /* Button */
-.rt-btn{height:var(--size-control);padding:0 var(--space-6);border-radius:var(--radius-pill);display:inline-flex;align-items:center;gap:var(--space-2);font-size:16px;white-space:nowrap}
+.rt-btn{height:var(--size-control);padding:0 var(--space-6);border-radius:var(--radius-control);display:inline-flex;align-items:center;gap:var(--space-2);font-size:16px;white-space:nowrap}
 .rt-btn--primary{background:var(--brand-strong);color:var(--on-brand)}
 .rt-btn--primary:hover{background:var(--brand-deep)}
 .rt-btn--secondary{background:var(--surface);color:var(--ink)}
@@ -26,14 +26,14 @@
 .rt-btn--sm{height:32px;padding:0 var(--space-3);font-size:12px;gap:var(--space-1)}
 /* NavPills */
 .rt-nav{display:flex;gap:var(--space-2)}
-.rt-nav__item{height:40px;padding:0 var(--space-4);border-radius:var(--radius-pill);display:inline-flex;align-items:center;gap:6px;background:var(--surface);color:var(--ink);font-size:14px}
+.rt-nav__item{height:40px;padding:0 var(--space-4);border-radius:var(--radius-control);display:inline-flex;align-items:center;gap:6px;background:var(--surface);color:var(--ink);font-size:14px}
 .rt-nav__item .rt-i{width:16px;height:16px}
 .rt-nav__item[aria-current="page"]{background:var(--ink);color:var(--on-ink)}
 /* Toolbar */
-.rt-seg{display:inline-flex;align-items:center;gap:4px;padding:4px;height:var(--size-control-lg);background:var(--ink);color:var(--on-ink);border-radius:var(--radius-pill)}
+.rt-seg{display:inline-flex;align-items:center;gap:4px;padding:4px;height:var(--size-control-lg);background:var(--ink);color:var(--on-ink);border-radius:var(--radius-control)}
 .rt-seg .rt-icon-btn{width:48px;height:48px;background:transparent;color:var(--on-ink)}
 .rt-seg .rt-icon-btn--raised{background:var(--ink-raised)}
-.rt-date-pill{height:var(--size-control-lg);padding:0 var(--space-6);border-radius:var(--radius-pill);background:var(--surface);display:inline-flex;align-items:center;color:var(--ink-muted);font-size:16px}
+.rt-date-pill{height:var(--size-control-lg);padding:0 var(--space-6);border-radius:var(--radius-control);background:var(--surface);display:inline-flex;align-items:center;color:var(--ink-muted);font-size:16px}
 .rt-toolbar{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap}
 .rt-toolbar .rt-icon-btn,.rt-toolbar .rt-btn{height:var(--size-control-lg)}
 .rt-toolbar .rt-icon-btn{width:var(--size-control-lg)}
@@ -73,7 +73,7 @@
 .rt-cal{padding:var(--space-4);background:var(--canvas);border:2px solid var(--surface);border-radius:var(--radius-lg);width:max-content}
 .rt-cal--float{box-shadow:var(--shadow-float)}
 .rt-cal__head{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)}
-.rt-cal__nav{width:64px;height:32px;border-radius:var(--radius-pill);background:var(--surface);display:grid;place-items:center}
+.rt-cal__nav{width:64px;height:32px;border-radius:var(--radius-control);background:var(--surface);display:grid;place-items:center}
 .rt-cal__grid{display:grid;grid-template-columns:repeat(7,48px);row-gap:12px}
 .rt-cal__dow{height:64px;margin:0 4px;border-radius:var(--radius-pill);background:var(--surface);display:grid;place-items:center;font-size:14px}
 .rt-cal__day{height:48px;display:grid;place-items:center;font-size:14px}

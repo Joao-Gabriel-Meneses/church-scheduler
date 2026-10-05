@@ -81,3 +81,25 @@ for (const tipo of ["focusin", "mouseover"]) {
     }
   });
 }
+
+// NavMenu (docs/design/components/NavMenu): é um <details>, que abre e fecha sem JS. Aqui só fecha com clique fora,
+// com Esc (devolvendo o foco à aba) e quando outro menu abre.
+function fecharMenus(exceto) {
+  document.querySelectorAll("details.rt-nav-menu[open]").forEach((menu) => {
+    if (menu !== exceto) {
+      menu.open = false;
+    }
+  });
+}
+
+document.addEventListener("click", (evento) => {
+  fecharMenus(evento.target.closest("details.rt-nav-menu"));
+});
+
+document.addEventListener("keydown", (evento) => {
+  const menu = evento.key === "Escape" && document.activeElement?.closest("details.rt-nav-menu[open]");
+  if (menu) {
+    menu.open = false;
+    menu.querySelector("summary").focus();
+  }
+});

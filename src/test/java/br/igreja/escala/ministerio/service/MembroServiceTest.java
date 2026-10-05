@@ -252,7 +252,7 @@ class MembroServiceTest {
                     assertThat(recusa.campo()).isNull();
                     assertThat(recusa.getMessage())
                             .isEqualTo("Sua senha não mudou: para trocar a sua própria senha, use Trocar senha no"
-                                    + " início.");
+                                    + " menu da sua conta, no alto da página.");
                 });
         assertThatThrownBy(() -> servico.redefinirSenha(1L, 10L, "nova-provisoria", GERENTE))
                 .hasMessageStartingWith("Sua senha não mudou");
@@ -367,7 +367,9 @@ class MembroServiceTest {
         assertThatThrownBy(() -> servico.editarConta(1L, 1L, DADOS_NOVOS, ADMIN))
                 .isInstanceOfSatisfying(RegraVioladaException.class, recusa -> {
                     assertThat(recusa.campo()).isNull();
-                    assertThat(recusa.getMessage()).isEqualTo("Para mudar os seus dados, use Minha conta no início.");
+                    assertThat(recusa.getMessage())
+                            .isEqualTo(
+                                    "Para mudar os seus dados, use Minha conta no menu da sua conta, no alto da página.");
                 });
         verify(usuarios, never()).editar(anyLong(), any());
         verifyNoInteractions(auditoria);
