@@ -9,10 +9,16 @@ import java.util.Locale;
  * O painel do gerente num mês: quem serve, as respostas a cada evento por vir e quem ainda falta.
  *
  * @param temPeriodo o mês já tem eventos (e por isso uma trava para ligar ou desligar)
+ * @param escalaPublicada a escala do mês está publicada: destravar pede confirmação
  * @param membros quem falta responder primeiro, depois em ordem de nome
  */
 public record PainelDaDisponibilidade(
-        YearMonth mes, boolean temPeriodo, boolean travado, List<EventoDoPainel> eventos, List<LinhaDoPainel> membros) {
+        YearMonth mes,
+        boolean temPeriodo,
+        boolean travado,
+        boolean escalaPublicada,
+        List<EventoDoPainel> eventos,
+        List<LinhaDoPainel> membros) {
 
     public List<LinhaDoPainel> faltamResponder() {
         return membros.stream().filter(membro -> !membro.respondeuTudo()).toList();

@@ -108,6 +108,7 @@ public class ConsultaDaDisponibilidade {
                 mes,
                 periodo.isPresent(),
                 periodo.map(Periodo::isDisponibilidadeTravada).orElse(false),
+                periodo.map(Periodo::isEscalaPublicada).orElse(false),
                 colunas,
                 linhas);
     }

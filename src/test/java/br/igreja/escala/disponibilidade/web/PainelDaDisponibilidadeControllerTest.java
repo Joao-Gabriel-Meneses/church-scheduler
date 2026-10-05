@@ -5,6 +5,7 @@ import static br.igreja.escala.AcessoDeTeste.GERENTE_DA_MIDIA;
 import static br.igreja.escala.AcessoDeTeste.MEMBRO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -95,7 +96,7 @@ class PainelDaDisponibilidadeControllerTest {
         mvc.perform(destravar(1).with(user(MEMBRO))).andExpect(status().isForbidden());
 
         verify(disponibilidades, never()).travar(anyLong(), any(), any());
-        verify(disponibilidades, never()).destravar(anyLong(), any(), any());
+        verify(disponibilidades, never()).destravar(anyLong(), any(), anyBoolean(), any());
     }
 
     @Test
@@ -106,7 +107,7 @@ class PainelDaDisponibilidadeControllerTest {
         mvc.perform(destravar(2).with(user(GERENTE_DA_MIDIA))).andExpect(status().isForbidden());
 
         verify(disponibilidades, never()).travar(anyLong(), any(), any());
-        verify(disponibilidades, never()).destravar(anyLong(), any(), any());
+        verify(disponibilidades, never()).destravar(anyLong(), any(), anyBoolean(), any());
     }
 
     @Test
@@ -258,7 +259,8 @@ class PainelDaDisponibilidadeControllerTest {
     @Test
     void mesSemEventosNaoOfereceTravar() throws Exception {
         when(consulta.painel(1L, YearMonth.of(2026, 12)))
-                .thenReturn(new PainelDaDisponibilidade(YearMonth.of(2026, 12), false, false, List.of(), List.of()));
+                .thenReturn(
+                        new PainelDaDisponibilidade(YearMonth.of(2026, 12), false, false, false, List.of(), List.of()));
 
         assertThat(pagina(get("/ministerios/1/disponibilidade")
                         .param("mes", "2026-12")
@@ -271,7 +273,7 @@ class PainelDaDisponibilidadeControllerTest {
     void semNinguemHabilitadoAvisaOndeHabilitar() throws Exception {
         var semMembros = painel(false);
         when(consulta.painel(1L, NOVEMBRO))
-                .thenReturn(new PainelDaDisponibilidade(NOVEMBRO, true, false, semMembros.eventos(), List.of()));
+                .thenReturn(new PainelDaDisponibilidade(NOVEMBRO, true, false, false, semMembros.eventos(), List.of()));
 
         assertThat(pagina(get("/ministerios/1/disponibilidade").with(user(GERENTE_DA_MIDIA))))
                 .contains("Nenhum membro marca disponibilidade ainda", "href=\"/ministerios/1/membros\"")
@@ -281,7 +283,7 @@ class PainelDaDisponibilidadeControllerTest {
     @Test
     void travarEDestravarVoltamAoPainelComOResultado() throws Exception {
         when(disponibilidades.travar(1L, NOVEMBRO, GERENTE_DA_MIDIA)).thenReturn(true, false);
-        when(disponibilidades.destravar(1L, NOVEMBRO, GERENTE_DA_MIDIA)).thenReturn(true, false);
+        when(disponibilidades.destravar(1L, NOVEMBRO, false, GERENTE_DA_MIDIA)).thenReturn(true, false);
 
         mvc.perform(travar(1).with(user(GERENTE_DA_MIDIA)))
                 .andExpect(redirectedUrl("/ministerios/1/disponibilidade?mes=2026-11"))
@@ -292,6 +294,28 @@ class PainelDaDisponibilidadeControllerTest {
                 .andExpect(flash().attribute("sucesso", "Disponibilidade de novembro destravada"));
         mvc.perform(destravar(1).with(user(GERENTE_DA_MIDIA)))
                 .andExpect(flash().attribute("sucesso", "A disponibilidade de novembro já estava aberta"));
+    }
+
+    @Test
+    void comAEscalaPublicadaDestravarAbreAConfirmacao() throws Exception {
+        when(consulta.painel(1L, NOVEMBRO)).thenReturn(painel(true, true));
+
+        assertThat(pagina(get("/ministerios/1/disponibilidade").with(user(GERENTE_DA_MIDIA))))
+                .contains("<button type=\"button\" class=\"rt-btn rt-btn--outline\" popovertarget=\"destravar-sheet\">")
+                .contains("Destravar com a escala publicada?", "já está publicada")
+                .contains("action=\"/ministerios/1/disponibilidade/destravar?mes=2026-11&amp;confirmado=true\"");
+    }
+
+    @Test
+    void destravarConfirmadoPassaAConfirmacaoESemElaVoltaComOMotivo() throws Exception {
+        when(disponibilidades.destravar(1L, NOVEMBRO, true, GERENTE_DA_MIDIA)).thenReturn(true);
+        when(disponibilidades.destravar(1L, NOVEMBRO, false, GERENTE_DA_MIDIA))
+                .thenThrow(RegraVioladaException.geral("A escala de novembro está publicada."));
+
+        mvc.perform(destravar(1).param("confirmado", "true").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(flash().attribute("sucesso", "Disponibilidade de novembro destravada"));
+        mvc.perform(destravar(1).with(user(GERENTE_DA_MIDIA)))
+                .andExpect(flash().attribute("recusa", "A escala de novembro está publicada."));
     }
 
     @Test
@@ -351,10 +375,15 @@ class PainelDaDisponibilidadeControllerTest {
     }
 
     private static PainelDaDisponibilidade painel(boolean travado) {
+        return painel(travado, false);
+    }
+
+    private static PainelDaDisponibilidade painel(boolean travado, boolean escalaPublicada) {
         return new PainelDaDisponibilidade(
                 NOVEMBRO,
                 true,
                 travado,
+                escalaPublicada,
                 List.of(
                         new EventoDoPainel(500L, "Culto da manhã", "01 Dom", "09h30", 1),
                         new EventoDoPainel(501L, "Culto de domingo", "01 Dom", "18h00", 0)),
