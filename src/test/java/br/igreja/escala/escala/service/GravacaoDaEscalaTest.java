@@ -169,7 +169,8 @@ class GravacaoDaEscalaTest {
                         Map.of(),
                         RegrasDoMinisterio.padrao(),
                         List.of(),
-                        LocalDateTime.of(2026, 10, 7, 10, 0)));
+                        LocalDateTime.of(2026, 10, 7, 10, 0),
+                        List.of()));
         when(vagas.saveAll(anyList())).thenAnswer(chamada -> {
             List<Vaga> novas = chamada.getArgument(0);
             novas.forEach(nova -> comId(nova, 9L));

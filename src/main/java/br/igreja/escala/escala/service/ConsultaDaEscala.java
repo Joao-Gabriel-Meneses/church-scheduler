@@ -4,6 +4,7 @@ import ai.timefold.solver.core.api.score.HardMediumSoftScore;
 import ai.timefold.solver.core.api.solver.SolutionManager;
 import ai.timefold.solver.core.api.solver.SolverManager;
 import br.igreja.escala.compartilhado.Datas;
+import br.igreja.escala.compartilhado.Fuso;
 import br.igreja.escala.escala.domain.Vaga;
 import br.igreja.escala.escala.solver.DiagnosticoDaVaga;
 import br.igreja.escala.escala.solver.EscalaDoPeriodo;
@@ -30,9 +31,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * A página de escalas: a grade do mês, os alertas (vagas vazias explicadas, vagas cuja pessoa viola uma regra e quem
- * saiu da escala) e o resumo. A explicação e os avisos são calculados na hora, com os dados de agora; os avisos vêm do
- * solver (ValidacaoDaVaga).
+ * A página de escalas: a grade do mês, os alertas (desistências, vagas vazias explicadas, vagas cuja pessoa viola uma
+ * regra e quem saiu da escala) e o resumo. A explicação e os avisos são calculados na hora, com os dados de agora; os
+ * avisos vêm do solver (ValidacaoDaVaga).
  */
 @Service
 public class ConsultaDaEscala {
@@ -103,7 +104,8 @@ public class ConsultaDaEscala {
         var funcoes = porId(dados.funcoes(), Funcao::getId);
         var eventos = porId(dados.eventos(), Evento::getId);
         var pessoas = porId(
-                Stream.concat(dados.quemServe().stream(), dados.quemNaoServeMais().stream())
+                Stream.of(dados.quemServe(), dados.quemNaoServeMais(), dados.desistentes())
+                        .flatMap(List::stream)
                         .toList(),
                 UsuarioResumo::id);
         Map<String, Long> niveis = new HashMap<>();
@@ -151,6 +153,7 @@ public class ConsultaDaEscala {
         }
 
         var alertas = new ArrayList<Alerta>();
+        alertas.addAll(desistencias(dados, eventos, funcoes, pessoas));
         alertas.addAll(vagasVazias(dados));
         alertas.addAll(foraDaRegra(dados, eventos, funcoes, pessoas, avisos));
         alertas.addAll(quemSaiu(dados, eventos, funcoes, pessoas));
@@ -238,12 +241,54 @@ public class ConsultaDaEscala {
         return violacoes.stream().map(violacao -> violacao.regra().name()).collect(Collectors.joining(" · "));
     }
 
-    /** As vagas obrigatórias vazias dos eventos por vir, com o motivo (DiagnosticoDaVaga). */
+    /**
+     * Cada desistência que ainda espera alguém no lugar, nos eventos por vir: quem, função, evento e desde quando, com a
+     * ação de preencher pelo ajuste da vaga. Some quando alguém entra na vaga.
+     */
+    private static List<Alerta> desistencias(
+            DadosDoPeriodo dados,
+            Map<Long, Evento> eventos,
+            Map<Long, Funcao> funcoes,
+            Map<Long, UsuarioResumo> pessoas) {
+        var alertas = new ArrayList<Alerta>();
+        for (Vaga vaga : dados.vagas()) {
+            var evento = eventos.get(vaga.getEventoId());
+            var funcao = funcoes.get(vaga.getFuncaoId());
+            if (!vaga.isDesistida()
+                    || evento == null
+                    || !dados.porVir(evento)
+                    || !MontagemDaEscala.vigente(vaga, evento, funcao)) {
+                continue;
+            }
+            var desde = LocalDateTime.ofInstant(vaga.getDesistiuEm(), Fuso.SAO_PAULO);
+            alertas.add(new Alerta(
+                    evento.getInicio(),
+                    new AlertaDaEscala(
+                            nome(pessoas.get(vaga.getDesistenteId())) + " desistiu de " + funcao.getNome() + ", "
+                                    + quando(evento.getInicio()) + " · " + evento.getNome(),
+                            "A vaga está vazia desde " + Datas.diaEMes(desde.toLocalDate()) + " às "
+                                    + Datas.horario(desde.toLocalTime())
+                                    + ". Escolha quem entra no lugar: o ajuste confere as regras.",
+                            null,
+                            "arrow-left-right",
+                            vaga.getId())));
+        }
+        return alertas;
+    }
+
+    /**
+     * As vagas obrigatórias vazias dos eventos por vir, com o motivo (DiagnosticoDaVaga). A vaga de uma desistência
+     * já tem o alerta dela.
+     */
     private static List<Alerta> vagasVazias(DadosDoPeriodo dados) {
         var escala = MontagemDaEscala.montar(dados, false);
         var diagnostico = new DiagnosticoDaVaga(escala, dados.regras(), dados.nomesDosNiveis());
+        var desistidas = dados.vagas().stream()
+                .filter(Vaga::isDesistida)
+                .map(Vaga::getId)
+                .collect(Collectors.toSet());
         return escala.getVagas().stream()
-                .filter(vaga -> vaga.getPessoa() == null && vaga.isObrigatoria())
+                .filter(vaga -> vaga.getPessoa() == null && vaga.isObrigatoria() && !desistidas.contains(vaga.getId()))
                 .map(vaga -> {
                     var motivo = diagnostico.motivo(vaga);
                     var evento = vaga.getEvento();

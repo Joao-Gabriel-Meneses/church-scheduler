@@ -209,7 +209,8 @@ class EscalaDoMembroTest {
                 Map.of(201L, "Experiente"),
                 RegrasDoMinisterio.padrao(),
                 List.of(),
-                LocalDateTime.of(2026, 10, 7, 10, 0));
+                LocalDateTime.of(2026, 10, 7, 10, 0),
+                List.of());
     }
 
     private static Periodo periodo(Long id, YearMonth mes, boolean publicada) {

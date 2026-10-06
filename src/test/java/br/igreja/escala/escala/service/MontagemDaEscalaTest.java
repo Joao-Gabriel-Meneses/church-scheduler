@@ -151,7 +151,8 @@ class MontagemDaEscalaTest {
                 dados.nomesDosNiveis(),
                 dados.regras(),
                 dados.compromissosEmOutrosMinisterios(),
-                dados.agora());
+                dados.agora(),
+                List.of());
 
         var escala = MontagemDaEscala.montar(semDiego, true);
 
@@ -197,7 +198,8 @@ class MontagemDaEscalaTest {
                 Map.of(200L, "Iniciante", 201L, "Experiente"),
                 RegrasDoMinisterio.padrao(),
                 noLouvor,
-                AGORA);
+                AGORA,
+                List.of());
     }
 
     private Evento evento(Long id, int dia) {

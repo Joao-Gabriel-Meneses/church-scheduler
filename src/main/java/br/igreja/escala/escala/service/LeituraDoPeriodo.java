@@ -87,6 +87,10 @@ class LeituraDoPeriodo {
                 .map(Vaga::getUsuarioId)
                 .filter(id -> id != null && !servem.contains(id))
                 .collect(Collectors.toSet());
+        Set<Long> desistiram = vagasDoMes.stream()
+                .map(Vaga::getDesistenteId)
+                .filter(id -> id != null && !servem.contains(id) && !naoServem.contains(id))
+                .collect(Collectors.toSet());
         return new DadosDoPeriodo(
                 ministerioId,
                 ministerio.getNome(),
@@ -102,7 +106,8 @@ class LeituraDoPeriodo {
                 niveis.listar(ministerioId).stream().collect(Collectors.toMap(Nivel::getId, Nivel::getNome)),
                 regras.doMinisterio(ministerioId),
                 emOutrosMinisterios(ministerioId, mes, servem),
-                LocalDateTime.now(relogio));
+                LocalDateTime.now(relogio),
+                desistiram.isEmpty() ? List.of() : usuarios.resumos(desistiram));
     }
 
     /**

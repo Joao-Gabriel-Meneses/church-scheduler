@@ -409,7 +409,8 @@ class AjusteDaEscalaTest {
                 RegrasDoMinisterio.de(List.of(new RegraVigente(
                         TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO, Rigidez.HARD, 1, true, new MinPorNivelParams(201L, 1)))),
                 List.of(),
-                LocalDateTime.of(2026, 10, 7, 10, 0));
+                LocalDateTime.of(2026, 10, 7, 10, 0),
+                List.of());
     }
 
     private Evento evento(Long id, int dia) {

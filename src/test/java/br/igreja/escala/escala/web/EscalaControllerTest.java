@@ -193,6 +193,17 @@ class EscalaControllerTest {
     }
 
     @Test
+    void desistenciaApareceNosAlertasComAAcaoDePreencherAVaga() throws Exception {
+        when(consulta.doMes(1L, NOVEMBRO)).thenReturn(PaginasDeExemplo.publicada(NOVEMBRO));
+
+        assertThat(pagina(get("/ministerios/1/escalas").with(user(GERENTE_DA_MIDIA))))
+                .contains("Bruno Lima desistiu de Transmissão, 01/11 · Dom · 18h00 · Culto de domingo")
+                .contains("A vaga está vazia desde 28/10 às 14h32.")
+                .contains("#arrow-left-right")
+                .contains("href=\"/ministerios/1/escalas/vagas/8\"", "Preencher");
+    }
+
+    @Test
     void publicarEReabrirVoltamParaAPaginaComOAviso() throws Exception {
         when(publicacao.publicar(1L, NOVEMBRO, GERENTE_DA_MIDIA)).thenReturn("Escala de novembro publicada");
         when(publicacao.reabrir(1L, NOVEMBRO, GERENTE_DA_MIDIA))

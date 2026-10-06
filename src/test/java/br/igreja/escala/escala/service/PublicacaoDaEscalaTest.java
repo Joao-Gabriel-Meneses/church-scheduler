@@ -202,7 +202,8 @@ class PublicacaoDaEscalaTest {
                 Map.of(200L, "Iniciante", 201L, "Experiente"),
                 RegrasDoMinisterio.padrao(),
                 List.of(),
-                LocalDateTime.of(2026, 10, 7, 10, 0));
+                LocalDateTime.of(2026, 10, 7, 10, 0),
+                List.of());
     }
 
     private Evento evento(Long id, int dia) {

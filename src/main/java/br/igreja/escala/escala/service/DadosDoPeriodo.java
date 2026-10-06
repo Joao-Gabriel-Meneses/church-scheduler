@@ -26,6 +26,8 @@ import java.util.Set;
  * @param quemPode por evento por vir, quem serve e marcou Pode
  * @param compromissosEmOutrosMinisterios vagas vigentes de outros ministérios de quem serve aqui
  * @param agora o relógio de São Paulo: o que começou antes dele fica como está
+ * @param desistentes quem desistiu de uma vaga do mês e não está em quemServe nem em quemNaoServeMais (só o nome, para o
+ *     alerta ao gerente; não entra na escala)
  */
 record DadosDoPeriodo(
         Long ministerioId,
@@ -42,7 +44,8 @@ record DadosDoPeriodo(
         Map<Long, String> nomesDosNiveis,
         RegrasDoMinisterio regras,
         List<CompromissoFixo> compromissosEmOutrosMinisterios,
-        LocalDateTime agora) {
+        LocalDateTime agora,
+        List<UsuarioResumo> desistentes) {
 
     DadosDoPeriodo comVagas(List<Vaga> outras) {
         return new DadosDoPeriodo(
@@ -60,7 +63,8 @@ record DadosDoPeriodo(
                 nomesDosNiveis,
                 regras,
                 compromissosEmOutrosMinisterios,
-                agora);
+                agora,
+                desistentes);
     }
 
     boolean porVir(Evento evento) {
