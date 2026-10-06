@@ -193,6 +193,31 @@ class EscalaControllerTest {
     }
 
     @Test
+    void publicadaTemCopiarParaWhatsappEmCadaEventoComOTextoNumSheet() throws Exception {
+        when(consulta.doMes(1L, NOVEMBRO)).thenReturn(PaginasDeExemplo.publicada(NOVEMBRO));
+
+        String html = mvc.perform(get("/ministerios/1/escalas").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(html.replaceAll("\\s+", " "))
+                .contains("popovertarget=\"whatsapp-501\"", "Copiar para WhatsApp", "#message-circle")
+                .contains("id=\"whatsapp-501\" popover", "Texto para o WhatsApp")
+                .contains("data-copiar=\"texto-whatsapp-501\"", "id=\"texto-whatsapp-501-copiado\"");
+        assertThat(html)
+                .contains("*Mídia — Culto de domingo*\n01/11 · Dom · 18h00\n\nProjeção: Ana Souza\nTransmissão: a"
+                        + " definir");
+    }
+
+    @Test
+    void rascunhoNaoTemTextoParaWhatsapp() throws Exception {
+        assertThat(pagina(get("/ministerios/1/escalas").with(user(GERENTE_DA_MIDIA))))
+                .doesNotContain("Copiar para WhatsApp", "whatsapp-", "Texto para o WhatsApp");
+    }
+
+    @Test
     void desistenciaApareceNosAlertasComAAcaoDePreencherAVaga() throws Exception {
         when(consulta.doMes(1L, NOVEMBRO)).thenReturn(PaginasDeExemplo.publicada(NOVEMBRO));
 

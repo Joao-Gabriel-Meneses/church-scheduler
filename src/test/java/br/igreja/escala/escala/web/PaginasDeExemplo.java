@@ -71,7 +71,13 @@ final class PaginasDeExemplo {
                                 List.of(SlotDaGrade.de(
                                         7L, 2, "Ana Souza", "Experiente", false, false, null, null, ajustavel))),
                         new CelulaDaGrade(
-                                "Transmissão", true, List.of(SlotDaGrade.vazia(8L, 0, true, false, ajustavel)))));
+                                "Transmissão", true, List.of(SlotDaGrade.vazia(8L, 0, true, false, ajustavel)))),
+                publicada
+                        ? new LinhaDaGrade.Whatsapp(
+                                "whatsapp-501",
+                                "*Mídia — Culto de domingo*\n01/11 · Dom · 18h00\n\nProjeção: Ana Souza\n"
+                                        + "Transmissão: a definir")
+                        : null);
         return new PaginaDaEscala(
                 mes,
                 true,

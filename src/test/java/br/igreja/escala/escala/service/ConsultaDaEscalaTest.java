@@ -208,6 +208,33 @@ class ConsultaDaEscalaTest {
     }
 
     @Test
+    void soAEscalaPublicadaVistaPeloGerenteTemOTextoDoWhatsappDeCadaEvento() {
+        var vagas = vagas();
+        vagas.get(2).desistir(Instant.parse("2026-10-05T17:32:00Z"));
+        vagas.get(5).ajustar(carla.id());
+
+        var rascunho = ConsultaDaEscala.montar(dados(outubro, vagas));
+        outubro.publicarEscala();
+        var publicada = ConsultaDaEscala.montar(dados(outubro, vagas));
+        var doMembro = ConsultaDaEscala.paraOMembro(dados(outubro, vagas));
+
+        assertThat(rascunho.linhas()).allMatch(linha -> linha.whatsapp() == null);
+        assertThat(doMembro.linhas()).allMatch(linha -> linha.whatsapp() == null);
+        assertThat(publicada.linhas())
+                .extracting(LinhaDaGrade::whatsapp)
+                .containsExactly(
+                        new LinhaDaGrade.Whatsapp(
+                                "whatsapp-500",
+                                "*Mídia — Culto 4*\n04/10 · Dom · 18h00\n\nProjeção: Ana Souza\nTransmissão: a definir"),
+                        new LinhaDaGrade.Whatsapp(
+                                "whatsapp-501",
+                                "*Mídia — Culto 11*\n11/10 · Dom · 18h00\n\nProjeção: a definir\nTransmissão: a"
+                                        + " definir"),
+                        new LinhaDaGrade.Whatsapp(
+                                "whatsapp-504", "*Mídia — Culto 24*\n24/10 · Sáb · 18h00\n\nProjeção: Carla Dias"));
+    }
+
+    @Test
     void resumoContaAsVagasDoMesEAsEscalasDeCadaPessoa() {
         var resumo = ConsultaDaEscala.montar(dados(outubro, vagas())).resumo();
 

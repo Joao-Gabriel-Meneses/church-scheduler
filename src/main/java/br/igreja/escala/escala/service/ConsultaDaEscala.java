@@ -81,8 +81,8 @@ public class ConsultaDaEscala {
     }
 
     /**
-     * A grade como o membro a vê: as pessoas e o nível, sem fixada, forçada nem justificativa (isso é do gerente). Os
-     * alertas e o resumo vêm junto, mas a página do membro não os mostra.
+     * A grade como o membro a vê: as pessoas e o nível, sem fixada, forçada, justificativa nem o texto do WhatsApp (isso
+     * é do gerente). Os alertas e o resumo vêm junto, mas a página do membro não os mostra.
      */
     static PaginaDaEscala paraOMembro(DadosDoPeriodo dados) {
         return montar(dados, Map.of(), false, false);
@@ -117,6 +117,17 @@ public class ConsultaDaEscala {
                         vaga, eventos.get(vaga.getEventoId()), funcoes.get(vaga.getFuncaoId())))
                 .toList();
 
+        Map<Long, LinhaDaGrade.Whatsapp> textos = new HashMap<>();
+        if (doGerente && dados.periodo().isEscalaPublicada()) {
+            for (EscaladosDoEvento escalados : EscaladosDoEvento.doMes(dados)) {
+                textos.put(
+                        escalados.eventoId(),
+                        new LinhaDaGrade.Whatsapp(
+                                "whatsapp-" + escalados.eventoId(),
+                                TextoParaWhatsapp.de(dados.nomeDoMinisterio(), escalados)));
+            }
+        }
+
         var linhas = new ArrayList<LinhaDaGrade>();
         for (Evento evento : dados.eventos()) {
             if (evento.isCancelado()) {
@@ -149,7 +160,8 @@ public class ConsultaDaEscala {
                     evento.getNome(),
                     Datas.horario(evento.getHorario()),
                     comVagaVazia,
-                    celulas));
+                    celulas,
+                    textos.get(evento.getId())));
         }
 
         var alertas = new ArrayList<Alerta>();

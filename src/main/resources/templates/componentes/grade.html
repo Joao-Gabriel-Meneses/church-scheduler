@@ -9,7 +9,9 @@
       linhas   List<LinhaDaGrade>: dia ("04"), diaDaSemana ("Dom"), nome, horario ("18h00"), comVagaVazia e uma
                CelulaDaGrade por função (exigida e as vagas, List<SlotDaGrade>)
     No desktop é a tabela (rt-table rt-sched, dentro de rt-panel com rolagem horizontal); no celular, um cartão por
-    evento com as funções uma abaixo da outra. A linha com vaga obrigatória vazia ganha is-alert (filete à esquerda),
+    evento com as funções uma abaixo da outra. Linha com whatsapp (escala publicada, só o gerente) ganha "Copiar para
+    WhatsApp", que abre o Sheet de id linha.whatsapp.id (escala/fragments/whatsapp :: folha, posto pela página): no
+    cartão, embaixo; na tabela, numa coluna a mais. A linha com vaga obrigatória vazia ganha is-alert (filete à esquerda),
     além do texto "Vaga vazia". Função que o evento não exige aparece como "—" ("Não precisa" para o leitor de tela).
 
     celula(celula): as vagas de uma célula, empilhadas (função com qtd_max > 1 tem várias).
@@ -29,17 +31,23 @@
                 <span class="rt-label text-ink-muted" th:text="${celula.funcao}">Projeção</span>
                 <div th:replace="~{componentes/grade :: celula(${celula})}"></div>
             </div>
+            <th:block th:if="${linha.whatsapp != null}"><button th:replace="~{componentes/botao ::
+                    botao(texto='Copiar para WhatsApp', variante='outline', icone='message-circle', href=null,
+                    tipo='button', formulario=null, abre=${linha.whatsapp.id}, tamanho=null, iconeFinal=null,
+                    classe='justify-center', copiar=null)}"></button></th:block>
         </li>
     </ul>
 
     <!--/* relative: o texto sr-only (position absolute) fica preso à rolagem e não alarga a página. */-->
-    <div class="rt-panel relative hidden overflow-x-auto md:block">
+    <div class="rt-panel relative hidden overflow-x-auto md:block"
+         th:with="_comWhatsapp=${!linhas.?[whatsapp != null].isEmpty()}">
         <table class="rt-table rt-sched">
             <caption class="sr-only">Escala do mês: um evento por linha e uma função por coluna</caption>
             <thead>
             <tr>
                 <th scope="col">Evento</th>
                 <th th:each="funcao : ${funcoes}" scope="col" th:text="${funcao}">Projeção</th>
+                <th th:if="${_comWhatsapp}" scope="col"><span class="sr-only">WhatsApp</span></th>
             </tr>
             </thead>
             <tbody>
@@ -47,6 +55,10 @@
                 <td class="whitespace-nowrap"><div th:replace="~{componentes/grade :: evento(${linha})}"></div></td>
                 <td th:each="celula : ${linha.celulas}"><div
                         th:replace="~{componentes/grade :: celula(${celula})}"></div></td>
+                <td th:if="${_comWhatsapp}"><th:block th:if="${linha.whatsapp != null}"><button
+                        th:replace="~{componentes/botao :: botao(texto='Copiar para WhatsApp', variante='outline',
+                        icone='message-circle', href=null, tipo='button', formulario=null, abre=${linha.whatsapp.id},
+                        tamanho='sm', iconeFinal=null, classe=null, copiar=null)}"></button></th:block></td>
             </tr>
             </tbody>
         </table>

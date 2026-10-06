@@ -5,6 +5,7 @@
     alerta de uma desistência tem a ação "Preencher", que leva à vaga (o mesmo ajuste da grade).
     O ajuste de uma vaga devolve esta região inteira, então as contagens e os avisos das outras vagas mudam juntos, e
     o Sheet volta fechado. ${aviso}: um AlertBanner no topo (ex.: a vaga mudou em outra aba). ${toast}: o toast OOB.
+    Com a escala publicada, cada evento tem o Sheet do texto para o WhatsApp (escala/fragments/whatsapp).
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <body>
@@ -77,6 +78,9 @@
             </div>
         </section>
     </th:block>
+
+    <th:block th:each="linha : ${pagina.linhas}" th:if="${linha.whatsapp != null}"><div
+            th:replace="~{escala/fragments/whatsapp :: folha(${linha})}"></div></th:block>
 
     <div id="vaga-sheet" popover class="rt-sheet md:mx-auto md:max-w-lg" role="dialog" aria-labelledby="vaga-titulo">
         <div class="rt-sheet__cabeca">
