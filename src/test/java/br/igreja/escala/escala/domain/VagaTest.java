@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -85,6 +86,62 @@ class VagaTest {
         assertThat(vaga.isPresa()).isFalse();
         assertThat(vaga.getJustificativa()).isNull();
         assertThat(vaga.getUsuarioId()).as("a pessoa fica até gerar de novo").isEqualTo(31L);
+    }
+
+    @Test
+    void desistirEsvaziaFixaEGuardaQuemEQuando() {
+        var vaga = new Vaga(500L, 100L, 1);
+        vaga.forcar(30L, "Motivo");
+        var quando = Instant.parse("2026-10-05T17:32:00Z");
+
+        vaga.desistir(quando);
+
+        assertThat(vaga.isVazia()).isTrue();
+        assertThat(vaga.isDesistida()).isTrue();
+        assertThat(vaga.getDesistenteId()).isEqualTo(30L);
+        assertThat(vaga.getDesistiuEm()).isEqualTo(quando);
+        assertThat(vaga.isFixada()).as("gerar de novo não a preenche").isTrue();
+        assertThat(vaga.isForcada()).isFalse();
+        assertThat(vaga.getJustificativa()).isNull();
+    }
+
+    @Test
+    void vagaVaziaNaoTemDeQuemDesistir() {
+        var vaga = new Vaga(500L, 100L, 1);
+
+        assertThatIllegalStateException().isThrownBy(() -> vaga.desistir(Instant.EPOCH));
+        assertThat(vaga.isDesistida()).isFalse();
+    }
+
+    @Test
+    void alguemNaVagaApagaADesistenciaMasEsvaziarNaGeracaoNao() {
+        var ajustada = desistida();
+        ajustada.ajustar(31L);
+        var esvaziada = desistida();
+        esvaziada.ajustar(null);
+        var forcada = desistida();
+        forcada.forcar(31L, "Motivo");
+        var gerada = desistida();
+        gerada.desafixar();
+        gerada.escalar(null);
+
+        assertThat(ajustada.isDesistida()).isFalse();
+        assertThat(ajustada.getDesistiuEm()).isNull();
+        assertThat(esvaziada.isDesistida())
+                .as("o gerente esvaziou de propósito: o alerta da desistência sai")
+                .isFalse();
+        assertThat(forcada.isDesistida()).isFalse();
+        assertThat(gerada.isDesistida()).as("continua vazia").isTrue();
+
+        gerada.escalar(32L);
+        assertThat(gerada.isDesistida()).isFalse();
+    }
+
+    private static Vaga desistida() {
+        var vaga = new Vaga(500L, 100L, 1);
+        vaga.escalar(30L);
+        vaga.desistir(Instant.EPOCH);
+        return vaga;
     }
 
     @Test

@@ -16,6 +16,8 @@ import org.hibernate.annotations.UpdateTimestamp;
  * módulos, então ficam só os ids. A geração mexe só nas vagas que não estão fixadas nem forçadas; toda alteração do
  * gerente fixa a vaga, e a forçada (que viola uma regra forçável, com justificativa) é sempre fixada. A versão é o
  * controle de concorrência: quem edita manda a versão que viu.
+ *
+ * <p>Quando a pessoa desiste, a vaga fica vazia e fixada, com quem desistiu e quando, até alguém entrar no lugar.
  */
 @Entity
 @Table(name = "vaga")
@@ -48,6 +50,12 @@ public class Vaga {
     @Column(length = TAMANHO_JUSTIFICATIVA)
     private String justificativa;
 
+    @Column(name = "desistente_id")
+    private Long desistenteId;
+
+    @Column(name = "desistiu_em")
+    private Instant desistiuEm;
+
     @UpdateTimestamp
     @Column(name = "atualizado_em", nullable = false)
     private Instant atualizadoEm;
@@ -66,7 +74,7 @@ public class Vaga {
     }
 
     /**
-     * Põe a pessoa (ou ninguém, com nulo) numa vaga que a geração pode mexer.
+     * Põe a pessoa (ou ninguém, com nulo) numa vaga que a geração pode mexer. Com alguém na vaga, a desistência sai.
      *
      * @throws IllegalStateException se a vaga está fixada ou forçada
      */
@@ -75,11 +83,36 @@ public class Vaga {
             throw new IllegalStateException("vaga " + id + " está fixada ou forçada");
         }
         this.usuarioId = usuarioId;
+        if (usuarioId != null) {
+            semDesistencia();
+        }
     }
 
-    /** O gerente põe a pessoa (ou ninguém, com nulo) sem violar regra: a vaga fica fixada e deixa de ser forçada. */
+    /**
+     * O gerente põe a pessoa (ou ninguém, com nulo) sem violar regra: a vaga fica fixada e deixa de ser forçada. Ele já
+     * viu a desistência, se havia, então ela sai.
+     */
     public void ajustar(Long usuarioId) {
         this.usuarioId = usuarioId;
+        this.fixada = true;
+        this.forcada = false;
+        this.justificativa = null;
+        semDesistencia();
+    }
+
+    /**
+     * Quem está na vaga desiste: ela fica vazia e fixada (gerar de novo não a preenche nem devolve a pessoa), com quem
+     * desistiu e quando, até alguém entrar no lugar.
+     *
+     * @throws IllegalStateException se a vaga está vazia
+     */
+    public void desistir(Instant quando) {
+        if (usuarioId == null) {
+            throw new IllegalStateException("vaga " + id + " está vazia");
+        }
+        this.desistenteId = usuarioId;
+        this.desistiuEm = Exigencias.presente(quando, "quando");
+        this.usuarioId = null;
         this.fixada = true;
         this.forcada = false;
         this.justificativa = null;
@@ -95,6 +128,7 @@ public class Vaga {
         this.justificativa = Exigencias.texto(justificativa, "justificativa", TAMANHO_JUSTIFICATIVA);
         this.fixada = true;
         this.forcada = true;
+        semDesistencia();
     }
 
     /** Fixa a vaga como está, preenchida ou vazia: gerar de novo não a muda. */
@@ -116,6 +150,16 @@ public class Vaga {
 
     public boolean isVazia() {
         return usuarioId == null;
+    }
+
+    /** Vazia porque quem estava nela desistiu, e ninguém entrou no lugar ainda. */
+    public boolean isDesistida() {
+        return desistenteId != null;
+    }
+
+    private void semDesistencia() {
+        this.desistenteId = null;
+        this.desistiuEm = null;
     }
 
     public Long getId() {
@@ -148,6 +192,14 @@ public class Vaga {
 
     public String getJustificativa() {
         return justificativa;
+    }
+
+    public Long getDesistenteId() {
+        return desistenteId;
+    }
+
+    public Instant getDesistiuEm() {
+        return desistiuEm;
     }
 
     public long getVersao() {
