@@ -4,6 +4,7 @@ import static br.igreja.escala.evento.ExemplosDeEvento.DUAS_HORAS;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.igreja.escala.compartilhado.Fuso;
@@ -300,6 +301,36 @@ class PaginasDoGerenteIT {
                         .with(user(membro)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(Matchers.containsString("Ana Páginas")));
+    }
+
+    @Test
+    void escalaPublicadaComDesistenciaMostraOAlertaOTextoDoWhatsappEOPdf() throws Exception {
+        jdbc.update("update periodo set status_escala = 'PUBLICADA' where id = ?", periodoId);
+        jdbc.update(
+                "update vaga set desistente_id = usuario_id, desistiu_em = systimestamp, usuario_id = null,"
+                        + " fixada = 1 where id = ?",
+                vagaDaAnaId);
+
+        mvc.perform(get("/ministerios/{m}/escalas", ministerioId)
+                        .param("mes", mes.toString())
+                        .with(user(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Ana Páginas desistiu de Projeção")))
+                .andExpect(content()
+                        .string(Matchers.containsString(
+                                "href=\"/ministerios/" + ministerioId + "/escalas/vagas/" + vagaDaAnaId + "\"")))
+                .andExpect(content().string(Matchers.containsString("Copiar para WhatsApp")))
+                .andExpect(content().string(Matchers.containsString("*Mídia Páginas — Culto de domingo*")))
+                .andExpect(content().string(Matchers.containsString("Baixar PDF")));
+        abre("/ministerios/{m}/escalas/vagas/{v}", ministerioId, vagaDaAnaId);
+        mvc.perform(get("/ministerios/{m}/escalas/pdf", ministerioId)
+                        .param("mes", mes.toString())
+                        .with(user(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "application/pdf"))
+                .andExpect(header().string(
+                                "Content-Disposition",
+                                Matchers.startsWith("attachment; filename=\"escala-midia-paginas-" + mes + ".pdf\"")));
     }
 
     @Test
