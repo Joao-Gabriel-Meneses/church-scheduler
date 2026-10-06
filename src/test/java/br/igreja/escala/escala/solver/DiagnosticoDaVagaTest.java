@@ -10,7 +10,7 @@ import static br.igreja.escala.escala.solver.Cenario.vaga;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import br.igreja.escala.escala.domain.LimitePorPeriodoParams;
-import br.igreja.escala.escala.domain.MaxPorNivelParams;
+import br.igreja.escala.escala.domain.MinPorNivelParams;
 import br.igreja.escala.escala.domain.RegraVigente;
 import br.igreja.escala.escala.domain.RegrasDoMinisterio;
 import br.igreja.escala.escala.domain.Rigidez;
@@ -113,18 +113,48 @@ class DiagnosticoDaVagaTest {
     }
 
     @Test
-    void quemPodeEInicianteEOEventoJaTemOMaximo() {
+    void quemPodeEInicianteEOEventoAindaNaoTemExperiente() {
         regras = RegrasDoMinisterio.de(List.of(new RegraVigente(
-                TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO, Rigidez.HARD, 1, true, new MaxPorNivelParams(INICIANTE, 1))));
-        parametros = Cenario.maximoDeIniciantes(1);
+                TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO, Rigidez.HARD, 1, true, new MinPorNivelParams(EXPERIENTE, 1))));
+        parametros = Cenario.minimoDeExperientes(1);
         var lucas = pessoa(30, Map.of(PROJECAO.id(), INICIANTE), 1L);
         var diego = pessoa(31, Map.of(TRANSMISSAO.id(), INICIANTE), 1L);
         var vazia = vaga(2, domingo, TRANSMISSAO, null);
 
         assertThat(motivo(vazia, List.of(lucas, diego), List.of(vaga(1, domingo, PROJECAO, lucas), vazia)))
                 .isEqualTo(new MotivoDaVagaVazia(
-                        TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO,
-                        "A única pessoa que pode é do nível Iniciante, e o evento já tem 1."));
+                        TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO,
+                        "O evento precisa de pelo menos 1 pessoa do nível Experiente, e a única pessoa que pode não é"
+                                + " desse nível."));
+    }
+
+    @Test
+    void inicianteCabeQuandoOEventoJaTemOExperiente() {
+        regras = RegrasDoMinisterio.de(List.of(new RegraVigente(
+                TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO, Rigidez.HARD, 1, true, new MinPorNivelParams(EXPERIENTE, 1))));
+        parametros = Cenario.minimoDeExperientes(1);
+        var ana = pessoa(30, Map.of(PROJECAO.id(), EXPERIENTE), 1L);
+        var diego = pessoa(31, Map.of(TRANSMISSAO.id(), INICIANTE), 1L);
+        var vazia = vaga(2, domingo, TRANSMISSAO, null);
+
+        assertThat(motivo(vazia, List.of(ana, diego), List.of(vaga(1, domingo, PROJECAO, ana), vazia))
+                        .regra())
+                .isNull();
+    }
+
+    @Test
+    void quandoFaltaMaisDeUmNinguemSozinhoCompleta() {
+        regras = RegrasDoMinisterio.de(List.of(new RegraVigente(
+                TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO, Rigidez.HARD, 1, true, new MinPorNivelParams(EXPERIENTE, 2))));
+        parametros = new ParametrosDaEscala(3, EXPERIENTE, 2);
+        var ana = pessoa(30, Map.of(TRANSMISSAO.id(), EXPERIENTE), 1L);
+        var vazia = vaga(2, domingo, TRANSMISSAO, null);
+
+        assertThat(motivo(vazia, List.of(ana), List.of(vaga(1, domingo, PROJECAO, null), vazia)))
+                .isEqualTo(new MotivoDaVagaVazia(
+                        TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO,
+                        "O evento precisa de pelo menos 2 pessoas do nível Experiente e tem 0: uma pessoa sozinha não"
+                                + " completa."));
     }
 
     private MotivoDaVagaVazia motivo(VagaPlanejada vazia, List<Pessoa> pessoas, List<VagaPlanejada> vagas) {

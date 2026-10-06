@@ -17,7 +17,7 @@ import org.hibernate.annotations.CreationTimestamp;
 @Table(name = "auditoria")
 public class Auditoria {
 
-    public static final int TAMANHO_DESCRICAO = 500;
+    public static final int TAMANHO_DESCRICAO = 1000;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

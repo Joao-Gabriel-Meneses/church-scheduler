@@ -135,8 +135,8 @@
         <div class="rt-canvas -mx-4 md:mx-0 md:rounded-lg">
             <div class="flex max-w-2xl flex-col gap-2">
                 <div th:replace="~{componentes/alerta :: alerta(titulo='12/10 · Culto de domingo — Transmissão sem ninguém',
-                        corpo='Os 3 disponíveis já estão no limite do mês ou são iniciantes com outro iniciante no evento.',
-                        regra='Regras: LIMITE_POR_PERIODO · MAX_POR_NIVEL_NO_EVENTO', acaoTexto='Preencher',
+                        corpo='Os 3 disponíveis já estão no limite do mês ou são iniciantes, e o evento ainda não tem um experiente.',
+                        regra='Regras: LIMITE_POR_PERIODO · MIN_POR_NIVEL_NO_EVENTO', acaoTexto='Preencher',
                         acaoHref='#alert-banner', icone=null)}"></div>
                 <div th:replace="~{componentes/alerta :: alerta(titulo='Lucas Lima desistiu de 18/10 · Projeção',
                         corpo='Indicou Bia Rocha como substituta (habilitada, sem violar regras rígidas).', regra=null,

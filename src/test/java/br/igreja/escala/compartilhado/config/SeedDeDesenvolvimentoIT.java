@@ -8,7 +8,6 @@ import br.igreja.escala.disponibilidade.service.ConsultaDaDisponibilidade;
 import br.igreja.escala.disponibilidade.service.DisponibilidadeService;
 import br.igreja.escala.disponibilidade.service.GrupoDeDisponibilidade;
 import br.igreja.escala.disponibilidade.service.LinhaDeDisponibilidade;
-import br.igreja.escala.escala.domain.MaxPorNivelParams;
 import br.igreja.escala.escala.service.RegraService;
 import br.igreja.escala.evento.domain.Evento;
 import br.igreja.escala.evento.repository.EventoRepository;
@@ -191,11 +190,11 @@ class SeedDeDesenvolvimentoIT {
                     .as("o mês travado também tem respostas, para gerar a escala")
                     .hasSize(11);
         }
-        assertThat(regras.doMinisterio(midia.getId()).maximoPorNivel())
-                .get()
-                .extracting(MaxPorNivelParams::maximo)
-                .isEqualTo(1);
-        assertThat(regras.doMinisterio(louvor.getId()).maximoPorNivel()).isEmpty();
+        assertThat(regras.doMinisterio(midia.getId()).minimoPorNivel()).get().satisfies(minimo -> {
+            assertThat(niveis.buscar(midia.getId(), minimo.nivelId()).getNome()).isEqualTo("Experiente");
+            assertThat(minimo.minimo()).isEqualTo(1);
+        });
+        assertThat(regras.doMinisterio(louvor.getId()).minimoPorNivel()).isEmpty();
         assertThat(painel.faltamResponder()).isNotEmpty();
         var ana = usuarioRepository.findByEmail("ana.souza@escala.local").orElseThrow();
         var tela = consulta.doMembro(ana.getId(), proximo);

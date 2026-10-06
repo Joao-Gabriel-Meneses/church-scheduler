@@ -10,6 +10,7 @@ import br.igreja.escala.disponibilidade.domain.Disponibilidade;
 import br.igreja.escala.disponibilidade.domain.Resposta;
 import br.igreja.escala.disponibilidade.repository.DisponibilidadeRepository;
 import br.igreja.escala.evento.domain.Evento;
+import br.igreja.escala.evento.domain.Periodo;
 import br.igreja.escala.evento.service.EventoService;
 import br.igreja.escala.evento.service.PeriodoService;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
@@ -123,12 +124,24 @@ public class DisponibilidadeService {
     }
 
     /**
+     * Destrava a disponibilidade. Se a escala do mês está publicada, só com {@code confirmado}: ela foi gerada com
+     * estas respostas, e o gerente confirma que sabe disso (Sheet de confirmação).
+     *
      * @return se destravou agora; falso se já estava aberta
-     * @throws RegraVioladaException se o mês ainda não tem eventos
+     * @throws RegraVioladaException se o mês ainda não tem eventos, ou se a escala está publicada e não houve
+     *     confirmação
      */
     @Transactional
-    public boolean destravar(Long ministerioId, YearMonth mes, UsuarioAutenticado autor) {
+    public boolean destravar(Long ministerioId, YearMonth mes, boolean confirmado, UsuarioAutenticado autor) {
         var ministerio = ministerios.buscar(ministerioId);
+        boolean publicada = periodos.doMes(ministerioId, mes)
+                .filter(Periodo::isEscalaPublicada)
+                .isPresent();
+        if (publicada && !confirmado) {
+            throw RegraVioladaException.geral(
+                    "A escala de " + Datas.nomeDoMes(mes).toLowerCase(Locale.ROOT)
+                            + " está publicada e foi gerada com estas respostas. Confirme para destravar a disponibilidade.");
+        }
         boolean destravou = periodos.destravarDisponibilidade(ministerioId, mes);
         if (destravou) {
             registrarTrava(AcaoAuditada.DESTRAVAR_DISPONIBILIDADE, autor, ministerio, mes, "destravada");

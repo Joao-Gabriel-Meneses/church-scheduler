@@ -77,7 +77,7 @@ Gerente e admin também servem e aparecem na escala. Um usuário pode estar em v
 - Cadastrar um e-mail que já tem conta só cria a membresia; a conta não muda (se estiver desativada, o gerente é avisado).
 - **Abas fixas:** são as mesmas em toda página (`Navegacao.PRINCIPAL`); só muda a atual. Início e Disponibilidade para todos, mais o NavMenu **Gerenciar** para quem gerencia algum ministério ou é admin (README do NavPills e do NavMenu).
 - **Menu Gerenciar:** Escalas (rascunho e geração), Eventos (mês e modelos), Disponibilidade (painel e trava), Membros (e habilitações), Funções (funções e níveis) e Regras, mais Ministérios para o admin, separado. Dentro de um ministério, os itens levam às páginas dele; fora, às do primeiro gerenciado. A SideRail abre a mesma seção no outro ministério, e as Escalas são a seção padrão (`Navegacao.SECAO_INICIAL`).
-- **Início:** "Minhas escalas" (sem aba própria) e a disponibilidade do próximo mês por ministério (`DisponibilidadeNoInicio`), com o primário "Marcar disponibilidade". Minha conta, Trocar senha e Sair ficam no menu do usuário, no cabeçalho comum (`layouts/base :: cabecalho`).
+- **Início:** "Minhas escalas" (sem aba própria; `EscalasNoInicio`) e a disponibilidade do próximo mês por ministério (`DisponibilidadeNoInicio`), com o primário "Marcar disponibilidade". Minha conta, Trocar senha e Sair ficam no menu do usuário, no cabeçalho comum (`layouts/base :: cabecalho`).
 
 ## Modelo de dados (resumo)
 
@@ -92,15 +92,15 @@ Gerente e admin também servem e aparecem na escala. Um usuário pode estar em v
 - `Evento` (e `evento_funcao`: as funções que o evento precisa; sem linhas = todas)
 - `Periodo` (`disponibilidade_travada`, `status_escala` RASCUNHO/PUBLICADA)
 - `Disponibilidade` (PODE / NAO_PODE / PREFERE_NAO; uma por usuário × evento, `uk_disponibilidade`; guarda `data_na_resposta`/`horario_na_resposta_minutos` e `marcado_por_id`)
-- `Vaga` (evento × funcao × posicao, `uk_vaga`; `usuario_id` anulável, `fixada`, `forcada`, `justificativa`; forçada exige pessoa e justificativa)
+- `Vaga` (evento × funcao × posicao, `uk_vaga`; `usuario_id` anulável, `fixada`, `forcada`, `justificativa`, `versao` para o `@Version`; forçada exige pessoa e justificativa e é sempre fixada)
 - `SolicitacaoTroca`
-- `Auditoria`
+- `Auditoria` (descrição de até 1000 caracteres: o ajuste guarda o antes, o depois e a justificativa)
 
 Tudo que varia por ministério (funções, níveis, regras, eventos) pertence ao ministério. **Oracle 19c não tem tipos JSON nem BOOLEAN nativos:**
 - `parametros` é `CLOB` com `CHECK (parametros IS JSON)`. Na entidade, mapeie como `String` com `@Lob` e converta com Jackson na classe de parâmetros. Não use `@JdbcTypeCode(SqlTypes.JSON)`: com o dialeto 19 o Hibernate espera **BLOB**.
 - Flags (`gerente`, `fixada`, `ativa`...) são `NUMBER(1)` com `CHECK (col IN (0, 1))`, mapeadas como `boolean` no Java.
 
-Cada tipo de regra tem uma classe Java de parâmetros (ex.: `MaxPorNivelParams`) que valida esse JSON.
+Cada tipo de regra tem uma classe Java de parâmetros (ex.: `MinPorNivelParams`) que valida esse JSON.
 
 ## Regras de negócio — o ponto central
 
@@ -112,10 +112,10 @@ Existe um **catálogo fixo de tipos de regra**. Cada tipo é implementado uma ú
 | --- | --- |
 | `PESSOAS_POR_FUNCAO` | Projeção 1–1, Transmissão 1–1 (hard) |
 | `HABILITACAO` | Sempre ativa (hard) |
-| `DISPONIBILIDADE` | Só escala quem marcou PODE (hard) |
+| `DISPONIBILIDADE` | Só escala quem marcou PODE (hard; **forçável** com justificativa) |
 | `UMA_FUNCAO_POR_EVENTO` | Hard |
-| `MAX_POR_NIVEL_NO_EVENTO` | Máx. 1 Iniciante por evento, ou seja, nunca dois iniciantes juntos (hard). Desligada no catálogo padrão; o gerente liga na página de regras, escolhendo o nível e a quantidade |
-| `LIMITE_POR_PERIODO` | Máx. de escalas por mês por pessoa, **editável pelo gerente** (padrão 3). Conta **eventos**: dois cultos no mesmo domingo contam 2 (hard; o gerente pode forçar mais, com justificativa) |
+| `MIN_POR_NIVEL_NO_EVENTO` | Pelo menos 1 Experiente em cada evento com alguém escalado, contando as vagas preenchidas de todas as funções (hard, **não forçável**). A falta é o mínimo menos as pessoas do nível; evento sem ninguém escalado não viola. Desligada no catálogo padrão (substituiu a `MAX_POR_NIVEL_NO_EVENTO` na V13, que a criou desligada em todo ministério); o gerente liga na página de regras, escolhendo o nível e a quantidade |
+| `LIMITE_POR_PERIODO` | Máx. de escalas por mês por pessoa, **editável pelo gerente** (padrão 3). Conta **eventos**: dois cultos no mesmo domingo contam 2 (hard; **forçável**: o gerente escala acima do limite com justificativa) |
 | `SEM_SOBREPOSICAO` | Sempre ativa (hard): ninguém em dois eventos com horários sobrepostos, **nem em ministérios diferentes** |
 | `EQUILIBRIO_DE_CARGA` | Distribuir o serviço igualmente (soft) |
 | `PRIORIDADE_POR_DATA` | Preencher primeiro os eventos mais próximos (medium) |
@@ -127,7 +127,7 @@ Outras regras:
 - **Níveis:** a mídia usa só **Iniciante** e **Experiente**. O nível é atribuído pelo gerente **por função**.
 - **Disponibilidade:** pode ser alterada a qualquer momento até o gerente **travar** o período (ver "Disponibilidade (Fase 2)").
 - **Sem solução válida:** a vaga fica **vazia** e o gerente é alertado com o motivo. O solver nunca viola uma regra hard sem avisar.
-- **Forçar uma alocação** que viola regra exige justificativa e gera registro de auditoria.
+- **Forçar uma alocação** que viola regra exige justificativa e gera registro de auditoria. Só se forçam `LIMITE_POR_PERIODO` e `DISPONIBILIDADE` (`TipoDeRegra.isForcavel`); habilitação, uma função por evento, sobreposição e mínimo por nível nunca.
 - **Desistência:** esvazia a vaga **na hora, sem aprovação**. A escala do mês **não é regerada nem reorganizada**; o buraco fica e o gerente recebe um alerta. O membro pode indicar opcionalmente um substituto habilitado, que não pode violar regras hard.
 - **Eventos:** modelos recorrentes (domingo e quinta) têm horário e **duração** padrão, editáveis no modelo ou em um evento específico. Editar um evento não altera o modelo. Eventos avulsos podem ser criados a qualquer momento.
   - Um modelo por ministério, dia da semana e horário (`uk_modelo_evento_horario`); dois modelos no mesmo dia em horários diferentes valem (culto da manhã e da noite).
@@ -150,7 +150,7 @@ Outras regras:
 
 ### Escala (Fase 3)
 
-A Fase 3 foi dividida. A **3a** (feita) gera a escala com o Timefold e mostra o rascunho ao gerente, com as vagas vazias explicadas. A **3b** traz o ajuste manual, fixar, forçar com justificativa, publicar e "Minhas escalas".
+A Fase 3 foi dividida. A **3a** (feita) gera a escala com o Timefold e mostra o rascunho ao gerente, com as vagas vazias explicadas. A **3b** (feita) traz o ajuste manual, fixar, forçar com justificativa, publicar e "Minhas escalas".
 
 - **Funções exigidas:** cada modelo e cada evento escolhem as funções que precisam (`modelo_evento_funcao`, `evento_funcao`). **Sem linhas, precisa de todas as funções do ministério**, que é o padrão; uma função criada depois entra sozinha nos eventos não personalizados. Marcar todas no formulário grava zero linhas; desmarcar todas é recusado. O evento gerado de um modelo copia as funções dele, e editar o modelo não muda os eventos já criados. Excluir a função apaga as linhas dela em cascata (o evento que só tinha ela volta para todas).
 - **Vagas:** gerar cria as que faltam nos eventos por vir: da posição 1 até o `qtd_max` de cada função exigida. A posição até o `qtd_min` é obrigatória; acima dele, opcional.
@@ -158,14 +158,14 @@ A Fase 3 foi dividida. A **3a** (feita) gera a escala com o Timefold e mostra o 
   - As outras (evento cancelado, função que deixou de ser exigida, `qtd_max` reduzido) saem da escala na hora, a página de escalas diz quem saiu, e a próxima geração as apaga. Se o evento for reativado antes, elas voltam.
   - Evento que já começou fica como está; as vagas dele contam no limite e no equilíbrio do mês.
 - **Regras:** o catálogo é o enum `TipoDeRegra`, com o padrão de cada tipo; cada ministério tem uma linha de `regra` por tipo.
-  - O ministério criado pelo `MinisterioService` recebe o catálogo padrão (evento `MinisterioCriado`, gravado pelo `RegraService` na mesma transação): rígidas ligadas, limite de 3 eventos por mês e máximo por nível desligado. Tipo sem linha vale o padrão do enum (a migração só criou a tabela).
-  - A rigidez dá o nível da pontuação e o peso multiplica a penalidade; desligada pesa zero (`PesosDasRegras`, via `ConstraintWeightOverrides`). Os parâmetros ficam em JSON e são validados pelo record do tipo (`LimitePorPeriodoParams`, `MaxPorNivelParams`, `SemParametros`), estritos com campo desconhecido, ausente ou nulo.
+  - O ministério criado pelo `MinisterioService` recebe o catálogo padrão (evento `MinisterioCriado`, gravado pelo `RegraService` na mesma transação): rígidas ligadas, limite de 3 eventos por mês e mínimo por nível desligado. Tipo sem linha vale o padrão do enum (a migração só criou a tabela).
+  - A rigidez dá o nível da pontuação e o peso multiplica a penalidade; desligada pesa zero (`PesosDasRegras`, via `ConstraintWeightOverrides`). Os parâmetros ficam em JSON e são validados pelo record do tipo (`LimitePorPeriodoParams`, `MinPorNivelParams`, `SemParametros`), estritos com campo desconhecido, ausente ou nulo.
   - Não se desligam: pessoas por função, habilitação, disponibilidade, uma função por evento, sem sobreposição e prioridade por data (sem ela o solver deixaria as vagas vazias).
-  - Na página de regras o gerente muda o limite do mês (1 a 31) e liga o máximo por nível, escolhendo o nível e a quantidade (1 a 20), com `Auditoria` (`ALTERAR_REGRA`). Nível excluído deixa o máximo por nível sem efeito, e a página diz isso.
+  - Na página de regras o gerente muda o limite do mês (1 a 31) e liga o mínimo por nível, escolhendo o nível e a quantidade (1 a 20), com `Auditoria` (`ALTERAR_REGRA`). Nível excluído deixa o mínimo por nível sem efeito, e a página diz isso.
 - **Sem sobreposição de horários** (`SEM_SOBREPOSICAO`): a mesma pessoa não serve em dois eventos que se sobrepõem, contando início e duração (`Evento.getInicio()` e `getFim()`, que pode cair no dia seguinte), **inclusive entre ministérios diferentes**.
   - As vagas vigentes de outros ministérios entram como fatos (`CompromissoFixo`), só com pessoa e horário: gerar a da Mídia não mexe na do Louvor, e nada do outro ministério aparece na tela ("já serve em outro evento nesse horário").
   - Eventos colados (um termina às 11h00 e o outro começa às 11h00) não se sobrepõem. Evento cancelado não conta.
-- **Limite mensal** (`LIMITE_POR_PERIODO`): conta **eventos** distintos do ministério no mês, mesmo que dois caiam no mesmo dia, incluindo os que já começaram. Uma pessoa tem no máximo uma vaga por evento (`UMA_FUNCAO_POR_EVENTO`). Na 3b, o gerente poderá forçar acima do limite, com justificativa e `Auditoria`.
+- **Limite mensal** (`LIMITE_POR_PERIODO`): conta **eventos** distintos do ministério no mês, mesmo que dois caiam no mesmo dia, incluindo os que já começaram. Uma pessoa tem no máximo uma vaga por evento (`UMA_FUNCAO_POR_EVENTO`). O gerente pode forçar acima do limite, com justificativa e `Auditoria`.
 - **Prioridade por data** (medium): a vaga obrigatória vazia pesa 100 mais os dias até o fim do mês; a opcional, 1. Preencher mais vagas vale mais que a data, e a data desempata. **Equilíbrio** (soft): o quadrado dos eventos de cada pessoa no mês.
 - **Geração** (`GeracaoDaEscala`):
   - Só com a disponibilidade do período travada; sem trava, o servidor recusa.
@@ -173,10 +173,26 @@ A Fase 3 foi dividida. A **3a** (feita) gera a escala com o Timefold e mostra o 
   - Até 30 s, ou 5 s sem melhorar (`timefold.solver.termination`). Gerar de novo substitui o rascunho, menos as vagas fixadas e forçadas (`@PlanningPin`).
   - A gravação relê a trava com o período bloqueado: destravada no meio, o resultado é descartado e o gerente é avisado. Registra `Auditoria` (`GERAR_ESCALA`, com as vagas preenchidas, o tempo e a pontuação).
   - O andamento fica em memória (`GeracoesEmAndamento`, uma instância do app): o segundo clique encontra a geração rodando e não dispara outra. Um reinício no meio perde só a geração.
-- **Explicação da vaga vazia** (`DiagnosticoDaVaga`): no Timefold 2 não existe `SolutionManager.explain`, e o `analyze` é da versão Enterprise. Quem serve passa pelas regras rígidas ligadas, nesta ordem: habilitação, disponibilidade, uma função por evento, sobreposição, limite e máximo por nível. A primeira que deixa ninguém é o motivo ("Ninguém habilitado em Projeção marcou Pode."). É calculada ao abrir a página, com os dados de agora, e só as vagas obrigatórias dos eventos por vir geram alerta.
-- **Página de escalas** (`/ministerios/{id}/escalas`): a Toolbar tem "Gerar escala" (o primário; durante a geração vira o Badge "Gerando escala"). O painel de andamento pede `/escalas/andamento` a cada 2 s; quando termina, a resposta manda recarregar a página (`HX-Redirect`), que avisa o resultado uma vez. Depois vêm os alertas, os StatCards, a grade (`componentes/grade`, só leitura) e as escalas por pessoa.
-- **Destravar a disponibilidade de um período com escala publicada exige confirmação** (Sheet, `componentes/sheet :: confirmacao`), porque a escala publicada foi gerada com aquelas respostas. Entra com a publicação, na 3b.
-- **Pendente na 3b:** ajuste manual, fixar e forçar com justificativa (`DiagnosticoDaVaga` diz qual regra a alocação viola), publicar (Badge Publicada), "Regerar não fixadas" no lugar de "Gerar escala" quando já há rascunho (README da Toolbar), "Minhas escalas" e a confirmação ao destravar.
+- **Explicação da vaga vazia** (`DiagnosticoDaVaga`): no Timefold 2 não existe `SolutionManager.explain`, e o `analyze` é da versão Enterprise. Quem serve passa pelas regras rígidas ligadas, nesta ordem: habilitação, disponibilidade, uma função por evento, sobreposição, limite e mínimo por nível. A primeira que deixa ninguém é o motivo ("Ninguém habilitado em Projeção marcou Pode."). No mínimo por nível, cabe quem completa o mínimo com as outras vagas do evento ("O evento precisa de pelo menos 1 pessoa do nível Experiente, e a única pessoa que pode não é desse nível."). É calculada ao abrir a página, com os dados de agora, e só as vagas obrigatórias dos eventos por vir geram alerta.
+- **Página de escalas** (`/ministerios/{id}/escalas`): a ação da Toolbar segue o estado da escala. Sem rascunho, "Gerar escala" (primário); com rascunho, "Publicar" (primário, abre o resumo) e "Regerar não fixadas" (contorno, com confirmação); publicada, o Badge e "Reabrir para rascunho" (contorno, com confirmação). Durante a geração, vira o Badge "Gerando escala" e as vagas não se abrem. O painel de andamento pede `/escalas/andamento` a cada 2 s; quando termina, a resposta manda recarregar a página (`HX-Redirect`), que avisa o resultado uma vez. Depois vem a região `#escala` (`escala/fragments/escala`): os alertas, os StatCards, a grade (`componentes/grade`) e as escalas por pessoa, mais o Sheet da vaga.
+- **Validação manual pelo solver** (`ValidacaoDaVaga`): o `analyze` e o `recommendAssignment` são Enterprise no Timefold 2, então a validação usa o `SolutionManager.update` (Community) sobre o mesmo `RestricoesDaEscala`, sem reescrever regra.
+  - Cada regra rígida ligada é pesada sozinha (`PesosDasRegras.isolando`), e a regra é violada se a pontuação dela piora com a pessoa na vaga. Violação que já existia (a forçada de outra vaga) não pesa na candidata.
+  - O mínimo por nível conta o evento inteiro: além da piora, o evento sozinho não pode continuar abaixo do mínimo (senão o terceiro Iniciante passaria, com a falta igual).
+  - Esvaziar só é recusado se piora uma regra (tirar o único Experiente do evento).
+  - `avisos()` aponta as vagas cuja pessoa viola uma regra como a escala está (um cálculo só quando a pontuação rígida é zero); `penalidadesBrandas()` diz quanto pesam as regras de prioridade e preferência.
+  - O texto do porquê ("Já tem 3 escalas no mês, e o limite é 3.") só explica; o veredito é do solver. O `ValidacaoDaVagaTest` confere, regra a regra, que o solver dá o mesmo veredito. Abrir os candidatos de uma vaga na Mídia leva cerca de 150 ms.
+- **Ajuste manual** (`AjusteDaEscala`, `VagaController` em `/ministerios/{id}/escalas/vagas/{vagaId}`):
+  - Na grade, a vaga de evento por vir é um link: com htmx, abre no Sheet `#vaga-sheet` com quem está nela e os candidatos da função em três grupos (podem servir; só com justificativa; não podem, sem botão), cada um com o nível, as escalas do mês e o porquê; sem JS, abre a página da vaga.
+  - Trocar, preencher, esvaziar, fixar e desafixar salvam na hora e devolvem a região `#escala` inteira (contagens e avisos das outras vagas) com o toast. A recusa volta para o Sheet (`HX-Retarget`), com o erro no campo da justificativa.
+  - **Toda alteração fixa a vaga**, inclusive esvaziar (a vaga vazia fixada não é preenchida ao gerar de novo; desafixe para isso). Forçar fixa e marca forçada; desafixar tira as duas.
+  - Cada alteração bloqueia o período (como a geração e a trava) e confere a `versao` que a tela viu: na segunda aba, a alteração é recusada (`EdicaoConcorrenteException`), a grade recarrega e avisa. Com a geração rodando ou o evento começado, nada muda.
+  - Toda alteração vai para a `Auditoria` (`AJUSTAR_VAGA`, `FORCAR_VAGA`, `FIXAR_VAGA`, `DESAFIXAR_VAGA`) com o antes e o depois, e diz quando a escala já estava publicada.
+  - Na grade: a forçada mostra "Forçada · regra" e a justificativa no tooltip; a vaga com aviso mostra a regra e ganha um alerta no topo.
+- **Publicação** (`PublicacaoDaEscala`): o Sheet de "Publicar" resume as vagas obrigatórias vazias (com o motivo), as forçadas (regra e justificativa) e as regras de prioridade e preferência que mais pesam; publica mesmo com vaga vazia ("Publicar mesmo assim"). Publicada, o ajuste continua e vale na hora, e a geração automática é recusada no clique, ao preparar e ao gravar, até "Reabrir para rascunho" (que tira a escala da visão dos membros). Publicar e reabrir vão para a `Auditoria`. E-mail é da Fase 4.
+- **Destravar a disponibilidade de um período com escala publicada exige confirmação** (Sheet, `componentes/sheet :: confirmacao`), porque a escala publicada foi gerada com aquelas respostas. O servidor recusa sem `confirmado=true`.
+- **Membro** (`EscalaDoMembro`): só escala publicada, nunca rascunho, nem por URL direta.
+  - "Minhas escalas", no início: as próximas primeiro ("12/10 · Dom · 18h00", função, evento e a etiqueta de cor do ministério), as dos últimos 60 dias recolhidas, e atalhos para a escala de cada ministério.
+  - Escala do ministério (`/escalas/{id}?mes=`): a grade publicada só de leitura, sem fixada, forçada nem justificativa, para quem é membro (o admin vê todos; ministério alheio responde 404). Na navegação, conta como Início.
 
 ## Solver (Timefold)
 
@@ -191,6 +207,7 @@ A Fase 3 foi dividida. A **3a** (feita) gera a escala com o Timefold e mostra o 
   - Medium: vaga vazia, com peso maior quanto mais próximo o evento.
   - Soft: equilíbrio de carga (o quadrado das escalas por pessoa) e preferências (Fase 5).
 - `RestricoesDaEscala`: uma restrição por tipo de regra, com o nome do tipo como id.
+- **Validação manual:** `ValidacaoDaVaga` (ver "Escala (Fase 3)"), pelo `SolutionManager.update`.
 - **Toda restrição nova precisa de teste com `ConstraintVerifier`**, cobrindo o caso que penaliza e o que não penaliza (`RestricoesDaEscalaTest`). O `GeracaoDaMidiaTest` roda o solver no cenário da Mídia do seed, inclusive em `FULL_ASSERT`, que pega pontuação incremental errada.
 
 ## Infraestrutura e restrições do ambiente
@@ -292,12 +309,13 @@ O design system "Escala" (feito no Claude Design) está em `docs/design/`. O `do
   - Todo teste que sobe o Spring roda no perfil `test`, nunca no `dev`, para que o seed e as credenciais de dev não apareçam nos testes. O `@TesteDeIntegracao` e o `@TesteDeController` já incluem `@ActiveProfiles("test")`. O `PerfilDosTestesTest` falha se algum teste subir o Spring sem esse perfil, e o `EscalaApplicationIT` confere que ele vence o `SPRING_PROFILES_ACTIVE` do ambiente.
   - Todo `*IT` usa `@TesteDeIntegracao`, que declara toda a configuração (credenciais em `CredenciaisDeTeste`). Nada vem de `.env`, de variáveis de ambiente ou do perfil `dev`.
   - Cada teste cria os próprios dados e usa `@Transactional` para desfazê-los. Nunca dependa de dados de outra classe nem do admin criado na subida. O banco é um container novo, sem reuse.
-  - A exceção é o `PaginasDoGerenteIT`, que grava os dados de verdade e os apaga no `@AfterEach`: ele abre as páginas sem a transação do teste em volta, porque com `open-in-view` desligado uma associação lazy lida fora do serviço só falha assim. Página nova do gerente entra nele.
+  - A exceção é o `PaginasDoGerenteIT`, que grava os dados de verdade e os apaga no `@AfterEach`: ele abre as páginas sem a transação do teste em volta, porque com `open-in-view` desligado uma associação lazy lida fora do serviço só falha assim. Página nova do gerente entra nele; página nova do membro entra no `PaginasDoMembroIT`, que segue o mesmo modelo.
+  - O `AjusteDaEscalaIT` também roda sem `@Transactional`: a concorrência do ajuste (duas edições com a mesma versão) só aparece com dois commits.
   - Teste de concorrência (ex.: `DisponibilidadeConcorrenciaIT`) também roda sem `@Transactional`, com transações de verdade em threads, e apaga os dados no `@AfterEach`.
   - O `GeracaoDaEscalaIT` também: a geração roda na fila e só enxerga o que foi commitado. O teste espera a geração terminar (`Andamento.getFim()`) antes de conferir e de apagar. Nos ITs, o solver termina com 1 s sem melhorar (`@TesteDeIntegracao`).
   - As classes rodam em ordem aleatória. Para reproduzir uma falha, use a semente do log (`-Dfailsafe.runOrder.random.seed=...`).
 - Não existe perfil padrão. O `./mvnw spring-boot:run` ativa o `dev`; na IDE, rode `TestEscalaApplication` ou ative o perfil `dev`.
-- O perfil `dev` tem seed (`SeedDeDesenvolvimento`): Mídia com 20 membros, funções, níveis, modelos e eventos, e Louvor. A Mídia chega com o mês atual respondido e travado (pronto para gerar a escala), o próximo respondido e aberto, e no máximo um Iniciante por evento. Gerente da Mídia: `paula.ribeiro@escala.local`; a senha dos membros está no `application-dev.yaml`.
+- O perfil `dev` tem seed (`SeedDeDesenvolvimento`): Mídia com 20 membros, funções, níveis, modelos e eventos, e Louvor. A Mídia chega com o mês atual respondido e travado (pronto para gerar a escala), o próximo respondido e aberto, e pelo menos um Experiente por evento. Gerente da Mídia: `paula.ribeiro@escala.local`; a senha dos membros está no `application-dev.yaml`.
 - Correção de bug começa por um teste que reproduz o bug.
 - O JaCoCo falha o `verify` se a cobertura de linhas dos testes unitários ficar abaixo de 70% (excluídos `*Application`, `config` e DTOs).
 
@@ -321,7 +339,7 @@ docker compose up -d            # produção, na VM (o COMPOSE_FILE do .env apon
 3. **Fase 2 — Disponibilidade:** tela mobile de marcação, trava do período, painel de quem não respondeu.
 4. **Fase 3 — Escala automática** (ver "Escala (Fase 3)"):
    - **3a (feita):** domínio Timefold, catálogo de regras e página de regras, funções exigidas por evento, geração em segundo plano, rascunho com as vagas vazias explicadas.
-   - **3b:** ajuste manual, fixar, forçar com justificativa, publicação e "Minhas escalas".
+   - **3b (feita):** ajuste manual validado pelo solver, fixar, forçar com justificativa, publicação com resumo, reabrir, "Minhas escalas" e a escala do ministério para o membro; o mínimo por nível no lugar do máximo.
 5. **Fase 4 — Pós-publicação:** desistência, alertas ao líder, e-mails de publicação e lembrete de 24 h, texto para WhatsApp, PDF. **Aqui o MVP entra em uso.**
 6. **Fase 5 — Refinos:** preferências, relatórios, auditoria completa.
 7. **Fase 6 — Expansão:** louvor, criando só os tipos de regra que faltarem.

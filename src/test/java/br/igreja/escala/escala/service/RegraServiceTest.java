@@ -17,7 +17,7 @@ import br.igreja.escala.compartilhado.domain.AcaoAuditada;
 import br.igreja.escala.compartilhado.domain.RegistroDeAuditoria;
 import br.igreja.escala.compartilhado.service.AuditoriaService;
 import br.igreja.escala.escala.domain.LimitePorPeriodoParams;
-import br.igreja.escala.escala.domain.MaxPorNivelParams;
+import br.igreja.escala.escala.domain.MinPorNivelParams;
 import br.igreja.escala.escala.domain.Regra;
 import br.igreja.escala.escala.domain.TipoDeRegra;
 import br.igreja.escala.escala.repository.RegraRepository;
@@ -43,7 +43,7 @@ class RegraServiceTest {
     private final RegraService servico = new RegraService(regras, ministerios, niveis, auditoria);
 
     private final Regra limite = new Regra(MIDIA, TipoDeRegra.LIMITE_POR_PERIODO);
-    private final Regra maximo = new Regra(MIDIA, TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO);
+    private final Regra minimo = new Regra(MIDIA, TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO);
 
     @BeforeEach
     void prepara() {
@@ -52,12 +52,13 @@ class RegraServiceTest {
         when(ministerios.buscar(9L)).thenThrow(new NaoEncontradoException("Ministério 9"));
         when(niveis.listar(MIDIA)).thenReturn(List.of(Exemplos.iniciante(midia), Exemplos.experiente(midia)));
         when(niveis.buscar(MIDIA, 200L)).thenReturn(Exemplos.iniciante(midia));
+        when(niveis.buscar(MIDIA, 201L)).thenReturn(Exemplos.experiente(midia));
         when(niveis.buscar(MIDIA, 900L)).thenThrow(new NaoEncontradoException("Nível 900"));
-        when(regras.findByMinisterioId(MIDIA)).thenReturn(List.of(limite, maximo));
+        when(regras.findByMinisterioId(MIDIA)).thenReturn(List.of(limite, minimo));
         when(regras.findByMinisterioIdAndTipo(MIDIA, TipoDeRegra.LIMITE_POR_PERIODO))
                 .thenReturn(Optional.of(limite));
-        when(regras.findByMinisterioIdAndTipo(MIDIA, TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO))
-                .thenReturn(Optional.of(maximo));
+        when(regras.findByMinisterioIdAndTipo(MIDIA, TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO))
+                .thenReturn(Optional.of(minimo));
         when(regras.save(any())).thenAnswer(chamada -> chamada.getArgument(0));
     }
 
@@ -82,12 +83,12 @@ class RegraServiceTest {
     }
 
     @Test
-    void maximoPorNivelComNivelExcluidoValeComoDesligado() {
-        maximo.alterar(new MaxPorNivelParams(999L, 1), true);
+    void minimoPorNivelComNivelExcluidoValeComoDesligado() {
+        minimo.alterar(new MinPorNivelParams(999L, 1), true);
 
-        assertThat(servico.doMinisterio(MIDIA).maximoPorNivel()).isEmpty();
+        assertThat(servico.doMinisterio(MIDIA).minimoPorNivel()).isEmpty();
         assertThat(servico.resumos(MIDIA))
-                .filteredOn(resumo -> resumo.codigo().equals("MAX_POR_NIVEL_NO_EVENTO"))
+                .filteredOn(resumo -> resumo.codigo().equals("MIN_POR_NIVEL_NO_EVENTO"))
                 .singleElement()
                 .satisfies(resumo -> {
                     assertThat(resumo.estado()).isEqualTo("Desligada");
@@ -151,54 +152,55 @@ class RegraServiceTest {
     }
 
     @Test
-    void ligaOMaximoPorNivelEAudita() {
-        assertThat(servico.alterarMaximoPorNivel(MIDIA, true, 200L, 1, AcessoDeTeste.GERENTE_DA_MIDIA))
+    void ligaOMinimoPorNivelEAudita() {
+        assertThat(servico.alterarMinimoPorNivel(MIDIA, true, 201L, 1, AcessoDeTeste.GERENTE_DA_MIDIA))
                 .isTrue();
 
-        assertThat(servico.doMinisterio(MIDIA).maximoPorNivel()).contains(new MaxPorNivelParams(200L, 1));
+        assertThat(servico.doMinisterio(MIDIA).minimoPorNivel()).contains(new MinPorNivelParams(201L, 1));
         verify(auditoria)
                 .registrar(new RegistroDeAuditoria(
                         AcaoAuditada.ALTERAR_REGRA,
                         GERENTE,
                         MIDIA,
                         null,
-                        "Máximo por nível ligado: 1 pessoa do nível Iniciante por evento (Mídia)."));
+                        "Mínimo por nível ligado: 1 pessoa do nível Experiente por evento (Mídia)."));
         assertThat(servico.resumos(MIDIA))
-                .filteredOn(resumo -> resumo.codigo().equals("MAX_POR_NIVEL_NO_EVENTO"))
+                .filteredOn(resumo -> resumo.codigo().equals("MIN_POR_NIVEL_NO_EVENTO"))
                 .singleElement()
                 .satisfies(resumo -> {
                     assertThat(resumo.estado()).isEqualTo("Ligada");
-                    assertThat(resumo.descricao()).isEqualTo("No máximo 1 pessoa do nível Iniciante por evento.");
+                    assertThat(resumo.descricao())
+                            .isEqualTo("Pelo menos 1 pessoa do nível Experiente em cada evento com alguém escalado.");
                 });
     }
 
     @Test
-    void desligaOMaximoPorNivel() {
-        maximo.alterar(new MaxPorNivelParams(200L, 1), true);
+    void desligaOMinimoPorNivel() {
+        minimo.alterar(new MinPorNivelParams(200L, 1), true);
 
-        assertThat(servico.alterarMaximoPorNivel(MIDIA, false, 200L, 1, AcessoDeTeste.GERENTE_DA_MIDIA))
+        assertThat(servico.alterarMinimoPorNivel(MIDIA, false, 200L, 1, AcessoDeTeste.GERENTE_DA_MIDIA))
                 .isTrue();
 
-        assertThat(maximo.isAtiva()).isFalse();
+        assertThat(minimo.isAtiva()).isFalse();
         verify(auditoria)
                 .registrar(new RegistroDeAuditoria(
-                        AcaoAuditada.ALTERAR_REGRA, GERENTE, MIDIA, null, "Máximo por nível desligado (Mídia)."));
+                        AcaoAuditada.ALTERAR_REGRA, GERENTE, MIDIA, null, "Mínimo por nível desligado (Mídia)."));
     }
 
     @Test
     void ligarSemNivelERecusadoNoCampoENivelDeOutroMinisterioE404() {
-        assertThatThrownBy(() -> servico.alterarMaximoPorNivel(MIDIA, true, null, 1, AcessoDeTeste.GERENTE_DA_MIDIA))
+        assertThatThrownBy(() -> servico.alterarMinimoPorNivel(MIDIA, true, null, 1, AcessoDeTeste.GERENTE_DA_MIDIA))
                 .isInstanceOfSatisfying(RegraVioladaException.class, recusa -> {
                     assertThat(recusa.campo()).isEqualTo("nivelId");
                     assertThat(recusa.getMessage()).isEqualTo("Escolha o nível.");
                 });
-        assertThatThrownBy(() -> servico.alterarMaximoPorNivel(MIDIA, true, 900L, 1, AcessoDeTeste.GERENTE_DA_MIDIA))
+        assertThatThrownBy(() -> servico.alterarMinimoPorNivel(MIDIA, true, 900L, 1, AcessoDeTeste.GERENTE_DA_MIDIA))
                 .isInstanceOf(NaoEncontradoException.class);
-        assertThatThrownBy(() -> servico.alterarMaximoPorNivel(MIDIA, true, 200L, 21, AcessoDeTeste.GERENTE_DA_MIDIA))
+        assertThatThrownBy(() -> servico.alterarMinimoPorNivel(MIDIA, true, 200L, 21, AcessoDeTeste.GERENTE_DA_MIDIA))
                 .isInstanceOfSatisfying(
                         RegraVioladaException.class,
-                        recusa -> assertThat(recusa.campo()).isEqualTo("maximo"));
-        assertThat(maximo.isAtiva()).isFalse();
+                        recusa -> assertThat(recusa.campo()).isEqualTo("minimo"));
+        assertThat(minimo.isAtiva()).isFalse();
         verify(auditoria, never()).registrar(any());
     }
 
@@ -213,7 +215,7 @@ class RegraServiceTest {
                         tuple("UMA_FUNCAO_POR_EVENTO", "Rígida", "Sempre ativa", null),
                         tuple("SEM_SOBREPOSICAO", "Rígida", "Sempre ativa", null),
                         tuple("LIMITE_POR_PERIODO", "Rígida", "Ligada", "limite"),
-                        tuple("MAX_POR_NIVEL_NO_EVENTO", "Rígida", "Desligada", "maximo-por-nivel"),
+                        tuple("MIN_POR_NIVEL_NO_EVENTO", "Rígida", "Desligada", "minimo-por-nivel"),
                         tuple("PRIORIDADE_POR_DATA", "Prioridade", "Sempre ativa", null),
                         tuple("EQUILIBRIO_DE_CARGA", "Preferência", "Ligada", null));
         assertThat(servico.resumos(MIDIA))

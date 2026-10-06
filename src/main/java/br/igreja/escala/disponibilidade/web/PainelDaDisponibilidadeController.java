@@ -139,17 +139,19 @@ class PainelDaDisponibilidadeController {
         return paraOPainel(ministerioId, mes);
     }
 
+    /** Com a escala do mês publicada, só com {@code confirmado} (o Sheet de confirmação do painel manda). */
     @PostMapping("/destravar")
     String destravar(
             @PathVariable Long ministerioId,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth mes,
+            @RequestParam(defaultValue = "false") boolean confirmado,
             @AuthenticationPrincipal UsuarioAutenticado autor,
             RedirectAttributes redirecionamento) {
         String doMes = nomeDoMes(mes);
         try {
             redirecionamento.addFlashAttribute(
                     "sucesso",
-                    disponibilidades.destravar(ministerioId, mes, autor)
+                    disponibilidades.destravar(ministerioId, mes, confirmado, autor)
                             ? "Disponibilidade de " + doMes + " destravada"
                             : "A disponibilidade de " + doMes + " já estava aberta");
         } catch (RegraVioladaException recusa) {

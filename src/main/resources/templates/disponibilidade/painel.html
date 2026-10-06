@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--/*
     Disponibilidade do mês para o gerente. A Toolbar troca o mês e traz a trava como ação (escura para travar,
-    contorno para destravar; sem primário na tela). StatCards com quem respondeu e quem falta, "Copiar lembrete" (Sheet
+    contorno para destravar; sem primário na tela). Com a escala do mês publicada, destravar pede confirmação num Sheet. StatCards com quem respondeu e quem falta, "Copiar lembrete" (Sheet
     com o texto para o WhatsApp, só com a disponibilidade aberta); no celular, duas listas (ListRow), e no desktop a
     visão membro × evento (DataTable), com a linha "Podem" por evento.
 */-->
@@ -17,7 +17,9 @@
         travada=${painel.travado}, regrasHref=null,
         acaoTexto=${!painel.temPeriodo ? null : (painel.travado ? 'Destravar disponibilidade' : 'Travar disponibilidade')},
         acaoIcone=${painel.travado ? 'lock-open' : 'lock'}, acaoVariante=${painel.travado ? 'outline' : 'dark'},
-        acaoFormulario=${painel.travado ? 'destravar-disponibilidade' : 'travar-disponibilidade'}, acaoHref=null)}"></div>
+        acaoFormulario=${painel.travado and painel.escalaPublicada ? null
+                : (painel.travado ? 'destravar-disponibilidade' : 'travar-disponibilidade')}, acaoHref=null,
+        acaoAlvo=${painel.travado and painel.escalaPublicada ? 'destravar-sheet' : null}, outraTexto=null)}"></div>
 
 <main class="flex flex-col gap-6">
     <header class="flex flex-col gap-1">
@@ -36,6 +38,12 @@
           th:action="@{/ministerios/{m}/disponibilidade/destravar(m=${ministerio.id})}" method="post" hidden>
         <input type="hidden" name="mes" th:value="${painel.mes}">
     </form>
+    <th:block th:if="${painel.travado and painel.escalaPublicada}"><div th:replace="~{componentes/sheet ::
+            confirmacao(id='destravar-sheet', titulo='Destravar com a escala publicada?',
+            texto=|A escala de ${painel.nomeDoMes()} foi gerada com estas respostas e já está publicada. Os membros
+            voltam a mudar as respostas, e a escala publicada não muda sozinha.|,
+            acao=@{/ministerios/{m}/disponibilidade/destravar(m=${ministerio.id}, mes=${painel.mes}, confirmado=true)},
+            confirmar='Destravar')}"></div></th:block>
 
     <th:block th:if="${recusa != null}"><div th:replace="~{componentes/alerta :: alerta(titulo=${recusa}, corpo=null,
             regra=null, acaoTexto=null, icone=null)}"></div></th:block>

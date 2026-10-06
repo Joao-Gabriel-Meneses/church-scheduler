@@ -47,7 +47,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Dados de exemplo só no perfil dev: Mídia (com 20 membros, funções, níveis, habilitações, modelos e os eventos deste
  * mês e do próximo, com dois cultos em cada domingo) e Louvor (Vocal para a Ana, a Paula e a Priscila, com um ensaio
  * aos sábados), para a SideRail e a disponibilidade por ministério aparecerem. A Mídia já chega com respostas nos dois
- * meses, com a disponibilidade deste mês travada (pronta para gerar a escala) e com no máximo um Iniciante por evento,
+ * meses, com a disponibilidade deste mês travada (pronta para gerar a escala) e com pelo menos um Experiente por evento,
  * configurado como o gerente faria na página de regras. Roda depois do admin inicial e só se a Mídia ainda não existe.
  * Usa só os serviços públicos dos módulos, como uma pessoa faria pelas telas. O SeedDeDesenvolvimentoIT roda o seed no
  * banco dos testes.
@@ -167,7 +167,7 @@ class SeedDeDesenvolvimento implements ApplicationRunner {
         }
         var paula = usuarios.buscarPorEmail("paula.ribeiro@escala.local").orElseThrow();
         membros.tornarGerente(midia, paula.id(), admin);
-        regras.alterarMaximoPorNivel(midia, true, doMinisterio.get("Iniciante").getId(), 1, admin);
+        regras.alterarMinimoPorNivel(midia, true, doMinisterio.get("Experiente").getId(), 1, admin);
 
         // Dois cultos no mesmo domingo: a escala (Fase 3) não pode pôr a mesma pessoa nos dois se eles se sobrepuserem,
         // e o limite do mês conta cada um.

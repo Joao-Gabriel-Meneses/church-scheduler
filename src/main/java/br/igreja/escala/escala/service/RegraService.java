@@ -5,7 +5,7 @@ import br.igreja.escala.compartilhado.domain.AcaoAuditada;
 import br.igreja.escala.compartilhado.domain.RegistroDeAuditoria;
 import br.igreja.escala.compartilhado.service.AuditoriaService;
 import br.igreja.escala.escala.domain.LimitePorPeriodoParams;
-import br.igreja.escala.escala.domain.MaxPorNivelParams;
+import br.igreja.escala.escala.domain.MinPorNivelParams;
 import br.igreja.escala.escala.domain.Regra;
 import br.igreja.escala.escala.domain.RegraVigente;
 import br.igreja.escala.escala.domain.RegrasDoMinisterio;
@@ -25,7 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * As regras de cada ministério. O ministério novo recebe o catálogo padrão; o gerente muda o limite do mês e o máximo
+ * As regras de cada ministério. O ministério novo recebe o catálogo padrão; o gerente muda o limite do mês e o mínimo
  * por nível, com auditoria. Tipo sem linha (ministério criado antes do catálogo, ou tipo novo) vale o padrão.
  */
 @Service
@@ -54,7 +54,7 @@ public class RegraService {
     }
 
     /**
-     * As regras que valem para a geração. O máximo por nível cujo nível foi excluído vale como desligado.
+     * As regras que valem para a geração. O mínimo por nível cujo nível foi excluído vale como desligado.
      *
      * @throws br.igreja.escala.compartilhado.NaoEncontradoException se o ministério não existe
      */
@@ -110,28 +110,28 @@ public class RegraService {
     }
 
     /**
-     * Liga (com nível e máximo) ou desliga o máximo por nível no evento.
+     * Liga (com nível e mínimo) ou desliga o mínimo por nível no evento.
      *
      * @return se mudou
-     * @throws RegraVioladaException no campo {@code nivelId}, se liga sem nível, ou {@code maximo}, fora de 1 a 20
+     * @throws RegraVioladaException no campo {@code nivelId}, se liga sem nível, ou {@code minimo}, fora de 1 a 20
      * @throws br.igreja.escala.compartilhado.NaoEncontradoException se o nível é de outro ministério
      */
     @Transactional
-    public boolean alterarMaximoPorNivel(
-            Long ministerioId, boolean ligada, Long nivelId, int maximo, UsuarioAutenticado autor) {
+    public boolean alterarMinimoPorNivel(
+            Long ministerioId, boolean ligada, Long nivelId, int minimo, UsuarioAutenticado autor) {
         var ministerio = ministerios.buscar(ministerioId);
-        if (maximo < MaxPorNivelParams.MINIMO || maximo > MaxPorNivelParams.MAXIMO) {
+        if (minimo < MinPorNivelParams.MINIMO || minimo > MinPorNivelParams.MAXIMO) {
             throw new RegraVioladaException(
-                    "maximo",
-                    "O máximo vai de " + MaxPorNivelParams.MINIMO + " a " + MaxPorNivelParams.MAXIMO
+                    "minimo",
+                    "O mínimo vai de " + MinPorNivelParams.MINIMO + " a " + MinPorNivelParams.MAXIMO
                             + " pessoas por evento.");
         }
         if (ligada && nivelId == null) {
             throw new RegraVioladaException("nivelId", "Escolha o nível.");
         }
         Nivel nivel = nivelId == null ? null : niveis.buscar(ministerioId, nivelId);
-        var regra = linha(ministerioId, TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO);
-        var novos = new MaxPorNivelParams(nivelId, maximo);
+        var regra = linha(ministerioId, TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO);
+        var novos = new MinPorNivelParams(nivelId, minimo);
         if (regra.isAtiva() == ligada && regra.getParametros().equals(novos)) {
             return false;
         }
@@ -142,8 +142,8 @@ public class RegraService {
                 ministerioId,
                 null,
                 (ligada
-                                ? "Máximo por nível ligado: " + quantasDoNivel(maximo, nivel.getNome()) + " por evento"
-                                : "Máximo por nível desligado")
+                                ? "Mínimo por nível ligado: " + quantasDoNivel(minimo, nivel.getNome()) + " por evento"
+                                : "Mínimo por nível desligado")
                         + " (" + ministerio.getNome() + ")."));
         return true;
     }
@@ -159,10 +159,10 @@ public class RegraService {
     }
 
     private static RegraVigente semNivelExcluido(RegraVigente regra, Map<Long, Nivel> doMinisterio) {
-        if (regra.tipo() != TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO || !regra.ativa()) {
+        if (regra.tipo() != TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO || !regra.ativa()) {
             return regra;
         }
-        Long nivelId = regra.parametros(MaxPorNivelParams.class).nivelId();
+        Long nivelId = regra.parametros(MinPorNivelParams.class).nivelId();
         if (nivelId != null && doMinisterio.containsKey(nivelId)) {
             return regra;
         }
@@ -178,17 +178,17 @@ public class RegraService {
             descricao = "Cada pessoa serve em no máximo " + maximo + (maximo == 1 ? " evento" : " eventos")
                     + " no mês; dois cultos no mesmo dia contam dois.";
             edicao = "limite";
-        } else if (tipo == TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO) {
-            var parametros = vigente.parametros(MaxPorNivelParams.class);
+        } else if (tipo == TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO) {
+            var parametros = vigente.parametros(MinPorNivelParams.class);
             if (vigente.ativa()) {
-                descricao = "No máximo "
+                descricao = "Pelo menos "
                         + quantasDoNivel(
-                                parametros.maximo(),
-                                niveis.get(parametros.nivelId()).getNome()) + " por evento.";
+                                parametros.minimo(),
+                                niveis.get(parametros.nivelId()).getNome()) + " em cada evento com alguém escalado.";
             } else if (configurada.ativa()) {
                 descricao = "Sem efeito: o nível escolhido foi excluído. Escolha outro nível.";
             }
-            edicao = "maximo-por-nivel";
+            edicao = "minimo-por-nivel";
         }
         String estado = tipo.sempreAtiva() ? "Sempre ativa" : (vigente.ativa() ? "Ligada" : "Desligada");
         return new RegraResumo(
@@ -196,7 +196,7 @@ public class RegraService {
     }
 
     /** "1 pessoa do nível Iniciante", "2 pessoas do nível Iniciante". */
-    private static String quantasDoNivel(int maximo, String nivel) {
-        return maximo + (maximo == 1 ? " pessoa" : " pessoas") + " do nível " + nivel;
+    private static String quantasDoNivel(int quantas, String nivel) {
+        return quantas + (quantas == 1 ? " pessoa" : " pessoas") + " do nível " + nivel;
     }
 }

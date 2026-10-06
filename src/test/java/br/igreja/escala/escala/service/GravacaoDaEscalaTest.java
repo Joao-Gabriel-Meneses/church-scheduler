@@ -38,6 +38,7 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -118,6 +119,29 @@ class GravacaoDaEscalaTest {
                         + " Trave de novo e gere a escala.");
         assertThat(daProjecao.isVazia()).isTrue();
         verify(auditoria, never()).registrar(any());
+    }
+
+    @Test
+    void escalaPublicadaNoMeioNaoMudaNada() {
+        novembro.publicarEscala();
+
+        assertThatThrownBy(() -> gravacao.gravar(solucao(ana, null), andamento, Duration.ofSeconds(8)))
+                .isInstanceOf(RegraVioladaException.class)
+                .hasMessageStartingWith("A escala de novembro está publicada.");
+        assertThat(daProjecao.isVazia()).isTrue();
+        verify(auditoria, never()).registrar(any());
+    }
+
+    @Test
+    void prepararBloqueiaOPeriodoERecusaAEscalaPublicada() {
+        when(periodos.doMes(MIDIA, NOVEMBRO)).thenReturn(Optional.of(novembro));
+        novembro.publicarEscala();
+
+        assertThatThrownBy(() -> gravacao.preparar(MIDIA, NOVEMBRO))
+                .isInstanceOf(RegraVioladaException.class)
+                .hasMessageStartingWith("A escala de novembro está publicada.");
+        verify(periodos).bloquearParaAlterar(400L);
+        verify(leitura, never()).ler(any(), any());
     }
 
     @Test

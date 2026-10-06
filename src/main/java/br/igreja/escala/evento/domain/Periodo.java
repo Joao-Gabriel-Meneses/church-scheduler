@@ -78,6 +78,36 @@ public class Periodo {
         return true;
     }
 
+    /**
+     * O rascunho vira a escala que os membros veem.
+     *
+     * @return se publicou agora; falso se já estava publicada
+     */
+    public boolean publicarEscala() {
+        if (isEscalaPublicada()) {
+            return false;
+        }
+        statusDaEscala = StatusDaEscala.PUBLICADA;
+        return true;
+    }
+
+    /**
+     * A escala volta a ser rascunho e some da visão dos membros (a geração automática volta a valer).
+     *
+     * @return se reabriu agora; falso se já era rascunho
+     */
+    public boolean reabrirEscala() {
+        if (!isEscalaPublicada()) {
+            return false;
+        }
+        statusDaEscala = StatusDaEscala.RASCUNHO;
+        return true;
+    }
+
+    public boolean isEscalaPublicada() {
+        return statusDaEscala == StatusDaEscala.PUBLICADA;
+    }
+
     public Long getId() {
         return id;
     }

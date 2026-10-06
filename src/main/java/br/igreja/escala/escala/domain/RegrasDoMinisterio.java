@@ -50,10 +50,10 @@ public record RegrasDoMinisterio(Map<TipoDeRegra, RegraVigente> porTipo) {
                 .maximo();
     }
 
-    /** O máximo por nível, se a regra está ligada e com nível. */
-    public Optional<MaxPorNivelParams> maximoPorNivel() {
-        var regra = de(TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO);
-        var parametros = regra.parametros(MaxPorNivelParams.class);
+    /** O mínimo por nível, se a regra está ligada e com nível. */
+    public Optional<MinPorNivelParams> minimoPorNivel() {
+        var regra = de(TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO);
+        var parametros = regra.parametros(MinPorNivelParams.class);
         return regra.ativa() && parametros.nivelId() != null ? Optional.of(parametros) : Optional.empty();
     }
 }

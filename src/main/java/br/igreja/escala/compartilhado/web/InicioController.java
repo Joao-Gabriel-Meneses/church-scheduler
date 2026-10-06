@@ -11,11 +11,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 class InicioController {
 
-    /** Ausente nos testes de controller, que não carregam o módulo disponibilidade: o resumo fica vazio. */
+    /** Ausentes nos testes de controller, que não carregam os módulos disponibilidade e escala: o resumo fica vazio. */
     private final ObjectProvider<DisponibilidadeNoInicio> disponibilidade;
 
-    InicioController(ObjectProvider<DisponibilidadeNoInicio> disponibilidade) {
+    private final ObjectProvider<EscalasNoInicio> escalas;
+
+    InicioController(ObjectProvider<DisponibilidadeNoInicio> disponibilidade, ObjectProvider<EscalasNoInicio> escalas) {
         this.disponibilidade = disponibilidade;
+        this.escalas = escalas;
     }
 
     @GetMapping("/")
@@ -23,6 +26,8 @@ class InicioController {
         var fonte = disponibilidade.getIfAvailable();
         model.addAttribute(
                 "disponibilidade", fonte == null ? ResumoDaDisponibilidade.vazio() : fonte.doMembro(usuario.getId()));
+        var minhas = escalas.getIfAvailable();
+        model.addAttribute("minhasEscalas", minhas == null ? MinhasEscalas.vazio() : minhas.doMembro(usuario.getId()));
         return "inicio";
     }
 }

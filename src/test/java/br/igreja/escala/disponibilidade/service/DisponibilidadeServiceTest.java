@@ -239,7 +239,8 @@ class DisponibilidadeServiceTest {
     void destravarRegistraNaAuditoria() {
         when(periodos.destravarDisponibilidade(MIDIA, NOVEMBRO)).thenReturn(true);
 
-        assertThat(servico.destravar(MIDIA, NOVEMBRO, AcessoDeTeste.ADMIN)).isTrue();
+        assertThat(servico.destravar(MIDIA, NOVEMBRO, false, AcessoDeTeste.ADMIN))
+                .isTrue();
 
         verify(auditoria)
                 .registrar(new RegistroDeAuditoria(
@@ -251,13 +252,30 @@ class DisponibilidadeServiceTest {
     }
 
     @Test
+    void comAEscalaPublicadaSoDestravaComConfirmacao() {
+        var publicada = ExemplosDeEvento.periodo(MIDIA, NOVEMBRO);
+        publicada.publicarEscala();
+        when(periodos.doMes(MIDIA, NOVEMBRO)).thenReturn(Optional.of(publicada));
+        when(periodos.destravarDisponibilidade(MIDIA, NOVEMBRO)).thenReturn(true);
+
+        assertThatThrownBy(() -> servico.destravar(MIDIA, NOVEMBRO, false, AcessoDeTeste.GERENTE_DA_MIDIA))
+                .isInstanceOf(RegraVioladaException.class)
+                .hasMessage("A escala de novembro está publicada e foi gerada com estas respostas. Confirme para"
+                        + " destravar a disponibilidade.");
+        verify(periodos, never()).destravarDisponibilidade(MIDIA, NOVEMBRO);
+
+        assertThat(servico.destravar(MIDIA, NOVEMBRO, true, AcessoDeTeste.GERENTE_DA_MIDIA))
+                .isTrue();
+    }
+
+    @Test
     void travarOuDestravarDeNovoNaoRegistraOutraVez() {
         when(periodos.travarDisponibilidade(MIDIA, NOVEMBRO)).thenReturn(false);
         when(periodos.destravarDisponibilidade(MIDIA, NOVEMBRO)).thenReturn(false);
 
         assertThat(servico.travar(MIDIA, NOVEMBRO, AcessoDeTeste.GERENTE_DA_MIDIA))
                 .isFalse();
-        assertThat(servico.destravar(MIDIA, NOVEMBRO, AcessoDeTeste.GERENTE_DA_MIDIA))
+        assertThat(servico.destravar(MIDIA, NOVEMBRO, false, AcessoDeTeste.GERENTE_DA_MIDIA))
                 .isFalse();
 
         verify(auditoria, never()).registrar(any());

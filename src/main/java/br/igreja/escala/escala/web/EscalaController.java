@@ -5,6 +5,8 @@ import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.escala.service.Andamento;
 import br.igreja.escala.escala.service.ConsultaDaEscala;
 import br.igreja.escala.escala.service.GeracaoDaEscala;
+import br.igreja.escala.escala.service.PaginaDaEscala;
+import br.igreja.escala.escala.service.PublicacaoDaEscala;
 import br.igreja.escala.evento.service.EventoService;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
 import br.igreja.escala.ministerio.service.MinisterioService;
@@ -30,8 +32,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
- * A escala do mês para o gerente: a grade do rascunho com as vagas vazias explicadas e o resumo, e "Gerar escala" (o
- * primário da página). A geração roda em segundo plano; a página mostra o andamento por htmx e recarrega quando termina.
+ * A escala do mês para o gerente: a grade com as vagas vazias explicadas e o resumo, gerar (o primário sem rascunho),
+ * publicar (o primário com rascunho, depois do resumo) e reabrir para rascunho. A geração roda em segundo plano; a
+ * página mostra o andamento por htmx e recarrega quando termina. O ajuste de cada vaga fica no VagaController.
  */
 @Controller
 @GerenteDoMinisterio
@@ -43,6 +46,7 @@ class EscalaController {
 
     private final ConsultaDaEscala consulta;
     private final GeracaoDaEscala geracao;
+    private final PublicacaoDaEscala publicacao;
     private final MinisterioService ministerios;
     private final EventoService eventos;
     private final Clock relogio;
@@ -51,12 +55,14 @@ class EscalaController {
     EscalaController(
             ConsultaDaEscala consulta,
             GeracaoDaEscala geracao,
+            PublicacaoDaEscala publicacao,
             MinisterioService ministerios,
             EventoService eventos,
             Clock relogio,
             @Value("${timefold.solver.termination.spent-limit:30s}") Duration limite) {
         this.consulta = consulta;
         this.geracao = geracao;
+        this.publicacao = publicacao;
         this.ministerios = ministerios;
         this.eventos = eventos;
         this.relogio = relogio;
@@ -78,9 +84,58 @@ class EscalaController {
                 .ifPresent(terminada -> model.addAttribute(
                         terminada.getEstado() == Andamento.Estado.CONCLUIDA ? "sucesso" : "recusa",
                         terminada.getMensagem()));
-        model.addAttribute("geracao", emAndamento(ministerioId, doMes));
-        model.addAttribute("pagina", consulta.doMes(ministerioId, doMes));
+        var geracaoNaTela = emAndamento(ministerioId, doMes);
+        var pagina = consulta.doMes(ministerioId, doMes);
+        model.addAttribute("geracao", geracaoNaTela);
+        model.addAttribute("pagina", pagina);
+        if (geracaoNaTela == null) {
+            adicionarResumoDaPublicacao(ministerioId, pagina, model);
+        }
         return PAGINA;
+    }
+
+    /** Publica a escala do mês, mesmo com vaga vazia: o gerente já viu o resumo. */
+    @PostMapping("/publicar")
+    String publicar(
+            @PathVariable Long ministerioId,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth mes,
+            @AuthenticationPrincipal UsuarioAutenticado autor,
+            RedirectAttributes redirecionamento) {
+        ministerios.buscar(ministerioId);
+        try {
+            redirecionamento.addFlashAttribute("sucesso", publicacao.publicar(ministerioId, mes, autor));
+        } catch (RegraVioladaException recusa) {
+            redirecionamento.addFlashAttribute("recusa", recusa.getMessage());
+        }
+        return "redirect:" + caminho(ministerioId, mes);
+    }
+
+    /** A escala volta a ser rascunho e sai da visão dos membros. */
+    @PostMapping("/reabrir")
+    String reabrir(
+            @PathVariable Long ministerioId,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth mes,
+            @AuthenticationPrincipal UsuarioAutenticado autor,
+            RedirectAttributes redirecionamento) {
+        ministerios.buscar(ministerioId);
+        try {
+            redirecionamento.addFlashAttribute("sucesso", publicacao.reabrir(ministerioId, mes, autor));
+        } catch (RegraVioladaException recusa) {
+            redirecionamento.addFlashAttribute("recusa", recusa.getMessage());
+        }
+        return "redirect:" + caminho(ministerioId, mes);
+    }
+
+    /** O resumo do Sheet de publicar, só quando há rascunho para publicar. */
+    static void adicionarResumoDaPublicacao(
+            Long ministerioId, PaginaDaEscala pagina, PublicacaoDaEscala publicacao, Model model) {
+        if (pagina.gerada() && !pagina.publicada()) {
+            model.addAttribute("resumoDaPublicacao", publicacao.resumo(ministerioId, pagina.mes()));
+        }
+    }
+
+    private void adicionarResumoDaPublicacao(Long ministerioId, PaginaDaEscala pagina, Model model) {
+        adicionarResumoDaPublicacao(ministerioId, pagina, publicacao, model);
     }
 
     /** Começa a geração; o segundo clique (ou um POST repetido) encontra a que está rodando. */

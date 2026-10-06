@@ -6,14 +6,18 @@ import ai.timefold.solver.core.api.solver.SolverFactory;
 import ai.timefold.solver.core.config.solver.EnvironmentMode;
 import ai.timefold.solver.core.config.solver.SolverConfig;
 import ai.timefold.solver.core.config.solver.termination.TerminationConfig;
-import br.igreja.escala.escala.domain.MaxPorNivelParams;
+import br.igreja.escala.escala.domain.MinPorNivelParams;
 import br.igreja.escala.escala.domain.RegraVigente;
 import br.igreja.escala.escala.domain.RegrasDoMinisterio;
 import br.igreja.escala.escala.domain.Rigidez;
 import br.igreja.escala.escala.domain.TipoDeRegra;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -21,11 +25,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * O solver de verdade no cenário da Mídia do seed: 19 pessoas que servem (a Natália não tem habilitação), outubro de
- * 2026 com dois cultos por domingo, as quintas e a conferência de sábado, limite de 3 por mês e no máximo um Iniciante
- * por evento. Termina quando a pontuação para de melhorar por 1 s.
+ * O solver de verdade no cenário da Mídia do seed: 19 pessoas que servem (a Natália não tem habilitação), dois cultos
+ * por domingo e as quintas, a conferência de sábado no mês seguinte, limite de 3 por mês e pelo menos um Experiente por
+ * evento. As respostas são as do SeedDeDesenvolvimento: na ordem do nome, as 12 primeiras respondem tudo (uma a cada
+ * três vezes "Não pode"), as 3 seguintes respondem a metade e o resto não responde; a Ana só responde os três primeiros
+ * eventos do mês seguinte. Termina quando a pontuação para de melhorar por 1 s.
  */
 class GeracaoDaMidiaTest {
 
@@ -33,6 +41,9 @@ class GeracaoDaMidiaTest {
     private static final Long TRANSMISSAO = 101L;
     private static final Long INICIANTE = 200L;
     private static final Long EXPERIENTE = 201L;
+
+    /** Outubro é o mês travado do seed; novembro, o seguinte, com a conferência e as respostas da Ana. */
+    private static final YearMonth OUTUBRO = YearMonth.of(2026, 10);
 
     /** Nome e nível em Projeção e Transmissão, como no SeedDeDesenvolvimento (nulo = sem habilitação). */
     private static final List<String[]> MEMBROS = List.of(
@@ -57,30 +68,37 @@ class GeracaoDaMidiaTest {
             new String[] {"Sofia Araújo", "I", null});
 
     private static final RegrasDoMinisterio REGRAS = RegrasDoMinisterio.de(List.of(new RegraVigente(
-            TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO, Rigidez.HARD, 1, true, new MaxPorNivelParams(INICIANTE, 1))));
+            TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO, Rigidez.HARD, 1, true, new MinPorNivelParams(EXPERIENTE, 1))));
 
-    private final List<EventoDaEscala> eventos = eventosDeOutubro();
-
-    @Test
-    void comSolucaoPreencheTodasAsVagasSemViolarRegraRigida() {
-        var resolvida = resolver(problema(Set.of()), EnvironmentMode.NO_ASSERT, Duration.ofSeconds(1));
+    @ParameterizedTest
+    @ValueSource(ints = {10, 11})
+    void comAsRespostasDoSeedPreencheTodasAsVagasSemViolarRegraRigida(int mes) {
+        var doMes = YearMonth.of(2026, mes);
+        var resolvida = resolver(problema(doMes, Set.of()), EnvironmentMode.NO_ASSERT, Duration.ofSeconds(1));
 
         assertThat(resolvida.getPontuacao().hardScore()).isZero();
         assertThat(resolvida.getPontuacao().mediumScore())
                 .as("nenhuma vaga vazia")
                 .isZero();
-        assertThat(resolvida.getVagas()).hasSize(28).allMatch(vaga -> vaga.getPessoa() != null);
+        assertThat(resolvida.getVagas())
+                .hasSize(2 * eventosDe(doMes).size())
+                .allMatch(vaga -> vaga.getPessoa() != null);
         assertThat(cargas(resolvida).values()).allMatch(carga -> carga <= 3);
+        assertThat(resolvida.getVagas().stream().collect(Collectors.groupingBy(VagaPlanejada::getEvento)))
+                .as("todo evento tem um Experiente")
+                .allSatisfy(
+                        (evento, vagas) -> assertThat(vagas).anyMatch(vaga -> EXPERIENTE.equals(vaga.getNivelId())));
     }
 
     @Test
     void semNinguemDisponivelAVagaFicaVaziaEODiagnosticoDizPorque() {
-        var quinta15 = eventos.stream()
+        var quinta15 = eventosDe(OUTUBRO).stream()
                 .filter(evento -> evento.inicio().getDayOfMonth() == 15)
                 .findFirst()
                 .orElseThrow();
 
-        var resolvida = resolver(problema(Set.of(quinta15.id())), EnvironmentMode.NO_ASSERT, Duration.ofSeconds(1));
+        var resolvida =
+                resolver(problema(OUTUBRO, Set.of(quinta15.id())), EnvironmentMode.NO_ASSERT, Duration.ofSeconds(1));
 
         assertThat(resolvida.getPontuacao().hardScore()).isZero();
         var vazias = resolvida.getVagas().stream()
@@ -97,9 +115,11 @@ class GeracaoDaMidiaTest {
     }
 
     /** Com FULL_ASSERT o Timefold recalcula a pontuação do zero a cada passo e falha se a incremental divergir. */
-    @Test
-    void asRestricoesNaoCorrompemAPontuacaoIncremental() {
-        var resolvida = resolver(problema(Set.of()), EnvironmentMode.FULL_ASSERT, Duration.ofMillis(300));
+    @ParameterizedTest
+    @ValueSource(ints = {10, 11})
+    void asRestricoesNaoCorrompemAPontuacaoIncremental(int mes) {
+        var resolvida = resolver(
+                problema(YearMonth.of(2026, mes), Set.of()), EnvironmentMode.FULL_ASSERT, Duration.ofMillis(300));
 
         assertThat(resolvida.getPontuacao()).isNotNull();
     }
@@ -117,14 +137,15 @@ class GeracaoDaMidiaTest {
         return SolverFactory.<EscalaDoPeriodo>create(configuracao).buildSolver().solve(problema);
     }
 
-    /**
-     * Cada pessoa marca Pode em 2 de cada 3 eventos, como no seed. Nos eventos de {@code semTransmissao}, ninguém
-     * habilitado em Transmissão pode.
-     */
-    private EscalaDoPeriodo problema(Set<Long> semTransmissao) {
+    /** As respostas do seed no mês. Nos eventos de {@code semTransmissao}, ninguém habilitado em Transmissão pode. */
+    private EscalaDoPeriodo problema(YearMonth mes, Set<Long> semTransmissao) {
+        var eventos = eventosDe(mes);
+        var emOrdemDeNome = MEMBROS.stream()
+                .sorted(Comparator.comparing((String[] membro) -> membro[0]))
+                .toList();
         var pessoas = new ArrayList<Pessoa>();
-        for (int i = 0; i < MEMBROS.size(); i++) {
-            var membro = MEMBROS.get(i);
+        for (int i = 0; i < emOrdemDeNome.size(); i++) {
+            var membro = emOrdemDeNome.get(i);
             Map<Long, Long> niveis = new HashMap<>();
             if (membro[1] != null) {
                 niveis.put(PROJECAO, nivel(membro[1]));
@@ -133,12 +154,18 @@ class GeracaoDaMidiaTest {
                 niveis.put(TRANSMISSAO, nivel(membro[2]));
             }
             Set<Long> pode = new HashSet<>();
-            for (int j = 0; j < eventos.size(); j++) {
-                var evento = eventos.get(j);
-                boolean bloqueado = semTransmissao.contains(evento.id()) && niveis.containsKey(TRANSMISSAO);
-                if ((i + j) % 3 != 0 && !bloqueado) {
-                    pode.add(evento.id());
+            int respondidos = i < 12 ? eventos.size() : (i < 15 ? eventos.size() / 2 : 0);
+            for (int j = 0; j < respondidos && !membro[0].equals("Ana Souza"); j++) {
+                if ((i + j) % 3 != 0) {
+                    pode.add(eventos.get(j).id());
                 }
+            }
+            if (membro[0].equals("Ana Souza") && !mes.equals(OUTUBRO)) {
+                pode.add(eventos.get(0).id());
+                pode.add(eventos.get(2).id());
+            }
+            if (niveis.containsKey(TRANSMISSAO)) {
+                pode.removeAll(semTransmissao);
             }
             pessoas.add(new Pessoa(30L + i, membro[0], niveis, pode));
         }
@@ -158,23 +185,28 @@ class GeracaoDaMidiaTest {
         return sigla.equals("I") ? INICIANTE : EXPERIENTE;
     }
 
-    /** Domingos (manhã e noite), quintas e a conferência do terceiro sábado: 14 eventos, 28 vagas. */
-    private static List<EventoDaEscala> eventosDeOutubro() {
+    /**
+     * Os eventos do mês em ordem, como os modelos do seed geram: domingos (manhã e noite) e quintas. O mês seguinte ao
+     * travado tem também a conferência do terceiro sábado.
+     */
+    private static List<EventoDaEscala> eventosDe(YearMonth mes) {
         var eventos = new ArrayList<EventoDaEscala>();
-        long id = 500;
-        for (int domingo : new int[] {4, 11, 18, 25}) {
-            eventos.add(evento(id++, "Culto da manhã", domingo, 9, 30, 90));
-            eventos.add(evento(id++, "Culto de domingo", domingo, 18, 0, 120));
+        long id = 500L + 100L * mes.getMonthValue();
+        for (var dia = mes.atDay(1); !dia.isAfter(mes.atEndOfMonth()); dia = dia.plusDays(1)) {
+            if (dia.getDayOfWeek() == DayOfWeek.SUNDAY) {
+                eventos.add(evento(id++, "Culto da manhã", dia.atTime(9, 30), 90));
+                eventos.add(evento(id++, "Culto de domingo", dia.atTime(18, 0), 120));
+            } else if (dia.getDayOfWeek() == DayOfWeek.THURSDAY) {
+                eventos.add(evento(id++, "Culto de quinta", dia.atTime(19, 30), 120));
+            } else if (!mes.equals(OUTUBRO)
+                    && dia.equals(mes.atDay(1).with(TemporalAdjusters.dayOfWeekInMonth(3, DayOfWeek.SATURDAY)))) {
+                eventos.add(evento(id++, "Conferência de jovens", dia.atTime(15, 0), 240));
+            }
         }
-        for (int quinta : new int[] {1, 8, 15, 22, 29}) {
-            eventos.add(evento(id++, "Culto de quinta", quinta, 19, 30, 120));
-        }
-        eventos.add(evento(id, "Conferência de jovens", 17, 15, 0, 240));
         return eventos;
     }
 
-    private static EventoDaEscala evento(long id, String nome, int dia, int hora, int minuto, int minutos) {
-        var inicio = LocalDateTime.of(2026, 10, dia, hora, minuto);
+    private static EventoDaEscala evento(long id, String nome, LocalDateTime inicio, int minutos) {
         return new EventoDaEscala(id, nome, inicio, inicio.plusMinutes(minutos));
     }
 

@@ -48,7 +48,7 @@ class ComponentesDevController {
                         "Qui",
                         "Culto de quinta",
                         "19h30",
-                        SlotDaGrade.de("Pedro Alves", "Experiente", true, false),
+                        SlotDaGrade.de(null, 0, "Pedro Alves", "Experiente", true, false, null, null, false),
                         vaga("Bia Rocha", "Experiente")),
                 linha(
                         "12",
@@ -56,13 +56,22 @@ class ComponentesDevController {
                         "Culto de domingo",
                         "18h00",
                         vaga("João Meneses", "Experiente"),
-                        SlotDaGrade.vazia(true)),
+                        SlotDaGrade.vazia(null, 0, true, false, false)),
                 linha(
                         "16",
                         "Qui",
                         "Culto de quinta",
                         "19h30",
-                        SlotDaGrade.de("Carla Dias", "Iniciante", false, true),
+                        SlotDaGrade.de(
+                                null,
+                                0,
+                                "Carla Dias",
+                                "Iniciante",
+                                true,
+                                true,
+                                "Única que opera a mesa nova",
+                                "LIMITE_POR_PERIODO",
+                                false),
                         vaga("Ana Souza", "Experiente")),
                 linha(
                         "18",
@@ -92,7 +101,7 @@ class ComponentesDevController {
     }
 
     private static SlotDaGrade vaga(String nome, String nivel) {
-        return SlotDaGrade.de(nome, nivel, false, false);
+        return SlotDaGrade.de(null, 0, nome, nivel, false, false, null, null, false);
     }
 
     /** As linhas do preview do AvailabilityPicker, mais uma marcada pelo gerente e outra de evento que mudou. */

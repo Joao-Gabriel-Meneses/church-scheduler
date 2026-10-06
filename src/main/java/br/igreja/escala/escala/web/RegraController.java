@@ -3,11 +3,11 @@ package br.igreja.escala.escala.web;
 import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.compartilhado.web.Formularios;
 import br.igreja.escala.compartilhado.web.Opcao;
-import br.igreja.escala.escala.domain.MaxPorNivelParams;
+import br.igreja.escala.escala.domain.MinPorNivelParams;
 import br.igreja.escala.escala.domain.TipoDeRegra;
 import br.igreja.escala.escala.service.RegraService;
 import br.igreja.escala.escala.web.dto.DadosDoLimite;
-import br.igreja.escala.escala.web.dto.DadosDoMaximoPorNivel;
+import br.igreja.escala.escala.web.dto.DadosDoMinimoPorNivel;
 import br.igreja.escala.identidade.domain.UsuarioAutenticado;
 import br.igreja.escala.ministerio.service.MinisterioService;
 import br.igreja.escala.ministerio.service.NivelService;
@@ -26,7 +26,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * As regras da escala do ministério: a lista do catálogo, com o que cada uma faz, e os formulários das que o gerente
- * muda nesta fase (o limite do mês e o máximo por nível). Cada mudança fica na auditoria.
+ * muda nesta fase (o limite do mês e o mínimo por nível). Cada mudança fica na auditoria.
  */
 @Controller
 @GerenteDoMinisterio
@@ -35,7 +35,7 @@ class RegraController {
 
     static final String LISTA = "escala/regras";
     static final String LIMITE = "escala/regra-limite";
-    static final String MAXIMO_POR_NIVEL = "escala/regra-maximo-por-nivel";
+    static final String MINIMO_POR_NIVEL = "escala/regra-minimo-por-nivel";
 
     private final RegraService regras;
     private final MinisterioService ministerios;
@@ -83,21 +83,21 @@ class RegraController {
         return formularioDoLimite(ministerioId, form, model);
     }
 
-    @GetMapping("/maximo-por-nivel")
-    String maximoPorNivel(@PathVariable Long ministerioId, Model model) {
-        var regra = regras.doMinisterio(ministerioId).de(TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO);
-        var parametros = regra.parametros(MaxPorNivelParams.class);
-        return formularioDoMaximo(
+    @GetMapping("/minimo-por-nivel")
+    String minimoPorNivel(@PathVariable Long ministerioId, Model model) {
+        var regra = regras.doMinisterio(ministerioId).de(TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO);
+        var parametros = regra.parametros(MinPorNivelParams.class);
+        return formularioDoMinimo(
                 ministerioId,
-                new DadosDoMaximoPorNivel(
-                        regra.ativa(), regra.ativa() ? parametros.nivelId() : null, parametros.maximo()),
+                new DadosDoMinimoPorNivel(
+                        regra.ativa(), regra.ativa() ? parametros.nivelId() : null, parametros.minimo()),
                 model);
     }
 
-    @PostMapping("/maximo-por-nivel")
-    String alterarMaximoPorNivel(
+    @PostMapping("/minimo-por-nivel")
+    String alterarMinimoPorNivel(
             @PathVariable Long ministerioId,
-            @Valid @ModelAttribute("form") DadosDoMaximoPorNivel form,
+            @Valid @ModelAttribute("form") DadosDoMinimoPorNivel form,
             BindingResult erros,
             @AuthenticationPrincipal UsuarioAutenticado autor,
             Model model,
@@ -105,18 +105,18 @@ class RegraController {
         if (!erros.hasErrors()) {
             try {
                 boolean mudou =
-                        regras.alterarMaximoPorNivel(ministerioId, form.ligada(), form.nivelId(), form.maximo(), autor);
+                        regras.alterarMinimoPorNivel(ministerioId, form.ligada(), form.nivelId(), form.minimo(), autor);
                 redirecionamento.addFlashAttribute(
                         "sucesso",
                         !mudou
-                                ? "O máximo por nível não mudou"
-                                : (form.ligada() ? "Máximo por nível ligado" : "Máximo por nível desligado"));
+                                ? "O mínimo por nível não mudou"
+                                : (form.ligada() ? "Mínimo por nível ligado" : "Mínimo por nível desligado"));
                 return paraALista(ministerioId);
             } catch (RegraVioladaException recusa) {
                 Formularios.rejeitar(erros, recusa);
             }
         }
-        return formularioDoMaximo(ministerioId, form, model);
+        return formularioDoMinimo(ministerioId, form, model);
     }
 
     private String formularioDoLimite(Long ministerioId, DadosDoLimite form, Model model) {
@@ -125,7 +125,7 @@ class RegraController {
         return LIMITE;
     }
 
-    private String formularioDoMaximo(Long ministerioId, DadosDoMaximoPorNivel form, Model model) {
+    private String formularioDoMinimo(Long ministerioId, DadosDoMinimoPorNivel form, Model model) {
         model.addAttribute("ministerio", ministerios.buscar(ministerioId));
         model.addAttribute("form", form);
         model.addAttribute(
@@ -133,7 +133,7 @@ class RegraController {
                 niveis.listar(ministerioId).stream()
                         .map(nivel -> new Opcao(nivel.getId().toString(), nivel.getNome()))
                         .toList());
-        return MAXIMO_POR_NIVEL;
+        return MINIMO_POR_NIVEL;
     }
 
     private static String paraALista(Long ministerioId) {

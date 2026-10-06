@@ -77,4 +77,17 @@ class ModeloEPeriodoTest {
         assertThat(conversor.convertToDatabaseColumn(null)).isNull();
         assertThat(conversor.convertToEntityAttribute(null)).isNull();
     }
+
+    @Test
+    void escalaNasceRascunhoPublicaEReabre() {
+        var outubro = new Periodo(1L, YearMonth.of(2026, 10));
+
+        assertThat(outubro.isEscalaPublicada()).isFalse();
+        assertThat(outubro.reabrirEscala()).isFalse();
+        assertThat(outubro.publicarEscala()).isTrue();
+        assertThat(outubro.getStatusDaEscala()).isEqualTo(StatusDaEscala.PUBLICADA);
+        assertThat(outubro.publicarEscala()).isFalse();
+        assertThat(outubro.reabrirEscala()).isTrue();
+        assertThat(outubro.getStatusDaEscala()).isEqualTo(StatusDaEscala.RASCUNHO);
+    }
 }

@@ -12,6 +12,7 @@
         href         vira <a> (navegação); sem href é <button>
         tipo         type do <button>: submit (padrão) | button
         formulario   id de um <form> da página que o <button> envia (atributo form), para um botão fora do form
+        abre         id de um Sheet (popover) que o <button> abre (popovertarget). Use com tipo='button'.
         copiar       id do elemento cujo texto o <button> copia (static/js/app.js). Use com tipo='button'. Se a página
                      tiver um <template id="<id>-copiado"> com um Toast, ele aparece depois de copiar, e o Sheet em
                      volta do botão fecha.
@@ -31,7 +32,7 @@
     <a th:if="${href != null}" th:href="${href}" th:class="${_classes}"><th:block
             th:replace="~{componentes/botao :: conteudoDoBotao}"></th:block></a>
     <button th:unless="${href != null}" th:type="${tipo ?: 'submit'}" th:class="${_classes}"
-            th:form="${formulario}" th:data-copiar="${copiar}"><th:block
+            th:form="${formulario}" th:data-copiar="${copiar}" th:popovertarget="${abre}"><th:block
             th:replace="~{componentes/botao :: conteudoDoBotao}"></th:block></button>
 </th:block>
 

@@ -92,6 +92,17 @@ class GeracaoDaEscalaTest {
     }
 
     @Test
+    void escalaPublicadaNaoGeraSemReabrir() {
+        novembro.publicarEscala();
+
+        assertThatThrownBy(() -> servico.iniciar(MIDIA, NOVEMBRO, AcessoDeTeste.GERENTE_DA_MIDIA))
+                .isInstanceOf(RegraVioladaException.class)
+                .hasMessage("A escala de novembro está publicada. Reabra para rascunho antes de gerar de novo: a"
+                        + " geração automática não mexe na escala que os membros veem.");
+        assertThat(fila).isEmpty();
+    }
+
+    @Test
     void mesSemEventosNaoGera() {
         when(periodos.doMes(MIDIA, NOVEMBRO)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> servico.iniciar(MIDIA, NOVEMBRO, AcessoDeTeste.GERENTE_DA_MIDIA))

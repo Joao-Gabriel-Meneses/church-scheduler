@@ -38,12 +38,12 @@ public enum TipoDeRegra {
             Rigidez.HARD,
             true,
             new LimitePorPeriodoParams(LimitePorPeriodoParams.PADRAO)),
-    MAX_POR_NIVEL_NO_EVENTO(
-            "Máximo por nível",
-            "Limita quantas pessoas de um nível servem no mesmo evento, como um Iniciante por vez.",
+    MIN_POR_NIVEL_NO_EVENTO(
+            "Mínimo por nível",
+            "Todo evento com alguém escalado tem pelo menos esse número de pessoas do nível, como um Experiente.",
             Rigidez.HARD,
             false,
-            MaxPorNivelParams.PADRAO),
+            MinPorNivelParams.PADRAO),
     PRIORIDADE_POR_DATA(
             "Eventos mais próximos primeiro",
             "Preenche o máximo de vagas; quando não dá, ficam vazias as dos eventos mais distantes.",
@@ -81,7 +81,15 @@ public enum TipoDeRegra {
      * o que faz o solver preencher as vagas).
      */
     public boolean sempreAtiva() {
-        return this != LIMITE_POR_PERIODO && this != MAX_POR_NIVEL_NO_EVENTO && this != EQUILIBRIO_DE_CARGA;
+        return this != LIMITE_POR_PERIODO && this != MIN_POR_NIVEL_NO_EVENTO && this != EQUILIBRIO_DE_CARGA;
+    }
+
+    /**
+     * O gerente pode pôr alguém que viola esta regra, com justificativa (vaga forçada): o limite do mês e a
+     * disponibilidade. Habilitação, uma função por evento, sobreposição e mínimo por nível nunca se forçam.
+     */
+    public boolean isForcavel() {
+        return this == LIMITE_POR_PERIODO || this == DISPONIBILIDADE;
     }
 
     public String rotulo() {

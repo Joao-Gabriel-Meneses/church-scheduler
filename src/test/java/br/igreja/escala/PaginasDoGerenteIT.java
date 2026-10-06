@@ -10,7 +10,7 @@ import br.igreja.escala.compartilhado.Fuso;
 import br.igreja.escala.disponibilidade.domain.Disponibilidade;
 import br.igreja.escala.disponibilidade.domain.Resposta;
 import br.igreja.escala.disponibilidade.repository.DisponibilidadeRepository;
-import br.igreja.escala.escala.domain.MaxPorNivelParams;
+import br.igreja.escala.escala.domain.MinPorNivelParams;
 import br.igreja.escala.escala.domain.Regra;
 import br.igreja.escala.escala.domain.TipoDeRegra;
 import br.igreja.escala.escala.domain.Vaga;
@@ -118,6 +118,8 @@ class PaginasDoGerenteIT {
     private Long modeloId;
     private Long eventoDoModeloId;
     private Long eventoAvulsoId;
+    private Long vagaDaAnaId;
+    private Long periodoId;
 
     @BeforeEach
     void gravaOsDados() {
@@ -154,11 +156,12 @@ class PaginasDoGerenteIT {
                     .getId();
             var daAna = new Vaga(eventoDoModeloId, projecao.getId(), 1);
             daAna.escalar(ana.getId());
-            vagas.save(daAna);
+            vagaDaAnaId = vagas.save(daAna).getId();
+            periodoId = periodo.getId();
             vagas.save(new Vaga(eventoAvulsoId, projecao.getId(), 1));
-            var maximo = new Regra(midia.getId(), TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO);
-            maximo.alterar(new MaxPorNivelParams(iniciante.getId(), 1), true);
-            regras.save(maximo);
+            var minimo = new Regra(midia.getId(), TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO);
+            minimo.alterar(new MinPorNivelParams(iniciante.getId(), 1), true);
+            regras.save(minimo);
             gerente = new UsuarioAutenticado(paula);
             membro = new UsuarioAutenticado(ana);
             membroId = ana.getId();
@@ -259,10 +262,44 @@ class PaginasDoGerenteIT {
         abre("/ministerios/{m}/escalas", ministerioId);
         mvc.perform(get("/ministerios/{m}/regras", ministerioId).with(user(gerente)))
                 .andExpect(status().isOk())
-                .andExpect(
-                        content().string(Matchers.containsString("No máximo 1 pessoa do nível Iniciante por evento.")));
+                .andExpect(content()
+                        .string(Matchers.containsString(
+                                "Pelo menos 1 pessoa do nível Iniciante em cada evento com alguém escalado.")));
         abre("/ministerios/{m}/regras/limite", ministerioId);
-        abre("/ministerios/{m}/regras/maximo-por-nivel", ministerioId);
+        abre("/ministerios/{m}/regras/minimo-por-nivel", ministerioId);
+    }
+
+    @Test
+    void vagaAbreNoSheetENaPaginaEOResumoDePublicarAparece() throws Exception {
+        mvc.perform(get("/ministerios/{m}/escalas/vagas/{v}", ministerioId, vagaDaAnaId)
+                        .header("HX-Request", "true")
+                        .with(user(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Ana Páginas")))
+                .andExpect(content().string(Matchers.containsString("Na vaga")));
+        abre("/ministerios/{m}/escalas/vagas/{v}", ministerioId, vagaDaAnaId);
+        mvc.perform(get("/ministerios/{m}/escalas", ministerioId)
+                        .param("mes", mes.toString())
+                        .with(user(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Publicar a escala de")))
+                .andExpect(content().string(Matchers.containsString("hx-target=\"#vaga-conteudo\"")));
+    }
+
+    @Test
+    void escalaPublicadaAbreParaOGerenteEParaOMembro() throws Exception {
+        jdbc.update("update periodo set status_escala = 'PUBLICADA' where id = ?", periodoId);
+
+        mvc.perform(get("/ministerios/{m}/escalas", ministerioId)
+                        .param("mes", mes.toString())
+                        .with(user(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Reabrir para rascunho")));
+        mvc.perform(get("/escalas/{m}", ministerioId)
+                        .param("mes", mes.toString())
+                        .with(user(membro)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Ana Páginas")));
     }
 
     @Test

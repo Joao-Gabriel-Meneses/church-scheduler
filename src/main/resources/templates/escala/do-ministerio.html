@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--/*
+    A escala de um ministério no mês para o membro (${escala}, EscalaDoMinisterio): a grade publicada, só leitura
+    (componentes/grade, sem fixada, forçada nem justificativa). Em rascunho, só o aviso, sem nada da escala. O seletor
+    de mês troca o mês, e os botões trocam de ministério (os de que a pessoa é membro). Sem primário.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/membro :: pagina(~{::title}, ~{::main})}">
+<head>
+    <title th:text="|${escala.nome} — ${nomeDoMes} · Escala|">Mídia — Outubro · Escala</title>
+</head>
+<body>
+<main class="flex flex-col gap-6">
+    <header class="flex flex-wrap items-center gap-3">
+        <h1 class="text-title" th:text="|${escala.nome} — ${nomeDoMes}|">Mídia — Outubro</h1>
+        <span th:replace="~{componentes/badge :: badge(texto=${escala.nome}, variante=null, icone=null,
+                tint=${escala.tint}, classe=null)}"></span>
+    </header>
+
+    <div class="rt-toolbar">
+        <div th:replace="~{componentes/toolbar :: seletorDePeriodo(${mesPorExtenso}, ${mesCurto},
+                @{/escalas/{m}(m=${escala.ministerioId}, mes=${mesAnterior})},
+                @{/escalas/{m}(m=${escala.ministerioId}, mes=${proximoMes})})}"></div>
+    </div>
+
+    <p th:unless="${escala.publicada}" class="rt-panel p-6 text-ink-muted"
+       th:text="|A escala de ${#strings.toLowerCase(nomeDoMes)} ainda não foi publicada.|">A escala de outubro ainda
+        não foi publicada.</p>
+
+    <th:block th:if="${escala.publicada}">
+        <p th:if="${escala.linhas.isEmpty()}" class="rt-panel p-6 text-ink-muted">Nenhum evento neste mês.</p>
+        <th:block th:unless="${escala.linhas.isEmpty()}"><div th:replace="~{componentes/grade ::
+                grade(funcoes=${escala.funcoes}, linhas=${escala.linhas})}"></div></th:block>
+    </th:block>
+
+    <p th:if="${outrosMinisterios.size() > 1}" class="flex flex-wrap items-center gap-2">
+        <span class="text-ink-muted">Outros ministérios:</span>
+        <th:block th:each="ministerio : ${outrosMinisterios}"><a th:replace="~{componentes/botao :: botao(
+                texto=${ministerio.nome}, variante='secondary', icone='users', href=@{${ministerio.url}(mes=${escala.mes})},
+                classe=null)}"></a></th:block>
+    </p>
+</main>
+</body>
+</html>

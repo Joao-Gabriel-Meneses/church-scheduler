@@ -7,7 +7,7 @@ import static br.igreja.escala.escala.solver.Cenario.TRANSMISSAO;
 import static br.igreja.escala.escala.solver.Cenario.culto;
 import static br.igreja.escala.escala.solver.Cenario.evento;
 import static br.igreja.escala.escala.solver.Cenario.limite;
-import static br.igreja.escala.escala.solver.Cenario.maximoDeIniciantes;
+import static br.igreja.escala.escala.solver.Cenario.minimoDeExperientes;
 import static br.igreja.escala.escala.solver.Cenario.pessoa;
 import static br.igreja.escala.escala.solver.Cenario.vaga;
 
@@ -228,31 +228,75 @@ class RestricoesDaEscalaTest {
     }
 
     @Nested
-    class MaxPorNivelNoEvento {
+    class MinPorNivelNoEvento {
+
+        /** Três funções, para um evento com três vagas. */
+        private final FuncaoDaEscala som = new FuncaoDaEscala(102L, "Som", 1, 1);
 
         private final Pessoa lucas = pessoa(30, Map.of(PROJECAO.id(), INICIANTE), 1L);
         private final Pessoa diego = pessoa(31, Map.of(TRANSMISSAO.id(), INICIANTE), 1L);
-        private final Pessoa ana = pessoa(32, Map.of(TRANSMISSAO.id(), EXPERIENTE), 1L);
+        private final Pessoa felipe = pessoa(33, Map.of(som.id(), INICIANTE), 1L);
+        private final Pessoa ana = pessoa(32, Map.of(TRANSMISSAO.id(), EXPERIENTE, som.id(), EXPERIENTE), 1L);
 
         @Test
-        void penalizaDoisIniciantesNoMesmoEvento() {
+        void penalizaEventoComTresVagasPreenchidasSoPorIniciantes() {
             verificador
-                    .verifyThat(RestricoesDaEscala::maxPorNivelNoEvento)
+                    .verifyThat(RestricoesDaEscala::minPorNivelNoEvento)
                     .given(
-                            maximoDeIniciantes(1),
+                            minimoDeExperientes(1),
                             vaga(1, domingo, PROJECAO, lucas),
-                            vaga(2, domingo, TRANSMISSAO, diego))
+                            vaga(2, domingo, TRANSMISSAO, diego),
+                            vaga(3, domingo, som, felipe))
                     .penalizesBy(1);
         }
 
         @Test
-        void naoPenalizaUmIniciantePorEventoNemComARegraDesligada() {
+        void naoPenalizaDoisIniciantesComUmExperiente() {
             verificador
-                    .verifyThat(RestricoesDaEscala::maxPorNivelNoEvento)
-                    .given(maximoDeIniciantes(1), vaga(1, domingo, PROJECAO, lucas), vaga(2, domingo, TRANSMISSAO, ana))
+                    .verifyThat(RestricoesDaEscala::minPorNivelNoEvento)
+                    .given(
+                            minimoDeExperientes(1),
+                            vaga(1, domingo, PROJECAO, lucas),
+                            vaga(2, domingo, som, felipe),
+                            vaga(3, domingo, TRANSMISSAO, ana))
+                    .penalizesBy(0);
+        }
+
+        @Test
+        void eventoSemNinguemEscaladoNaoViolaMasUmInicianteComVagaVaziaViola() {
+            verificador
+                    .verifyThat(RestricoesDaEscala::minPorNivelNoEvento)
+                    .given(
+                            minimoDeExperientes(1),
+                            vaga(1, domingo, PROJECAO, null),
+                            vaga(2, domingo, TRANSMISSAO, null))
                     .penalizesBy(0);
             verificador
-                    .verifyThat(RestricoesDaEscala::maxPorNivelNoEvento)
+                    .verifyThat(RestricoesDaEscala::minPorNivelNoEvento)
+                    .given(
+                            minimoDeExperientes(1),
+                            vaga(1, domingo, PROJECAO, lucas),
+                            vaga(2, domingo, TRANSMISSAO, null))
+                    .penalizesBy(1);
+        }
+
+        @Test
+        void contaAFaltaEmCadaEventoSeparado() {
+            var exigeDois = new ParametrosDaEscala(3, EXPERIENTE, 2);
+            verificador
+                    .verifyThat(RestricoesDaEscala::minPorNivelNoEvento)
+                    .given(
+                            exigeDois,
+                            vaga(1, domingo, PROJECAO, lucas),
+                            vaga(2, domingo, TRANSMISSAO, ana),
+                            vaga(3, quinta, PROJECAO, pessoa(34)))
+                    .penalizesBy(1 + 1);
+        }
+
+        @Test
+        void semNivelARegraNaoVale() {
+            verificador
+                    .verifyThat(RestricoesDaEscala::minPorNivelNoEvento)
                     .given(limite(3), vaga(1, domingo, PROJECAO, lucas), vaga(2, domingo, TRANSMISSAO, diego))
                     .penalizesBy(0);
         }

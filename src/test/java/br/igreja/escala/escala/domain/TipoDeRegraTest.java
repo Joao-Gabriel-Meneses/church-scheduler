@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 class TipoDeRegraTest {
 
     @Test
-    void catalogoPadraoTemAsRigidasLigadasOLimiteEmTresEOMaximoPorNivelDesligado() {
+    void catalogoPadraoTemAsRigidasLigadasOLimiteEmTresEOMinimoPorNivelDesligado() {
         var padrao = RegrasDoMinisterio.padrao();
 
         assertThat(Arrays.stream(TipoDeRegra.values()).filter(tipo -> tipo.rigidezPadrao() == Rigidez.HARD))
@@ -19,23 +19,23 @@ class TipoDeRegraTest {
                         TipoDeRegra.UMA_FUNCAO_POR_EVENTO,
                         TipoDeRegra.SEM_SOBREPOSICAO,
                         TipoDeRegra.LIMITE_POR_PERIODO,
-                        TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO);
+                        TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO);
         assertThat(padrao.todas())
-                .filteredOn(regra -> regra.tipo() != TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO)
+                .filteredOn(regra -> regra.tipo() != TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO)
                 .allMatch(RegraVigente::ativa);
         assertThat(padrao.limitePorMes()).isEqualTo(3);
-        assertThat(padrao.ativa(TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO)).isFalse();
-        assertThat(padrao.maximoPorNivel()).isEmpty();
+        assertThat(padrao.ativa(TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO)).isFalse();
+        assertThat(padrao.minimoPorNivel()).isEmpty();
         assertThat(TipoDeRegra.PRIORIDADE_POR_DATA.rigidezPadrao()).isEqualTo(Rigidez.MEDIUM);
         assertThat(TipoDeRegra.EQUILIBRIO_DE_CARGA.rigidezPadrao()).isEqualTo(Rigidez.SOFT);
     }
 
     @Test
-    void soOLimiteOMaximoPorNivelEOEquilibrioSeDesligam() {
+    void soOLimiteOMinimoPorNivelEOEquilibrioSeDesligam() {
         assertThat(Arrays.stream(TipoDeRegra.values()).filter(tipo -> !tipo.sempreAtiva()))
                 .containsExactly(
                         TipoDeRegra.LIMITE_POR_PERIODO,
-                        TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO,
+                        TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO,
                         TipoDeRegra.EQUILIBRIO_DE_CARGA);
     }
 

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<!--/*
+    A região #escala da página de escalas: os alertas, o resumo (StatCards), a grade e as escalas por pessoa, mais o
+    Sheet da vaga (#vaga-sheet), onde o htmx põe a vaga que o gerente tocou (escala/fragments/vaga :: conteudo).
+    O ajuste de uma vaga devolve esta região inteira, então as contagens e os avisos das outras vagas mudam juntos, e
+    o Sheet volta fechado. ${aviso}: um AlertBanner no topo (ex.: a vaga mudou em outra aba). ${toast}: o toast OOB.
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="regiao" id="escala" class="flex flex-col gap-6">
+    <div th:if="${aviso != null or recusa != null or (pagina.temPeriodo and !pagina.travada) or !pagina.alertas.isEmpty()}"
+         class="flex flex-col gap-2">
+        <th:block th:if="${aviso != null}"><div th:replace="~{componentes/alerta :: alerta(titulo=${aviso},
+                corpo=null, regra=null, acaoTexto=null, icone='rotate-ccw')}"></div></th:block>
+        <th:block th:if="${recusa != null}"><div th:replace="~{componentes/alerta :: alerta(titulo=${recusa},
+                corpo=null, regra=null, acaoTexto=null, icone=null)}"></div></th:block>
+        <th:block th:if="${pagina.temPeriodo and !pagina.travada}"><div th:replace="~{componentes/alerta ::
+                alerta(titulo=|Disponibilidade de ${#strings.toLowerCase(nomeDoMes)} aberta|,
+                corpo='Trave a disponibilidade para gerar a escala: a geração usa as respostas travadas.',
+                regra=null, acaoTexto='Ver disponibilidade',
+                acaoHref=@{/ministerios/{m}/disponibilidade(m=${ministerio.id}, mes=${mes})}, icone='lock-open')}"></div></th:block>
+        <th:block th:each="alerta : ${pagina.alertas}"><div th:replace="~{componentes/alerta ::
+                alerta(titulo=${alerta.titulo}, corpo=${alerta.corpo}, regra=${alerta.regra}, acaoTexto=null,
+                icone=null)}"></div></th:block>
+    </div>
+
+    <div th:unless="${pagina.temPeriodo}" class="rt-panel flex flex-col items-start gap-3 p-6">
+        <p class="text-ink-muted" th:text="|${nomeDoMes} ainda não tem eventos. Crie os eventos do mês para gerar a
+                escala.|">Outubro ainda não tem eventos.</p>
+        <a th:replace="~{componentes/botao :: botao(texto='Ver eventos', variante='outline',
+                href=@{/ministerios/{m}/eventos(m=${ministerio.id}, mes=${mes})}, icone=null, classe=null)}"></a>
+    </div>
+
+    <p th:if="${pagina.temPeriodo and !pagina.gerada}" class="rt-panel p-6 text-ink-muted"
+       th:text="|A escala de ${#strings.toLowerCase(nomeDoMes)} ainda não foi gerada.|">A escala de outubro ainda não foi
+        gerada.</p>
+
+    <th:block th:if="${pagina.gerada}">
+        <div class="rt-stats">
+            <div th:replace="~{componentes/estatistica :: cartao(rotulo='Vagas preenchidas',
+                    valor=${pagina.resumo.preenchidas},
+                    sub=|de ${pagina.resumo.vagas} · ${pagina.resumo.vazias} ${pagina.resumo.vazias == 1 ? 'vazia' : 'vazias'}|,
+                    href=null)}"></div>
+            <div th:replace="~{componentes/estatistica :: cartao(rotulo='Eventos no mês', valor=${pagina.resumo.eventos},
+                    sub=|em ${#strings.toLowerCase(nomeDoMes)}|, href=null)}"></div>
+            <div th:replace="~{componentes/estatistica :: cartao(rotulo='Maior carga', valor=${pagina.resumo.maiorCarga},
+                    sub='escalas de uma pessoa no mês', href='#por-pessoa')}"></div>
+        </div>
+
+        <div th:replace="~{componentes/grade :: grade(funcoes=${pagina.funcoes}, linhas=${pagina.linhas})}"></div>
+
+        <section class="flex flex-col gap-3" aria-labelledby="por-pessoa">
+            <h2 id="por-pessoa" class="text-heading">Escalas por pessoa</h2>
+            <ul class="rt-list md:hidden">
+                <li th:each="carga : ${pagina.resumo.porPessoa}"><div th:replace="~{componentes/lista :: linha(
+                        titulo=${carga.nome}, sub=${carga.descricao()}, icone='user', href=null,
+                        selecionada=false)}"></div></li>
+            </ul>
+            <div class="rt-panel hidden md:block">
+                <table class="rt-table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Pessoa</th>
+                        <th scope="col">Escalas no mês</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="carga : ${pagina.resumo.porPessoa}">
+                        <td><div th:replace="~{componentes/tabela :: pessoa(${carga.nome}, ${carga.iniciais})}"></div></td>
+                        <td th:text="${carga.escalas}">3</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </th:block>
+
+    <div id="vaga-sheet" popover class="rt-sheet md:mx-auto md:max-w-lg" role="dialog" aria-labelledby="vaga-titulo">
+        <div class="rt-sheet__cabeca">
+            <p id="vaga-titulo" class="rt-sheet__titulo">Vaga</p>
+            <button type="button" class="rt-icon-btn" popovertarget="vaga-sheet" popovertargetaction="hide"
+                    aria-label="Fechar" title="Fechar"><svg th:replace="~{componentes/icone :: icone('x')}"></svg></button>
+        </div>
+        <div id="vaga-conteudo" class="flex flex-col gap-4" aria-live="polite">
+            <p class="text-ink-muted">Carregando a vaga…</p>
+        </div>
+    </div>
+
+    <div th:if="${resumoDaPublicacao != null}" id="publicar-sheet" popover class="rt-sheet md:mx-auto md:max-w-lg"
+         role="dialog" aria-labelledby="publicar-titulo">
+        <div class="rt-sheet__cabeca">
+            <p id="publicar-titulo" class="rt-sheet__titulo"
+               th:text="|Publicar a escala de ${#strings.toLowerCase(nomeDoMes)}?|">Publicar a escala de outubro?</p>
+            <button type="button" class="rt-icon-btn" popovertarget="publicar-sheet" popovertargetaction="hide"
+                    aria-label="Fechar" title="Fechar"><svg th:replace="~{componentes/icone :: icone('x')}"></svg></button>
+        </div>
+        <p class="text-ink-muted">Os membros passam a ver a escala. Depois de publicada, cada ajuste vale na hora e fica
+            na auditoria; a geração automática só volta se você reabrir para rascunho.</p>
+        <section class="flex flex-col gap-1" aria-labelledby="resumo-vazias">
+            <h2 id="resumo-vazias" class="text-label text-ink-muted"
+                th:text="|Vagas vazias (${resumoDaPublicacao.vazias.size()})|">Vagas vazias (1)</h2>
+            <p th:unless="${resumoDaPublicacao.temVazias()}">Nenhuma vaga obrigatória vazia.</p>
+            <ul class="flex flex-col gap-1">
+                <li th:each="item : ${resumoDaPublicacao.vazias}"><span th:text="${item.titulo}">Transmissão, 12/10 ·
+                        Dom · 18h00</span><br><span class="text-label text-ink-muted" th:text="${item.detalhe}">Ninguém
+                        marcou Pode.</span></li>
+            </ul>
+        </section>
+        <section class="flex flex-col gap-1" aria-labelledby="resumo-forcadas">
+            <h2 id="resumo-forcadas" class="text-label text-ink-muted"
+                th:text="|Vagas forçadas (${resumoDaPublicacao.forcadas.size()})|">Vagas forçadas (0)</h2>
+            <p th:if="${resumoDaPublicacao.forcadas.isEmpty()}">Nenhuma vaga forçada.</p>
+            <ul class="flex flex-col gap-1">
+                <li th:each="item : ${resumoDaPublicacao.forcadas}"><span th:text="${item.titulo}">Ana Souza em
+                        Projeção</span><br><span class="text-label text-ink-muted" th:text="${item.detalhe}">LIMITE ·
+                        justificativa</span></li>
+            </ul>
+        </section>
+        <section th:unless="${resumoDaPublicacao.regras.isEmpty()}" class="flex flex-col gap-1"
+                 aria-labelledby="resumo-regras">
+            <h2 id="resumo-regras" class="text-label text-ink-muted">Regras de prioridade e preferência mais
+                pesadas</h2>
+            <ul class="flex flex-col gap-1">
+                <li th:each="item : ${resumoDaPublicacao.regras}"><span th:text="${item.titulo}">Equilíbrio</span><br><span
+                        class="text-label text-ink-muted" th:text="${item.detalhe}">Quem mais serve tem 4.</span></li>
+            </ul>
+        </section>
+        <form th:action="@{/ministerios/{m}/escalas/publicar(m=${ministerio.id}, mes=${mes})}" method="post"
+              class="flex flex-col gap-2">
+            <button type="button" class="rt-btn rt-btn--secondary w-full justify-center" popovertarget="publicar-sheet"
+                    popovertargetaction="hide">Cancelar</button>
+            <button type="submit" class="rt-btn rt-btn--dark w-full justify-center"
+                    th:text="${resumoDaPublicacao.temVazias()} ? 'Publicar mesmo assim' : 'Publicar'">Publicar</button>
+        </form>
+    </div>
+
+    <th:block th:if="${toast != null}"><div th:replace="~{componentes/toast :: toastOob(${toast})}"></div></th:block>
+</div>
+</body>
+</html>

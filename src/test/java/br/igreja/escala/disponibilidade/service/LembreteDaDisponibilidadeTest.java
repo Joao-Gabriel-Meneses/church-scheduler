@@ -24,6 +24,7 @@ class LembreteDaDisponibilidadeTest {
                 NOVEMBRO,
                 true,
                 false,
+                false,
                 List.of(CULTO),
                 List.of(
                         linha(31L, "Bruno Lima", (Resposta) null),
@@ -41,7 +42,7 @@ class LembreteDaDisponibilidadeTest {
     @Test
     void semNinguemFaltandoNaoTemALinhaDosNomes() {
         var painel = new PainelDaDisponibilidade(
-                NOVEMBRO, true, false, List.of(CULTO), List.of(linha(30L, "Ana Souza", Resposta.NAO_PODE)));
+                NOVEMBRO, true, false, false, List.of(CULTO), List.of(linha(30L, "Ana Souza", Resposta.NAO_PODE)));
 
         assertThat(lembrete.texto("Louvor", painel))
                 .startsWith("*Louvor — Novembro*\n")

@@ -5,6 +5,7 @@ import br.igreja.escala.escala.domain.Rigidez;
 import br.igreja.escala.escala.domain.TipoDeRegra;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -57,11 +58,9 @@ public final class DiagnosticoDaVaga {
                         quantas -> quem(quantas) + " já " + (quantas == 1 ? "tem " : "têm ")
                                 + escalas(escala.getParametros().limitePorMes()) + " no mês."),
                 new Passo(
-                        TipoDeRegra.MAX_POR_NIVEL_NO_EVENTO,
-                        pessoa -> cabeNoNivel(vaga, pessoa),
-                        quantas -> quem(quantas) + (quantas == 1 ? " é" : " são") + " do nível "
-                                + nomesDosNiveis.get(escala.getParametros().nivelLimitado()) + ", e o evento já tem "
-                                + escala.getParametros().maximoDoNivel() + "."));
+                        TipoDeRegra.MIN_POR_NIVEL_NO_EVENTO,
+                        pessoa -> completaONivel(vaga, pessoa),
+                        quantas -> faltaDoNivel(vaga, quantas)));
         for (Passo passo : passos) {
             if (!valeComoRigida(passo.regra())) {
                 continue;
@@ -109,16 +108,41 @@ public final class DiagnosticoDaVaga {
         return Stream.concat(nasVagas, nosCompromissos).distinct().count();
     }
 
-    private boolean cabeNoNivel(VagaPlanejada vaga, Pessoa pessoa) {
-        Long limitado = escala.getParametros().nivelLimitado();
-        if (limitado == null || !limitado.equals(pessoa.nivelEm(vaga.getFuncao().id()))) {
+    /**
+     * Com a pessoa na vaga, o evento passa a ter alguém escalado e precisa do mínimo do nível exigido: cabe se as outras
+     * vagas do evento, mais ela, chegam ao mínimo.
+     */
+    private boolean completaONivel(VagaPlanejada vaga, Pessoa pessoa) {
+        Long exigido = escala.getParametros().nivelExigido();
+        if (exigido == null) {
             return true;
         }
-        long doNivel = escala.getVagas().stream()
+        int dela = exigido.equals(pessoa.nivelEm(vaga.getFuncao().id())) ? 1 : 0;
+        return doNivelNasOutras(vaga) + dela >= escala.getParametros().minimoDoNivel();
+    }
+
+    private long doNivelNasOutras(VagaPlanejada vaga) {
+        Long exigido = escala.getParametros().nivelExigido();
+        return escala.getVagas().stream()
                 .filter(outra -> outra != vaga && outra.getEvento().equals(vaga.getEvento()))
-                .filter(outra -> Objects.equals(limitado, outra.getNivelId()))
+                .filter(outra -> Objects.equals(exigido, outra.getNivelId()))
                 .count();
-        return doNivel < escala.getParametros().maximoDoNivel();
+    }
+
+    /**
+     * "O evento precisa de pelo menos 1 pessoa do nível Experiente, e a única pessoa que pode não é desse nível." Se
+     * falta mais de uma, nenhuma pessoa sozinha completa.
+     */
+    private String faltaDoNivel(VagaPlanejada vaga, int quantas) {
+        int minimo = escala.getParametros().minimoDoNivel();
+        long tem = doNivelNasOutras(vaga);
+        String precisa = "O evento precisa de pelo menos " + minimo + (minimo == 1 ? " pessoa" : " pessoas")
+                + " do nível " + nomesDosNiveis.get(escala.getParametros().nivelExigido());
+        if (minimo - tem > 1) {
+            return precisa + " e tem " + tem + ": uma pessoa sozinha não completa.";
+        }
+        return precisa + ", e " + quem(quantas).toLowerCase(Locale.ROOT) + (quantas == 1 ? " não é" : " não são")
+                + " desse nível.";
     }
 
     /** "1 escala", "3 escalas". */

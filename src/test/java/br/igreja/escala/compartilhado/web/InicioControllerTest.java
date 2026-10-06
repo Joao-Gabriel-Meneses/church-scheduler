@@ -33,9 +33,13 @@ class InicioControllerTest {
     @MockitoBean
     DisponibilidadeNoInicio disponibilidade;
 
+    @MockitoBean
+    EscalasNoInicio escalas;
+
     @BeforeEach
     void semMinisterios() {
         when(disponibilidade.doMembro(any())).thenReturn(ResumoDaDisponibilidade.vazio());
+        when(escalas.doMembro(any())).thenReturn(MinhasEscalas.vazio());
     }
 
     @Test
@@ -83,5 +87,52 @@ class InicioControllerTest {
                 .contains("Minhas escalas", "Disponibilidade — Novembro")
                 .contains("Mídia", "4 de 5 respondidos", "Travada · 2 de 2 respondidos")
                 .contains("href=\"/disponibilidade?mes=2026-11\"");
+    }
+
+    @Test
+    void minhasEscalasMostraAsProximasComAEtiquetaDoMinisterioEAsPassadasRecolhidas() throws Exception {
+        var ana = new UsuarioAutenticado(Usuario.membro("Ana", "ana@x.com", "hash"));
+        when(escalas.doMembro(any()))
+                .thenReturn(new MinhasEscalas(
+                        List.of(new MinhasEscalas.Escala(
+                                "12/10 · Dom · 18h00",
+                                "Projeção",
+                                "Culto de domingo",
+                                "Mídia",
+                                "mint",
+                                "/escalas/1?mes=2026-10")),
+                        List.of(new MinhasEscalas.Escala(
+                                "04/10 · Dom · 18h00",
+                                "Transmissão",
+                                "Culto de domingo",
+                                "Louvor",
+                                "rose",
+                                "/escalas/2?mes=2026-10")),
+                        List.of(new MinhasEscalas.Ministerio("Mídia", "mint", "/escalas/1"))));
+
+        var html = mvc.perform(get("/").with(user(ana)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString()
+                .replaceAll("\\s+", " ");
+
+        assertThat(html)
+                .contains("12/10 · Dom · 18h00", "Projeção · Culto de domingo", "href=\"/escalas/1?mes=2026-10\"")
+                .contains("rt-badge bg-tint-mint flex-none", "rt-badge bg-tint-rose flex-none")
+                .contains("<details", "Escalas passadas (1)", "04/10 · Dom · 18h00")
+                .contains("Escala do ministério:", "href=\"/escalas/1\"")
+                .doesNotContain("Suas próximas escalas vão aparecer aqui");
+    }
+
+    @Test
+    void semEscalaPublicadaAvisaQueVaiAparecerDepois() throws Exception {
+        var ana = new UsuarioAutenticado(Usuario.membro("Ana", "ana@x.com", "hash"));
+
+        mvc.perform(get("/").with(user(ana)))
+                .andExpect(content()
+                        .string(Matchers.containsString(
+                                "Suas próximas escalas vão aparecer aqui depois que o gerente publicar.")))
+                .andExpect(content().string(Matchers.not(Matchers.containsString("Escalas passadas"))));
     }
 }

@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <!--/*
     ScheduleGrid e Slot (docs/design/components/ScheduleGrid e Slot): a escala do período, uma linha por evento e uma
-    coluna por função, cada célula com as vagas da função no evento. Só leitura nesta fase (Fase 3a).
+    coluna por função, cada célula com as vagas da função no evento. A vaga editável (SlotDaGrade.editavel, só na página
+    do gerente) é um link para a vaga, que o htmx abre no Sheet #vaga-sheet da página (escala/fragments/escala); sem JS,
+    abre a página da vaga. Usa ${ministerio} e ${mes} da página para o link.
         <div th:replace="~{componentes/grade :: grade(funcoes=${pagina.funcoes}, linhas=${pagina.linhas})}"></div>
       funcoes  os nomes das colunas (List<String>)
       linhas   List<LinhaDaGrade>: dia ("04"), diaDaSemana ("Dom"), nome, horario ("18h00"), comVagaVazia e uma
@@ -12,8 +14,9 @@
 
     celula(celula): as vagas de uma célula, empilhadas (função com qtd_max > 1 tem várias).
     vaga(vaga): o Slot. Preenchida (pílula brand-tint com avatar, nome e nível), fixada (--pinned, alfinete), forçada
-        (--forced, triângulo e "Forçada") ou vazia (--empty, tracejado, triângulo e "Vaga vazia"; a opcional diz
-        "Opcional, vazia"). Estado nunca só por cor: sempre ícone ou texto.
+        (--forced, triângulo, "Forçada · regra" e a justificativa no tooltip), com aviso (a pessoa viola uma regra como
+        a escala está: --forced, triângulo e a regra) ou vazia (--empty, tracejado, triângulo e "Vaga vazia"; a
+        opcional diz "Opcional, vazia"; a fixada vazia tem o alfinete). Estado nunca só por cor: sempre ícone ou texto.
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <body>
@@ -67,17 +70,28 @@
             class="sr-only">Não precisa</span></span>
 </div>
 
-<th:block th:fragment="vaga(vaga)">
-    <span th:if="${vaga.vazia}" class="rt-slot rt-slot--empty"><svg
-            th:replace="~{componentes/icone :: icone('triangle-alert')}"></svg><th:block
-            th:text="${vaga.obrigatoria} ? 'Vaga vazia' : 'Opcional, vazia'">Vaga vazia</th:block></span>
-    <span th:unless="${vaga.vazia}"
-          th:class="|rt-slot${vaga.fixada ? ' rt-slot--pinned' : ''}${vaga.forcada ? ' rt-slot--forced' : ''}|"><span
-            class="rt-avatar" aria-hidden="true" th:text="${vaga.iniciais}">AS</span><span><th:block
+<th:block th:fragment="vaga(vaga)"
+          th:with="_classes=|rt-slot${vaga.vazia ? ' rt-slot--empty' : ''}${!vaga.vazia and vaga.fixada and !vaga.alerta ? ' rt-slot--pinned' : ''}${!vaga.vazia and vaga.alerta ? ' rt-slot--forced' : ''}${vaga.justificativa != null ? ' rt-com-tooltip' : ''}|">
+    <a th:if="${vaga.editavel}" th:class="${_classes}"
+       th:href="@{/ministerios/{m}/escalas/vagas/{v}(m=${ministerio.id}, v=${vaga.vagaId}, mes=${mes})}"
+       th:hx-get="@{/ministerios/{m}/escalas/vagas/{v}(m=${ministerio.id}, v=${vaga.vagaId}, mes=${mes})}"
+       hx-target="#vaga-conteudo" hx-swap="innerHTML" th:aria-label="|${vaga.descricao()}. Ajustar a vaga|"><th:block
+            th:replace="~{componentes/grade :: conteudoDaVaga(${vaga})}"></th:block></a>
+    <span th:unless="${vaga.editavel}" th:class="${_classes}"><th:block
+            th:replace="~{componentes/grade :: conteudoDaVaga(${vaga})}"></th:block></span>
+</th:block>
+
+<th:block th:fragment="conteudoDaVaga(vaga)">
+    <th:block th:if="${vaga.vazia}"><svg th:replace="~{componentes/icone :: icone('triangle-alert')}"></svg><th:block
+            th:text="${vaga.obrigatoria} ? 'Vaga vazia' : 'Opcional, vazia'">Vaga vazia</th:block><th:block
+            th:if="${vaga.fixada}"><svg th:replace="~{componentes/icone :: icone('pin')}"></svg></th:block></th:block>
+    <th:block th:unless="${vaga.vazia}"><span class="rt-avatar" aria-hidden="true" th:text="${vaga.iniciais}">AS</span><span><th:block
             th:text="${vaga.nome}">Ana Souza</th:block><span class="rt-slot__meta"
-            th:text="${vaga.meta}">Experiente</span></span><span th:if="${vaga.fixada or vaga.forcada}"
-            class="rt-slot__icon"><svg th:replace="~{componentes/icone :: icone(${vaga.forcada ? 'triangle-alert'
-            : 'pin'})}"></svg></span></span>
+            th:text="${vaga.meta}">Experiente</span></span><span th:if="${vaga.fixada or vaga.alerta}"
+            class="rt-slot__icon"><svg th:replace="~{componentes/icone :: icone(${vaga.alerta ? 'triangle-alert'
+            : 'pin'})}"></svg></span></th:block>
+    <span th:if="${vaga.justificativa != null}" class="rt-tooltip" aria-hidden="true"
+          th:text="${vaga.justificativa}">Única que opera a mesa nova</span>
 </th:block>
 
 </body>

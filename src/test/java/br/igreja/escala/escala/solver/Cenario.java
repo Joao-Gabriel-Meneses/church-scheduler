@@ -52,7 +52,7 @@ final class Cenario {
         return new ParametrosDaEscala(limitePorMes, null, 1);
     }
 
-    static ParametrosDaEscala maximoDeIniciantes(int maximo) {
-        return new ParametrosDaEscala(3, INICIANTE, maximo);
+    static ParametrosDaEscala minimoDeExperientes(int minimo) {
+        return new ParametrosDaEscala(3, EXPERIENTE, minimo);
     }
 }
