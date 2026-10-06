@@ -14,6 +14,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -28,6 +29,7 @@ import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.escala.service.Andamento;
 import br.igreja.escala.escala.service.ConsultaDaEscala;
 import br.igreja.escala.escala.service.GeracaoDaEscala;
+import br.igreja.escala.escala.service.ImpressaoDaEscala;
 import br.igreja.escala.escala.service.PaginaDaEscala;
 import br.igreja.escala.escala.service.PublicacaoDaEscala;
 import br.igreja.escala.escala.service.ResumoDaPublicacao;
@@ -56,6 +58,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 @Import(EscalaControllerTest.Relogio.class)
 class EscalaControllerTest {
 
+    private static final YearMonth OUTUBRO = YearMonth.of(2026, 10);
     private static final YearMonth NOVEMBRO = YearMonth.of(2026, 11);
     private static final Instant AGORA =
             ZonedDateTime.of(2026, 10, 7, 10, 0, 12, 0, Fuso.SAO_PAULO).toInstant();
@@ -74,6 +77,9 @@ class EscalaControllerTest {
 
     @MockitoBean
     PublicacaoDaEscala publicacao;
+
+    @MockitoBean
+    ImpressaoDaEscala impressao;
 
     @MockitoBean
     MinisterioService ministerios;
@@ -212,9 +218,50 @@ class EscalaControllerTest {
     }
 
     @Test
-    void rascunhoNaoTemTextoParaWhatsapp() throws Exception {
+    void rascunhoNaoTemTextoParaWhatsappNemPdf() throws Exception {
         assertThat(pagina(get("/ministerios/1/escalas").with(user(GERENTE_DA_MIDIA))))
-                .doesNotContain("Copiar para WhatsApp", "whatsapp-", "Texto para o WhatsApp");
+                .doesNotContain("Copiar para WhatsApp", "whatsapp-", "Texto para o WhatsApp")
+                .doesNotContain("Baixar PDF", "/escalas/pdf");
+    }
+
+    @Test
+    void publicadaTemBaixarPdfNaToolbar() throws Exception {
+        when(consulta.doMes(1L, NOVEMBRO)).thenReturn(PaginasDeExemplo.publicada(NOVEMBRO));
+
+        assertThat(pagina(get("/ministerios/1/escalas").with(user(GERENTE_DA_MIDIA))))
+                .contains("href=\"/ministerios/1/escalas/pdf?mes=2026-11\" class=\"rt-btn rt-btn--outline\"")
+                .contains("#file-down", "Baixar PDF");
+    }
+
+    @Test
+    void pdfDaEscalaPublicadaBaixaComONomeDoArquivo() throws Exception {
+        byte[] pdf = "%PDF-1.7 escala".getBytes();
+        when(impressao.doMes(1L, NOVEMBRO))
+                .thenReturn(new ImpressaoDaEscala.ArquivoPdf("escala-midia-2026-11.pdf", pdf));
+
+        mvc.perform(get("/ministerios/1/escalas/pdf").param("mes", "2026-11").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "application/pdf"))
+                .andExpect(header().string(
+                                "Content-Disposition",
+                                org.hamcrest.Matchers.startsWith("attachment; filename=\"escala-midia-2026-11.pdf\"")))
+                .andExpect(content().bytes(pdf));
+    }
+
+    @Test
+    void pdfSoParaOGerenteDoMinisterioEDaEscalaPublicada() throws Exception {
+        when(impressao.doMes(1L, OUTUBRO)).thenThrow(new NaoEncontradoException("Escala publicada de 2026-10"));
+        when(impressao.doMes(9L, NOVEMBRO)).thenThrow(new NaoEncontradoException("Ministério 9"));
+
+        mvc.perform(get("/ministerios/1/escalas/pdf").param("mes", "2026-11").with(user(MEMBRO)))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/ministerios/2/escalas/pdf").param("mes", "2026-11").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/ministerios/9/escalas/pdf").param("mes", "2026-11").with(user(ADMIN)))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/ministerios/1/escalas/pdf").param("mes", "2026-10").with(user(GERENTE_DA_MIDIA)))
+                .andExpect(status().isNotFound());
+        verify(impressao, never()).doMes(2L, NOVEMBRO);
     }
 
     @Test

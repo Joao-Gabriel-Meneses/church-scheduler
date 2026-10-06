@@ -13,7 +13,7 @@
         acaoFormulario  id de um <form method="post"> da página que a ação envia (ex.: travar a disponibilidade)
         acaoAlvo     id de um Sheet da página que a ação abre (ex.: o resumo antes de publicar)
         outraTexto   uma ação secundária antes da principal (contorno), com outraIcone e outraAlvo (o Sheet que ela abre,
-                     ex.: a confirmação de "Regerar não fixadas")
+                     ex.: a confirmação de "Regerar não fixadas") ou outraHref (um link, ex.: "Baixar PDF")
         progresso    texto de um trabalho em andamento no lugar da ação (ex.: "Gerando escala"), como Badge com faísca;
                      a página mostra o detalhe e atualiza sozinha
     No celular (< 560px) fica numa linha: seletor compacto (periodoCurto) e "Mais ações", que abre um Sheet com a
@@ -50,7 +50,8 @@
         <th:block th:if="${progresso != null}"><span th:replace="~{componentes/badge :: badge(texto=${progresso},
                 variante=null, icone='sparkles', tint=null, classe=null)}"></span></th:block>
         <th:block th:if="${outraTexto != null}"><button th:replace="~{componentes/botao :: botao(texto=${outraTexto},
-                variante='outline', icone=${outraIcone}, href=null, tipo='button', formulario=null, abre=${outraAlvo},
+                variante='outline', icone=${outraIcone}, href=${outraHref}, tipo='button', formulario=null,
+                abre=${outraAlvo},
                 tamanho=null, iconeFinal=null, classe=null, copiar=null)}"></button></th:block>
         <th:block th:if="${acaoTexto != null}"><button th:replace="~{componentes/botao :: botao(texto=${acaoTexto},
                 variante=${acaoVariante ?: 'primary'}, icone=${acaoIcone}, href=${acaoHref},

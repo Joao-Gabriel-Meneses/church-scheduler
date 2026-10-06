@@ -2,7 +2,8 @@
 <!--/*
     A escala do mês para o gerente. A Toolbar troca o mês, mostra a trava, leva às regras e tem a ação do estado da
     escala: "Gerar escala" (primário) sem rascunho; "Publicar" (primário, abre o resumo) e "Regerar não fixadas"
-    (contorno, com confirmação) com rascunho; "Reabrir para rascunho" (contorno, com confirmação) depois de publicada.
+    (contorno, com confirmação) com rascunho; "Baixar PDF" (contorno, o PDF do mês) e "Reabrir para rascunho" (contorno,
+    com confirmação) depois de publicada.
     Durante a geração vira "Gerando escala", o painel de andamento atualiza por htmx e as vagas não se abrem. Em
     cima, os alertas, o mais próximo primeiro: disponibilidade aberta, vagas vazias com o motivo e quem saiu da escala.
     Depois o resumo (StatCards), a grade (componentes/grade) e as escalas por pessoa, na região #escala
@@ -24,8 +25,11 @@
         acaoVariante=${pagina.publicada ? 'outline' : null},
         acaoFormulario=${pagina.gerada ? null : 'gerar-escala'}, acaoHref=null,
         acaoAlvo=${!pagina.gerada ? null : (pagina.publicada ? 'reabrir-sheet' : 'publicar-sheet')},
-        outraTexto=${geracao == null and pagina.gerada and !pagina.publicada ? 'Regerar não fixadas' : null},
-        outraIcone='sparkles', outraAlvo='regerar-sheet',
+        outraTexto=${geracao != null or !pagina.gerada ? null
+                : (pagina.publicada ? 'Baixar PDF' : 'Regerar não fixadas')},
+        outraIcone=${pagina.publicada ? 'file-down' : 'sparkles'},
+        outraAlvo=${pagina.publicada ? null : 'regerar-sheet'},
+        outraHref=${pagina.publicada} ? @{/ministerios/{m}/escalas/pdf(m=${ministerio.id}, mes=${mes})} : null,
         progresso=${geracao != null ? 'Gerando escala' : null})}"></div>
 
 <main class="flex flex-col gap-6">
