@@ -29,6 +29,7 @@ Objetivos do autor: servir o ministério, compor portfólio e aprender Java/Spri
 | Testes | JUnit 5, AssertJ, Mockito, `ConstraintVerifier` (Timefold), Testcontainers com `gvenzl/oracle-free:23-slim-faststart` (23ai, com o Hibernate fixado em 19), JaCoCo |
 | Qualidade | pre-commit (gitleaks, arquivos grandes, segredos), Spotless com palantir-java-format |
 | E-mail | Spring Mail via SMTP do Gmail (`smtp.gmail.com:587`, senha de app) |
+| PDF | Apache PDFBox 3.0.8 (Apache-2.0, Java puro), com a Helvetica das 14 fontes padrão do PDF |
 | Build | Maven (`./mvnw`) |
 | Deploy | Docker Compose (`compose.prod.yaml`: cloudflared + app) em VM Oracle Cloud Always Free Ampere A1 (**ARM64**), região São Paulo, atrás de um **Cloudflare Tunnel** em `escala.ibrp.com.br` |
 | CI | GitHub Actions, imagens multiarquitetura com `docker buildx` |
@@ -92,7 +93,7 @@ Gerente e admin também servem e aparecem na escala. Um usuário pode estar em v
 - `Evento` (e `evento_funcao`: as funções que o evento precisa; sem linhas = todas)
 - `Periodo` (`disponibilidade_travada`, `status_escala` RASCUNHO/PUBLICADA)
 - `Disponibilidade` (PODE / NAO_PODE / PREFERE_NAO; uma por usuário × evento, `uk_disponibilidade`; guarda `data_na_resposta`/`horario_na_resposta_minutos` e `marcado_por_id`)
-- `Vaga` (evento × funcao × posicao, `uk_vaga`; `usuario_id` anulável, `fixada`, `forcada`, `justificativa`, `versao` para o `@Version`; forçada exige pessoa e justificativa e é sempre fixada)
+- `Vaga` (evento × funcao × posicao, `uk_vaga`; `usuario_id` anulável, `fixada`, `forcada`, `justificativa`, `versao` para o `@Version`; forçada exige pessoa e justificativa e é sempre fixada; `desistente_id` e `desistiu_em` andam juntos e só com a vaga vazia, `ck_vaga_desistencia`)
 - `SolicitacaoTroca`
 - `Auditoria` (descrição de até 1000 caracteres: o ajuste guarda o antes, o depois e a justificativa)
 
@@ -128,7 +129,7 @@ Outras regras:
 - **Disponibilidade:** pode ser alterada a qualquer momento até o gerente **travar** o período (ver "Disponibilidade (Fase 2)").
 - **Sem solução válida:** a vaga fica **vazia** e o gerente é alertado com o motivo. O solver nunca viola uma regra hard sem avisar.
 - **Forçar uma alocação** que viola regra exige justificativa e gera registro de auditoria. Só se forçam `LIMITE_POR_PERIODO` e `DISPONIBILIDADE` (`TipoDeRegra.isForcavel`); habilitação, uma função por evento, sobreposição e mínimo por nível nunca.
-- **Desistência:** esvazia a vaga **na hora, sem aprovação**. A escala do mês **não é regerada nem reorganizada**; o buraco fica e o gerente recebe um alerta. O membro pode indicar opcionalmente um substituto habilitado, que não pode violar regras hard.
+- **Desistência:** esvazia a vaga **na hora, sem aprovação**, até 24 h antes do evento; depois disso, só o gerente muda. A escala do mês **não é regerada nem reorganizada**; o buraco fica e o gerente recebe um alerta. Sem indicação de substituto por enquanto (ver "Pós-publicação (Fase 4)").
 - **Eventos:** modelos recorrentes (domingo e quinta) têm horário e **duração** padrão, editáveis no modelo ou em um evento específico. Editar um evento não altera o modelo. Eventos avulsos podem ser criados a qualquer momento.
   - Um modelo por ministério, dia da semana e horário (`uk_modelo_evento_horario`); dois modelos no mesmo dia em horários diferentes valem (culto da manhã e da noite).
   - O evento de um modelo é único por data (`uk_evento_modelo_data`); avulsos não têm esse limite, nem no mesmo dia e horário.
@@ -188,11 +189,26 @@ A Fase 3 foi dividida. A **3a** (feita) gera a escala com o Timefold e mostra o 
   - Cada alteração bloqueia o período (como a geração e a trava) e confere a `versao` que a tela viu: na segunda aba, a alteração é recusada (`EdicaoConcorrenteException`), a grade recarrega e avisa. Com a geração rodando ou o evento começado, nada muda.
   - Toda alteração vai para a `Auditoria` (`AJUSTAR_VAGA`, `FORCAR_VAGA`, `FIXAR_VAGA`, `DESAFIXAR_VAGA`) com o antes e o depois, e diz quando a escala já estava publicada.
   - Na grade: a forçada mostra "Forçada · regra" e a justificativa no tooltip; a vaga com aviso mostra a regra e ganha um alerta no topo.
-- **Publicação** (`PublicacaoDaEscala`): o Sheet de "Publicar" resume as vagas obrigatórias vazias (com o motivo), as forçadas (regra e justificativa) e as regras de prioridade e preferência que mais pesam; publica mesmo com vaga vazia ("Publicar mesmo assim"). Publicada, o ajuste continua e vale na hora, e a geração automática é recusada no clique, ao preparar e ao gravar, até "Reabrir para rascunho" (que tira a escala da visão dos membros). Publicar e reabrir vão para a `Auditoria`. E-mail é da Fase 4.
+- **Publicação** (`PublicacaoDaEscala`): o Sheet de "Publicar" resume as vagas obrigatórias vazias (com o motivo), as forçadas (regra e justificativa) e as regras de prioridade e preferência que mais pesam; publica mesmo com vaga vazia ("Publicar mesmo assim"). Publicada, o ajuste continua e vale na hora, e a geração automática é recusada no clique, ao preparar e ao gravar, até "Reabrir para rascunho" (que tira a escala da visão dos membros). Publicar e reabrir vão para a `Auditoria`. O e-mail de publicação ainda não existe (ver "Pós-publicação (Fase 4)").
 - **Destravar a disponibilidade de um período com escala publicada exige confirmação** (Sheet, `componentes/sheet :: confirmacao`), porque a escala publicada foi gerada com aquelas respostas. O servidor recusa sem `confirmado=true`.
 - **Membro** (`EscalaDoMembro`): só escala publicada, nunca rascunho, nem por URL direta.
   - "Minhas escalas", no início: as próximas primeiro ("12/10 · Dom · 18h00", função, evento e a etiqueta de cor do ministério), as dos últimos 60 dias recolhidas, e atalhos para a escala de cada ministério.
   - Escala do ministério (`/escalas/{id}?mes=`): a grade publicada só de leitura, sem fixada, forçada nem justificativa, para quem é membro (o admin vê todos; ministério alheio responde 404). Na navegação, conta como Início.
+
+### Pós-publicação (Fase 4)
+
+A **4a** (feita) traz a desistência, o alerta ao gerente, o texto para o WhatsApp e o PDF. E-mails (publicação, lembrete de 24 h, desistência), Spring Mail e jobs agendados ficam para depois.
+
+- **Desistência** (`DesistenciaDaEscala`, `POST /escalas/vagas/{vagaId}/desistir`):
+  - Em "Minhas escalas", cada próxima escala tem "Desistir" (contorno), que confirma num Sheet ("Confirmar desistência", voltar "Manter escala"). A rota grava sempre para quem está logado.
+  - Só da própria vaga, vigente e de escala publicada; o resto responde 404 (`NaoEncontradoException`), inclusive POST direto na vaga de outro e em rascunho.
+  - Prazo: até 24 h antes do início (`DesistenciaDaEscala.noPrazo`, exatamente 24 h vale), pelo `Clock` de São Paulo. Depois disso, ou com o evento começado, é recusada (`RegraVioladaException`, AlertBanner no início) e a linha diz "Para sair desta escala agora, fale com o gerente."; o gerente muda pelo ajuste.
+  - A vaga fica vazia e **fixada** (`Vaga.desistir`), com `desistente_id` e `desistiu_em`: reabrir e regerar não a preenche nem devolve quem desistiu. Pôr alguém na vaga (ajuste, forçar ou geração) apaga a desistência; a `Auditoria` (`DESISTIR_DA_VAGA`, autor e alvo = o membro) guarda o histórico.
+  - Bloqueia o período e relê a vaga, como o ajuste: desistir de novo (toque duplo, outra aba) não muda nada nem audita.
+- **Alerta** (no painel de alertas da página de escalas, `ConsultaDaEscala`): cada vaga vigente vazia com desistente, de evento por vir: quem, função, evento e desde quando, com o ícone da troca e "Preencher", que leva ao ajuste da vaga. A vaga não repete o alerta de vaga vazia. Sai quando alguém entra no lugar ou o evento começa. O nome de quem desistiu e não serve mais vem em `DadosDoPeriodo.desistentes`.
+- **Escalados por evento** (`EscaladosDoEvento`): a base do texto e do PDF. Eventos não cancelados em ordem de início; por função exigida, os nomes por posição, com "a definir" na vaga obrigatória vazia (a opcional vazia não aparece; função sem ninguém tem um "a definir").
+- **"Copiar para WhatsApp"** (`TextoParaWhatsapp`): só na escala publicada, na grade do gerente (`LinhaDaGrade.whatsapp`; nulo no rascunho e na página do membro). Abre um Sheet por evento (`escala/fragments/whatsapp`) igual ao do "Copiar lembrete": `*Mídia — Culto de domingo*`, "12/10 · Dom · 18h00" e uma linha por função. É montado na hora da página, dentro de `#escala`, então reflete desistências e ajustes.
+- **"Baixar PDF"** (`ImpressaoDaEscala`, `PdfDaEscala`, `GET /ministerios/{id}/escalas/pdf?mes=`): ação secundária da Toolbar com a escala publicada (`outraHref`). A4 (paisagem acima de 4 funções), título "Mídia — Outubro 2026", a hora da geração, um evento por linha, um nome por linha em cada função, "—" na função que o evento não exige, cabeçalho repetido e páginas numeradas. Caractere fora da Helvetica vira a letra sem acento ou "?". Rascunho responde 404.
 
 ## Solver (Timefold)
 
@@ -311,6 +327,7 @@ O design system "Escala" (feito no Claude Design) está em `docs/design/`. O `do
   - Cada teste cria os próprios dados e usa `@Transactional` para desfazê-los. Nunca dependa de dados de outra classe nem do admin criado na subida. O banco é um container novo, sem reuse.
   - A exceção é o `PaginasDoGerenteIT`, que grava os dados de verdade e os apaga no `@AfterEach`: ele abre as páginas sem a transação do teste em volta, porque com `open-in-view` desligado uma associação lazy lida fora do serviço só falha assim. Página nova do gerente entra nele; página nova do membro entra no `PaginasDoMembroIT`, que segue o mesmo modelo.
   - O `AjusteDaEscalaIT` também roda sem `@Transactional`: a concorrência do ajuste (duas edições com a mesma versão) só aparece com dois commits.
+  - O `DesistenciaIT` também: cada desistência é uma transação de verdade (o período bloqueado, a vaga relida), e o teste confere o alerta, o texto e o PDF do gerente depois dela.
   - Teste de concorrência (ex.: `DisponibilidadeConcorrenciaIT`) também roda sem `@Transactional`, com transações de verdade em threads, e apaga os dados no `@AfterEach`.
   - O `GeracaoDaEscalaIT` também: a geração roda na fila e só enxerga o que foi commitado. O teste espera a geração terminar (`Andamento.getFim()`) antes de conferir e de apagar. Nos ITs, o solver termina com 1 s sem melhorar (`@TesteDeIntegracao`).
   - As classes rodam em ordem aleatória. Para reproduzir uma falha, use a semente do log (`-Dfailsafe.runOrder.random.seed=...`).
@@ -340,7 +357,9 @@ docker compose up -d            # produção, na VM (o COMPOSE_FILE do .env apon
 4. **Fase 3 — Escala automática** (ver "Escala (Fase 3)"):
    - **3a (feita):** domínio Timefold, catálogo de regras e página de regras, funções exigidas por evento, geração em segundo plano, rascunho com as vagas vazias explicadas.
    - **3b (feita):** ajuste manual validado pelo solver, fixar, forçar com justificativa, publicação com resumo, reabrir, "Minhas escalas" e a escala do ministério para o membro; o mínimo por nível no lugar do máximo.
-5. **Fase 4 — Pós-publicação:** desistência, alertas ao líder, e-mails de publicação e lembrete de 24 h, texto para WhatsApp, PDF. **Aqui o MVP entra em uso.**
+5. **Fase 4 — Pós-publicação** (ver "Pós-publicação (Fase 4)"). **Aqui o MVP entra em uso.**
+   - **4a (feita):** desistência até 24 h antes, alerta ao gerente, texto para o WhatsApp por evento e PDF do mês.
+   - **4b:** e-mails de publicação, de desistência e lembrete de 24 h (Spring Mail, job agendado).
 6. **Fase 5 — Refinos:** preferências, relatórios, auditoria completa.
 7. **Fase 6 — Expansão:** louvor, criando só os tipos de regra que faltarem.
 
