@@ -3,7 +3,9 @@
     Início: "Minhas escalas" e a disponibilidade do próximo mês na mesma tela. No desktop, duas colunas (escalas na
     larga); no celular, a disponibilidade vem primeiro, porque é o que a pessoa faz todo mês. Minhas escalas: só das
     escalas publicadas, as próximas primeiro ("12/10 · Dom · 18h00", função, evento e a etiqueta do ministério), as
-    passadas recolhidas, e os atalhos para a escala de cada ministério.
+    passadas recolhidas, e os atalhos para a escala de cada ministério. Cada próxima tem "Desistir", que confirma num
+    Sheet; com menos de 24 h para o evento, só o gerente muda, e a linha diz isso. A desistência recusada volta como
+    AlertBanner no topo (${recusa}).
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layouts/membro :: pagina(~{::title}, ~{::main})}">
@@ -12,6 +14,9 @@
 </head>
 <body>
 <main class="flex flex-col gap-6">
+    <th:block th:if="${recusa != null}"><div th:replace="~{componentes/alerta :: alerta(titulo=${recusa}, corpo=null,
+            regra=null, acaoTexto=null, icone=null)}"></div></th:block>
+
     <div class="flex flex-wrap items-center gap-3">
         <h1 class="text-title">Olá, <span sec:authentication="principal.nome">Nome</span>!</h1>
         <span sec:authorize="hasRole('ADMIN')"><span
@@ -22,11 +27,20 @@
         <section class="flex flex-col gap-3 lg:col-span-2" aria-labelledby="minhas-escalas">
             <h2 id="minhas-escalas" class="text-heading">Minhas escalas</h2>
             <ul th:unless="${minhasEscalas.proximas.isEmpty()}" class="rt-list">
-                <li th:each="escala : ${minhasEscalas.proximas}"><a th:replace="~{componentes/lista :: linha(
-                        titulo=${escala.quando}, sub=${escala.descricao()}, icone='calendar-check',
-                        href=@{${escala.url}}, selecionada=null, etiqueta=${escala.ministerio},
-                        etiquetaTint=${escala.tint})}"></a></li>
+                <li th:each="escala : ${minhasEscalas.proximas}"><div th:replace="~{componentes/lista :: linha(
+                        titulo=${escala.quando}, sub=${escala.descricao()}, icone='calendar-check', href=null,
+                        selecionada=null, etiqueta=${escala.ministerio}, etiquetaTint=${escala.tint},
+                        observacao=${escala.podeDesistir ? null : 'Para sair desta escala agora, fale com o gerente.'},
+                        botaoTexto=${escala.podeDesistir ? 'Desistir' : null}, botaoIcone='calendar-x',
+                        botaoAbre=|desistir-${escala.vagaId}|)}"></div></li>
             </ul>
+            <th:block th:each="escala : ${minhasEscalas.proximas}" th:if="${escala.podeDesistir}"><div
+                    th:replace="~{componentes/sheet :: confirmacao(id=|desistir-${escala.vagaId}|,
+                    titulo=|Desistir de ${escala.funcao}, ${escala.quando}?|,
+                    texto=|${escala.evento} · ${escala.ministerio}. A vaga fica vazia na hora e o gerente vê o aviso na
+                    escala; a escala do mês não é refeita. Para voltar, só o gerente põe você de novo.|,
+                    acao=@{/escalas/vagas/{v}/desistir(v=${escala.vagaId})}, confirmar='Confirmar desistência',
+                    voltar='Manter escala')}"></div></th:block>
             <div th:if="${minhasEscalas.proximas.isEmpty()}" class="rt-panel flex items-center gap-3 p-6 text-ink-muted">
                 <svg th:replace="~{componentes/icone :: icone('calendar-check')}"></svg>
                 <p>Suas próximas escalas vão aparecer aqui depois que o gerente publicar.</p>
@@ -38,7 +52,7 @@
                     <li th:each="escala : ${minhasEscalas.passadas}"><a th:replace="~{componentes/lista :: linha(
                             titulo=${escala.quando}, sub=${escala.descricao()}, icone='calendar',
                             href=@{${escala.url}}, selecionada=null, etiqueta=${escala.ministerio},
-                            etiquetaTint=${escala.tint})}"></a></li>
+                            etiquetaTint=${escala.tint}, observacao=null, botaoTexto=null)}"></a></li>
                 </ul>
             </details>
             <p th:unless="${minhasEscalas.ministerios.isEmpty()}" class="flex flex-wrap items-center gap-2">

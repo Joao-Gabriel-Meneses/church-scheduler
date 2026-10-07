@@ -100,14 +100,18 @@ class InicioControllerTest {
                                 "Culto de domingo",
                                 "Mídia",
                                 "mint",
-                                "/escalas/1?mes=2026-10")),
+                                "/escalas/1?mes=2026-10",
+                                7L,
+                                true)),
                         List.of(new MinhasEscalas.Escala(
                                 "04/10 · Dom · 18h00",
                                 "Transmissão",
                                 "Culto de domingo",
                                 "Louvor",
                                 "rose",
-                                "/escalas/2?mes=2026-10")),
+                                "/escalas/2?mes=2026-10",
+                                3L,
+                                false)),
                         List.of(new MinhasEscalas.Ministerio("Mídia", "mint", "/escalas/1"))));
 
         var html = mvc.perform(get("/").with(user(ana)))
@@ -118,11 +122,82 @@ class InicioControllerTest {
                 .replaceAll("\\s+", " ");
 
         assertThat(html)
-                .contains("12/10 · Dom · 18h00", "Projeção · Culto de domingo", "href=\"/escalas/1?mes=2026-10\"")
+                .contains("12/10 · Dom · 18h00", "Projeção · Culto de domingo")
                 .contains("rt-badge bg-tint-mint flex-none", "rt-badge bg-tint-rose flex-none")
-                .contains("<details", "Escalas passadas (1)", "04/10 · Dom · 18h00")
+                .contains("<details", "Escalas passadas (1)", "04/10 · Dom · 18h00", "href=\"/escalas/2?mes=2026-10\"")
                 .contains("Escala do ministério:", "href=\"/escalas/1\"")
                 .doesNotContain("Suas próximas escalas vão aparecer aqui");
+    }
+
+    @Test
+    void cadaProximaEscalaTemDesistirComConfirmacaoNumSheet() throws Exception {
+        var ana = new UsuarioAutenticado(Usuario.membro("Ana", "ana@x.com", "hash"));
+        when(escalas.doMembro(any()))
+                .thenReturn(new MinhasEscalas(
+                        List.of(new MinhasEscalas.Escala(
+                                "12/10 · Dom · 18h00",
+                                "Projeção",
+                                "Culto de domingo",
+                                "Mídia",
+                                "mint",
+                                "/escalas/1?mes=2026-10",
+                                7L,
+                                true)),
+                        List.of(),
+                        List.of()));
+
+        var html = mvc.perform(get("/").with(user(ana)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString()
+                .replaceAll("\\s+", " ");
+
+        assertThat(html)
+                .contains("popovertarget=\"desistir-7\"", "Desistir </button>")
+                .contains("id=\"desistir-7\" popover", "Desistir de Projeção, 12/10 · Dom · 18h00?")
+                .contains("Culto de domingo · Mídia. A vaga fica vazia na hora")
+                .contains("action=\"/escalas/vagas/7/desistir\"", "name=\"_csrf\"")
+                .contains("Manter escala", "Confirmar desistência")
+                .doesNotContain("Para sair desta escala agora");
+    }
+
+    @Test
+    void comMenosDe24HorasNaoTemDesistirEDizQueEComOGerente() throws Exception {
+        var ana = new UsuarioAutenticado(Usuario.membro("Ana", "ana@x.com", "hash"));
+        when(escalas.doMembro(any()))
+                .thenReturn(new MinhasEscalas(
+                        List.of(new MinhasEscalas.Escala(
+                                "08/10 · Qui · 19h30",
+                                "Projeção",
+                                "Culto de quinta",
+                                "Mídia",
+                                "mint",
+                                "/escalas/1?mes=2026-10",
+                                8L,
+                                false)),
+                        List.of(),
+                        List.of()));
+
+        var html = mvc.perform(get("/").with(user(ana)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(html)
+                .contains("08/10 · Qui · 19h30", "Para sair desta escala agora, fale com o gerente.")
+                .doesNotContain("desistir-8", "/escalas/vagas/8/desistir", "calendar-x");
+    }
+
+    @Test
+    void desistenciaRecusadaVoltaComoAlertaNoTopo() throws Exception {
+        var ana = new UsuarioAutenticado(Usuario.membro("Ana", "ana@x.com", "hash"));
+
+        mvc.perform(get("/").with(user(ana)).flashAttr("recusa", "Faltam menos de 24 h para Culto de quinta."))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("rt-alert")))
+                .andExpect(content().string(Matchers.containsString("Faltam menos de 24 h para Culto de quinta.")));
     }
 
     @Test

@@ -15,13 +15,17 @@ import br.igreja.escala.identidade.service.UsuarioResumo;
 import br.igreja.escala.ministerio.Exemplos;
 import br.igreja.escala.ministerio.domain.Funcao;
 import br.igreja.escala.ministerio.service.HabilitacaoDaPessoa;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -135,7 +139,7 @@ class ConsultaDaEscalaTest {
 
     @Test
     void vagaForcadaMostraARegraEAJustificativaSemAlerta() {
-        var vagas = new java.util.ArrayList<>(vagas());
+        var vagas = vagas();
         vagas.get(2).forcar(bruno.id(), "Combinou por telefone");
         var avisos = Map.of(3L, List.of(new Violacao(TipoDeRegra.DISPONIBILIDADE, "Não marcou Pode neste evento.")));
 
@@ -147,6 +151,87 @@ class ConsultaDaEscalaTest {
         assertThat(doBruno.descricao())
                 .isEqualTo("Bruno Alves, Forçada · DISPONIBILIDADE. Justificativa: Combinou por telefone");
         assertThat(pagina.alertas()).noneMatch(alerta -> alerta.titulo().contains("fora da regra"));
+    }
+
+    @Test
+    void desistenciaViraUmAlertaComQuemFuncaoEventoEAAcaoDePreencherNoLugarDoDeVagaVazia() {
+        var vagas = vagas();
+        vagas.get(2).desistir(Instant.parse("2026-10-05T17:32:00Z"));
+
+        var pagina = ConsultaDaEscala.montar(dados(outubro, vagas));
+
+        assertThat(pagina.alertas())
+                .containsExactly(
+                        new AlertaDaEscala(
+                                "Bruno Alves desistiu de Projeção, 11/10 · Dom · 18h00 · Culto 11",
+                                "A vaga está vazia desde 05/10 às 14h32. Escolha quem entra no lugar: o ajuste confere"
+                                        + " as regras.",
+                                null,
+                                "arrow-left-right",
+                                3L),
+                        new AlertaDaEscala(
+                                "Transmissão, 11/10 · Dom · 18h00 · Culto 11",
+                                "Ninguém habilitado em Transmissão marcou Pode.",
+                                "Regra: DISPONIBILIDADE"),
+                        new AlertaDaEscala(
+                                "18/10 · Dom · 18h00 · Culto 18 foi cancelado",
+                                "Bruno Alves (Projeção) saiu da escala. As vagas somem quando você gerar a escala de"
+                                        + " novo.",
+                                null));
+        assertThat(pagina.linhas().get(1).celulas().get(0).vagas().getFirst().vazia())
+                .isTrue();
+    }
+
+    @Test
+    void desistenciaDeQuemNaoServeMaisMostraONome() {
+        var vagas = vagas();
+        vagas.get(5).escalar(33L);
+        vagas.get(5).desistir(Instant.parse("2026-10-05T17:32:00Z"));
+
+        var pagina = ConsultaDaEscala.montar(dados(outubro, vagas, List.of(pessoa(33L, "Davi Rocha"))));
+
+        assertThat(pagina.alertas())
+                .extracting(AlertaDaEscala::titulo)
+                .contains("Davi Rocha desistiu de Projeção, 24/10 · Sáb · 18h00 · Culto 24");
+    }
+
+    @Test
+    void desistenciaSaiDoAlertaQuandoAlguemEntraNoLugarOuOEventoPassa() {
+        var vagas = vagas();
+        vagas.get(2).desistir(Instant.parse("2026-10-05T17:32:00Z"));
+        vagas.get(2).ajustar(carla.id());
+        vagas.getFirst().desistir(Instant.parse("2026-10-03T12:00:00Z"));
+
+        var pagina = ConsultaDaEscala.montar(dados(outubro, vagas));
+
+        assertThat(pagina.alertas()).noneMatch(alerta -> alerta.titulo().contains("desistiu"));
+    }
+
+    @Test
+    void soAEscalaPublicadaVistaPeloGerenteTemOTextoDoWhatsappDeCadaEvento() {
+        var vagas = vagas();
+        vagas.get(2).desistir(Instant.parse("2026-10-05T17:32:00Z"));
+        vagas.get(5).ajustar(carla.id());
+
+        var rascunho = ConsultaDaEscala.montar(dados(outubro, vagas));
+        outubro.publicarEscala();
+        var publicada = ConsultaDaEscala.montar(dados(outubro, vagas));
+        var doMembro = ConsultaDaEscala.paraOMembro(dados(outubro, vagas));
+
+        assertThat(rascunho.linhas()).allMatch(linha -> linha.whatsapp() == null);
+        assertThat(doMembro.linhas()).allMatch(linha -> linha.whatsapp() == null);
+        assertThat(publicada.linhas())
+                .extracting(LinhaDaGrade::whatsapp)
+                .containsExactly(
+                        new LinhaDaGrade.Whatsapp(
+                                "whatsapp-500",
+                                "*Mídia — Culto 4*\n04/10 · Dom · 18h00\n\nProjeção: Ana Souza\nTransmissão: a definir"),
+                        new LinhaDaGrade.Whatsapp(
+                                "whatsapp-501",
+                                "*Mídia — Culto 11*\n11/10 · Dom · 18h00\n\nProjeção: a definir\nTransmissão: a"
+                                        + " definir"),
+                        new LinhaDaGrade.Whatsapp(
+                                "whatsapp-504", "*Mídia — Culto 24*\n24/10 · Sáb · 18h00\n\nProjeção: Carla Dias"));
     }
 
     @Test
@@ -171,16 +256,21 @@ class ConsultaDaEscalaTest {
      * (casamento, só Projeção): Ana.
      */
     private List<Vaga> vagas() {
-        return List.of(
-                vaga(1L, domingoPassado, projecao, ana.id()),
-                vaga(2L, domingoPassado, transmissao, null),
-                vaga(3L, domingo, projecao, bruno.id()),
-                vaga(4L, domingo, transmissao, null),
-                vaga(5L, cancelado, projecao, bruno.id()),
-                vaga(6L, casamento, projecao, ana.id()));
+        return Stream.of(
+                        vaga(1L, domingoPassado, projecao, ana.id()),
+                        vaga(2L, domingoPassado, transmissao, null),
+                        vaga(3L, domingo, projecao, bruno.id()),
+                        vaga(4L, domingo, transmissao, null),
+                        vaga(5L, cancelado, projecao, bruno.id()),
+                        vaga(6L, casamento, projecao, ana.id()))
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     private DadosDoPeriodo dados(Periodo periodo, List<Vaga> vagas) {
+        return dados(periodo, vagas, List.of());
+    }
+
+    private DadosDoPeriodo dados(Periodo periodo, List<Vaga> vagas, List<UsuarioResumo> desistentes) {
         return new DadosDoPeriodo(
                 1L,
                 "Mídia",
@@ -200,7 +290,8 @@ class ConsultaDaEscalaTest {
                 Map.of(200L, "Iniciante", 201L, "Experiente"),
                 RegrasDoMinisterio.padrao(),
                 List.of(),
-                LocalDateTime.of(2026, 10, 7, 10, 0));
+                LocalDateTime.of(2026, 10, 7, 10, 0),
+                desistentes);
     }
 
     private Evento evento(Long id, int dia) {

@@ -19,5 +19,6 @@ public enum AcaoAuditada {
     FIXAR_VAGA,
     DESAFIXAR_VAGA,
     PUBLICAR_ESCALA,
-    REABRIR_ESCALA
+    REABRIR_ESCALA,
+    DESISTIR_DA_VAGA
 }

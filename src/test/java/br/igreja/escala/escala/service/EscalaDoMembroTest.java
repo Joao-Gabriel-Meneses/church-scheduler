@@ -3,6 +3,7 @@ package br.igreja.escala.escala.service;
 import static br.igreja.escala.evento.ExemplosDeEvento.DUAS_HORAS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
@@ -106,14 +107,47 @@ class EscalaDoMembroTest {
         assertThat(minhas.proximas())
                 .containsExactly(
                         new MinhasEscalas.Escala(
-                                "11/10 · Dom · 18h00", "Projeção", "Culto", "Mídia", "mint", "/escalas/1?mes=2026-10"),
+                                "11/10 · Dom · 18h00",
+                                "Projeção",
+                                "Culto",
+                                "Mídia",
+                                "mint",
+                                "/escalas/1?mes=2026-10",
+                                3L,
+                                true),
                         new MinhasEscalas.Escala(
-                                "18/10 · Dom · 18h00", "Projeção", "Culto", "Mídia", "mint", "/escalas/1?mes=2026-10"));
+                                "18/10 · Dom · 18h00",
+                                "Projeção",
+                                "Culto",
+                                "Mídia",
+                                "mint",
+                                "/escalas/1?mes=2026-10",
+                                1L,
+                                true));
         assertThat(minhas.passadas())
                 .extracting(MinhasEscalas.Escala::quando)
                 .as("a mais recente antes; a de setembro ainda está nos 60 dias")
                 .containsExactly("04/10 · Dom · 18h00", "06/09 · Dom · 18h00");
         assertThat(minhas.ministerios()).containsExactly(new MinhasEscalas.Ministerio("Mídia", "mint", "/escalas/1"));
+        assertThat(minhas.passadas()).noneMatch(MinhasEscalas.Escala::podeDesistir);
+    }
+
+    @Test
+    void comMenosDe24HorasOuJaComecadaSoOGerenteMuda() {
+        var amanhaAs10 = evento(503L, outubro, LocalDate.of(2026, 10, 8), LocalTime.of(10, 0));
+        var amanhaAs9 = evento(504L, outubro, LocalDate.of(2026, 10, 8), LocalTime.of(9, 59));
+        var agora = evento(505L, outubro, LocalDate.of(2026, 10, 7), LocalTime.of(9, 0));
+        when(vagas.findByUsuarioId(ANA))
+                .thenReturn(List.of(
+                        vaga(7L, amanhaAs10, projecao), vaga(8L, amanhaAs9, projecao), vaga(9L, agora, projecao)));
+        when(eventos.porIds(anyCollection())).thenReturn(List.of(amanhaAs10, amanhaAs9, agora));
+
+        var minhas = servico.doMembro(ANA);
+
+        assertThat(minhas.proximas())
+                .extracting(MinhasEscalas.Escala::vagaId, MinhasEscalas.Escala::podeDesistir)
+                .as("a que está acontecendo continua nas próximas, sem desistir")
+                .containsExactly(tuple(9L, false), tuple(8L, false), tuple(7L, true));
     }
 
     @Test
@@ -175,7 +209,8 @@ class EscalaDoMembroTest {
                 Map.of(201L, "Experiente"),
                 RegrasDoMinisterio.padrao(),
                 List.of(),
-                LocalDateTime.of(2026, 10, 7, 10, 0));
+                LocalDateTime.of(2026, 10, 7, 10, 0),
+                List.of());
     }
 
     private static Periodo periodo(Long id, YearMonth mes, boolean publicada) {
@@ -187,7 +222,11 @@ class EscalaDoMembroTest {
     }
 
     private static Evento evento(Long id, Periodo periodo, LocalDate data) {
-        return ExemplosDeEvento.comId(Evento.avulso(periodo, "Culto", data, LocalTime.of(18, 0), DUAS_HORAS), id);
+        return evento(id, periodo, data, LocalTime.of(18, 0));
+    }
+
+    private static Evento evento(Long id, Periodo periodo, LocalDate data, LocalTime horario) {
+        return ExemplosDeEvento.comId(Evento.avulso(periodo, "Culto", data, horario, DUAS_HORAS), id);
     }
 
     private Vaga vaga(Long id, Evento evento, Funcao funcao) {

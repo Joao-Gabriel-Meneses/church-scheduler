@@ -12,6 +12,10 @@
         href         linha clicável (<a> com chevron); sem href é só informação (<div>)
         selecionada  true: fundo brand-tint e aria-current
         etiqueta     Badge à direita do texto, com etiquetaTint (mint | rose | lemon): o ministério da linha
+        observacao   uma linha a mais abaixo do subtítulo, em label/ink-muted ("Para sair desta escala agora, fale com
+                     o gerente.")
+        botaoTexto   botão contorno abaixo do texto que abre o Sheet de id botaoAbre, com botaoIcone (ex.: "Desistir",
+                     em Minhas escalas). Use sem href: a linha não pode ser um link com um botão dentro.
     Opção omitida herda a variável de mesmo nome do contexto: passe null quando precisar.
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
@@ -33,6 +37,11 @@
     <span class="rt-list-row__text">
         <span class="rt-list-row__title" th:text="${titulo}">Projeção</span>
         <span th:if="${sub != null}" class="rt-list-row__sub" th:text="${sub}">Experiente · 3 escalas em outubro</span>
+        <span th:if="${observacao != null}" class="rt-list-row__sub" th:text="${observacao}">Para sair desta escala agora, fale
+            com o gerente.</span>
+        <span th:if="${botaoTexto != null}" class="mt-2"><button th:replace="~{componentes/botao ::
+                botao(texto=${botaoTexto}, variante='outline', icone=${botaoIcone}, href=null, tipo='button',
+                formulario=null, abre=${botaoAbre}, tamanho=null, iconeFinal=null, classe=null, copiar=null)}"></button></span>
     </span>
     <th:block th:if="${etiqueta != null}"><span th:replace="~{componentes/badge :: badge(texto=${etiqueta},
             variante=null, icone=null, tint=${etiquetaTint}, classe='flex-none')}"></span></th:block>

@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <!--/*
     A região #escala da página de escalas: os alertas, o resumo (StatCards), a grade e as escalas por pessoa, mais o
-    Sheet da vaga (#vaga-sheet), onde o htmx põe a vaga que o gerente tocou (escala/fragments/vaga :: conteudo).
+    Sheet da vaga (#vaga-sheet), onde o htmx põe a vaga que o gerente tocou (escala/fragments/vaga :: conteudo). O
+    alerta de uma desistência tem a ação "Preencher", que leva à vaga (o mesmo ajuste da grade).
     O ajuste de uma vaga devolve esta região inteira, então as contagens e os avisos das outras vagas mudam juntos, e
     o Sheet volta fechado. ${aviso}: um AlertBanner no topo (ex.: a vaga mudou em outra aba). ${toast}: o toast OOB.
+    Com a escala publicada, cada evento tem o Sheet do texto para o WhatsApp (escala/fragments/whatsapp).
 */-->
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <body>
@@ -20,8 +22,10 @@
                 regra=null, acaoTexto='Ver disponibilidade',
                 acaoHref=@{/ministerios/{m}/disponibilidade(m=${ministerio.id}, mes=${mes})}, icone='lock-open')}"></div></th:block>
         <th:block th:each="alerta : ${pagina.alertas}"><div th:replace="~{componentes/alerta ::
-                alerta(titulo=${alerta.titulo}, corpo=${alerta.corpo}, regra=${alerta.regra}, acaoTexto=null,
-                icone=null)}"></div></th:block>
+                alerta(titulo=${alerta.titulo}, corpo=${alerta.corpo}, regra=${alerta.regra},
+                acaoTexto=${alerta.vagaId == null ? null : 'Preencher'},
+                acaoHref=${alerta.vagaId == null} ? null : @{/ministerios/{m}/escalas/vagas/{v}(m=${ministerio.id},
+                v=${alerta.vagaId})}, icone=${alerta.icone})}"></div></th:block>
     </div>
 
     <div th:unless="${pagina.temPeriodo}" class="rt-panel flex flex-col items-start gap-3 p-6">
@@ -74,6 +78,9 @@
             </div>
         </section>
     </th:block>
+
+    <th:block th:each="linha : ${pagina.linhas}" th:if="${linha.whatsapp != null}"><div
+            th:replace="~{escala/fragments/whatsapp :: folha(${linha})}"></div></th:block>
 
     <div id="vaga-sheet" popover class="rt-sheet md:mx-auto md:max-w-lg" role="dialog" aria-labelledby="vaga-titulo">
         <div class="rt-sheet__cabeca">

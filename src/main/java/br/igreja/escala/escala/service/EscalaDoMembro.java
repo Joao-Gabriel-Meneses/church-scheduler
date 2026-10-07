@@ -27,8 +27,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * A escala vista pelo membro, só a publicada: as próprias escalas ("Minhas escalas", no início) e a grade do mês de
- * cada ministério de que ele é membro. Rascunho nunca aparece, nem por URL direta.
+ * A escala vista pelo membro, só a publicada: as próprias escalas ("Minhas escalas", no início, com o que ainda dá para
+ * desistir) e a grade do mês de cada ministério de que ele é membro. Rascunho nunca aparece, nem por URL direta.
  */
 @Service
 public class EscalaDoMembro implements EscalasNoInicio {
@@ -88,11 +88,11 @@ public class EscalaDoMembro implements EscalasNoInicio {
                 .toList();
         var proximas = publicadas.stream()
                 .filter(vaga -> porEvento.get(vaga.getEventoId()).getFim().isAfter(agora))
-                .map(vaga -> escala(vaga, porEvento, porFuncao, porMinisterio))
+                .map(vaga -> escala(vaga, porEvento, porFuncao, porMinisterio, agora))
                 .toList();
         var passadas = publicadas.reversed().stream()
                 .filter(vaga -> !porEvento.get(vaga.getEventoId()).getFim().isAfter(agora))
-                .map(vaga -> escala(vaga, porEvento, porFuncao, porMinisterio))
+                .map(vaga -> escala(vaga, porEvento, porFuncao, porMinisterio, agora))
                 .toList();
         var dosMinisterios = membros.ministeriosDe(usuarioId).stream()
                 .map(ministerio -> new MinhasEscalas.Ministerio(
@@ -139,7 +139,11 @@ public class EscalaDoMembro implements EscalasNoInicio {
     }
 
     private MinhasEscalas.Escala escala(
-            Vaga vaga, Map<Long, Evento> porEvento, Map<Long, Funcao> porFuncao, Map<Long, Ministerio> porMinisterio) {
+            Vaga vaga,
+            Map<Long, Evento> porEvento,
+            Map<Long, Funcao> porFuncao,
+            Map<Long, Ministerio> porMinisterio,
+            LocalDateTime agora) {
         var evento = porEvento.get(vaga.getEventoId());
         var ministerio = porMinisterio.computeIfAbsent(evento.getMinisterioId(), ministerios::buscar);
         return new MinhasEscalas.Escala(
@@ -148,7 +152,9 @@ public class EscalaDoMembro implements EscalasNoInicio {
                 evento.getNome(),
                 ministerio.getNome(),
                 ministerio.getCor().tint(),
-                "/escalas/" + ministerio.getId() + "?mes=" + YearMonth.from(evento.getData()));
+                "/escalas/" + ministerio.getId() + "?mes=" + YearMonth.from(evento.getData()),
+                vaga.getId(),
+                DesistenciaDaEscala.noPrazo(evento.getInicio(), agora));
     }
 
     private static <T> Map<Long, T> porId(List<T> itens, Function<T, Long> id) {

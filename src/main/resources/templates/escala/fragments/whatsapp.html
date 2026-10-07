@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!--/*
+    O Sheet com o texto de um evento da escala publicada para o WhatsApp, aberto pelo "Copiar para WhatsApp" da linha
+    na grade (componentes/grade). Igual ao "Copiar lembrete" da disponibilidade: o texto dá para selecionar à mão, e
+    "Copiar texto" copia (static/js/app.js), mostra o toast e fecha o Sheet. A página de escalas põe um por evento,
+    dentro da região #escala, então o ajuste de uma vaga atualiza o texto junto com a grade.
+        <th:block th:each="linha : ${pagina.linhas}" th:if="${linha.whatsapp != null}"><div
+            th:replace="~{escala/fragments/whatsapp :: folha(${linha})}"></div></th:block>
+*/-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="folha(linha)" th:id="${linha.whatsapp.id}" popover class="rt-sheet md:mx-auto md:max-w-md"
+     role="dialog" th:aria-label="|Texto para o WhatsApp: ${linha.nome}|">
+    <div class="rt-sheet__cabeca">
+        <p class="rt-sheet__titulo">Texto para o WhatsApp</p>
+        <button type="button" class="rt-icon-btn" th:attr="popovertarget=${linha.whatsapp.id}"
+                popovertargetaction="hide" aria-label="Fechar" title="Fechar"><svg
+                th:replace="~{componentes/icone :: icone('x')}"></svg></button>
+    </div>
+    <p class="text-ink-muted">Cole no grupo do ministério. O texto mostra a escala como está agora, com as desistências
+        e os ajustes.</p>
+    <p th:id="|texto-${linha.whatsapp.id}|" class="rt-panel whitespace-pre-line p-4 select-all"
+       th:text="${linha.whatsapp.texto}">*Mídia — Culto de domingo*</p>
+    <template th:id="|texto-${linha.whatsapp.id}-copiado|"><div th:replace="~{componentes/toast ::
+            toast('Texto copiado')}"></div></template>
+    <div class="flex flex-col gap-2">
+        <button th:replace="~{componentes/sheet :: fechar(${linha.whatsapp.id})}"></button>
+        <button th:replace="~{componentes/botao :: botao(texto='Copiar texto', variante='dark', icone='copy',
+                href=null, tipo='button', formulario=null, abre=null, tamanho=null, iconeFinal=null,
+                classe='w-full justify-center', copiar=|texto-${linha.whatsapp.id}|)}"></button>
+    </div>
+</div>
+
+</body>
+</html>

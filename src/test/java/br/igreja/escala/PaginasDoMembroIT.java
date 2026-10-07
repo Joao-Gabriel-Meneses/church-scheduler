@@ -155,6 +155,8 @@ class PaginasDoMembroIT {
                 .andExpect(content().string(Matchers.containsString(Datas.dataCurta(PUBLICADO.atDay(10)))))
                 .andExpect(content().string(Matchers.containsString("Projeção · Culto publicado")))
                 .andExpect(content().string(Matchers.containsString("Mídia Membro")))
+                .andExpect(content().string(Matchers.containsString("Confirmar desistência")))
+                .andExpect(content().string(Matchers.containsString("/desistir\"")))
                 .andExpect(content().string(Matchers.not(Matchers.containsString("Culto em rascunho"))))
                 .andExpect(content().string(Matchers.not(Matchers.containsString("Ensaio do louvor"))));
     }

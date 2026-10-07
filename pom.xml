@@ -25,6 +25,7 @@
         <spotless.version>3.10.3</spotless.version>
         <!-- O starter 2.x é o que suporta o Spring Boot 4; o 2.7.0 é compilado contra o Boot 4.1.1. -->
         <timefold.version>2.7.0</timefold.version>
+        <pdfbox.version>3.0.8</pdfbox.version>
         <!-- Cobertura mínima de linhas dos testes unitários (política de testes do CLAUDE.md). -->
         <cobertura.minima>0.70</cobertura.minima>
         <!--
@@ -72,6 +73,12 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-oracle</artifactId>
+        </dependency>
+        <!-- PDF da escala do mês (Fase 4). Apache-2.0, Java puro: sem binário nativo na imagem ARM64. -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${pdfbox.version}</version>
         </dependency>
         <dependency>
             <groupId>org.thymeleaf.extras</groupId>

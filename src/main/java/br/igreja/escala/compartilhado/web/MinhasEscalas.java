@@ -24,8 +24,18 @@ public record MinhasEscalas(List<Escala> proximas, List<Escala> passadas, List<M
      * @param quando "12/10 · Dom · 18h00"
      * @param tint a cor do ministério na etiqueta (mint, rose, lemon)
      * @param url a escala do ministério no mês ("/escalas/1?mes=2026-10")
+     * @param vagaId a vaga em que ela está, para desistir
+     * @param podeDesistir faltam pelo menos 24 h para o evento: ela desiste sozinha; depois, só o gerente muda
      */
-    public record Escala(String quando, String funcao, String evento, String ministerio, String tint, String url) {
+    public record Escala(
+            String quando,
+            String funcao,
+            String evento,
+            String ministerio,
+            String tint,
+            String url,
+            Long vagaId,
+            boolean podeDesistir) {
 
         /** "Projeção · Culto de domingo". */
         public String descricao() {

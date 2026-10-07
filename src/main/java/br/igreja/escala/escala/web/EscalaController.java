@@ -5,6 +5,7 @@ import br.igreja.escala.compartilhado.RegraVioladaException;
 import br.igreja.escala.escala.service.Andamento;
 import br.igreja.escala.escala.service.ConsultaDaEscala;
 import br.igreja.escala.escala.service.GeracaoDaEscala;
+import br.igreja.escala.escala.service.ImpressaoDaEscala;
 import br.igreja.escala.escala.service.PaginaDaEscala;
 import br.igreja.escala.escala.service.PublicacaoDaEscala;
 import br.igreja.escala.evento.service.EventoService;
@@ -13,6 +14,7 @@ import br.igreja.escala.ministerio.service.MinisterioService;
 import br.igreja.escala.ministerio.web.GerenteDoMinisterio;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -20,6 +22,10 @@ import java.time.YearMonth;
 import java.util.Locale;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -34,7 +40,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 /**
  * A escala do mês para o gerente: a grade com as vagas vazias explicadas e o resumo, gerar (o primário sem rascunho),
  * publicar (o primário com rascunho, depois do resumo) e reabrir para rascunho. A geração roda em segundo plano; a
- * página mostra o andamento por htmx e recarrega quando termina. O ajuste de cada vaga fica no VagaController.
+ * página mostra o andamento por htmx e recarrega quando termina. O ajuste de cada vaga fica no VagaController. Com a
+ * escala publicada, o PDF do mês para imprimir.
  */
 @Controller
 @GerenteDoMinisterio
@@ -47,6 +54,7 @@ class EscalaController {
     private final ConsultaDaEscala consulta;
     private final GeracaoDaEscala geracao;
     private final PublicacaoDaEscala publicacao;
+    private final ImpressaoDaEscala impressao;
     private final MinisterioService ministerios;
     private final EventoService eventos;
     private final Clock relogio;
@@ -56,6 +64,7 @@ class EscalaController {
             ConsultaDaEscala consulta,
             GeracaoDaEscala geracao,
             PublicacaoDaEscala publicacao,
+            ImpressaoDaEscala impressao,
             MinisterioService ministerios,
             EventoService eventos,
             Clock relogio,
@@ -63,6 +72,7 @@ class EscalaController {
         this.consulta = consulta;
         this.geracao = geracao;
         this.publicacao = publicacao;
+        this.impressao = impressao;
         this.ministerios = ministerios;
         this.eventos = eventos;
         this.relogio = relogio;
@@ -124,6 +134,22 @@ class EscalaController {
             redirecionamento.addFlashAttribute("recusa", recusa.getMessage());
         }
         return "redirect:" + caminho(ministerioId, mes);
+    }
+
+    /** O PDF da escala publicada do mês (A4), para baixar. Rascunho responde 404. */
+    @GetMapping("/pdf")
+    ResponseEntity<byte[]> pdf(
+            @PathVariable Long ministerioId, @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth mes) {
+        var arquivo = impressao.doMes(ministerioId, mes);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment()
+                                .filename(arquivo.nome(), StandardCharsets.UTF_8)
+                                .build()
+                                .toString())
+                .body(arquivo.conteudo());
     }
 
     /** O resumo do Sheet de publicar, só quando há rascunho para publicar. */

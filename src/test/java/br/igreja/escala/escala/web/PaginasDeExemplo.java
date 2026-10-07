@@ -71,7 +71,13 @@ final class PaginasDeExemplo {
                                 List.of(SlotDaGrade.de(
                                         7L, 2, "Ana Souza", "Experiente", false, false, null, null, ajustavel))),
                         new CelulaDaGrade(
-                                "Transmissão", true, List.of(SlotDaGrade.vazia(8L, 0, true, false, ajustavel)))));
+                                "Transmissão", true, List.of(SlotDaGrade.vazia(8L, 0, true, false, ajustavel)))),
+                publicada
+                        ? new LinhaDaGrade.Whatsapp(
+                                "whatsapp-501",
+                                "*Mídia — Culto de domingo*\n01/11 · Dom · 18h00\n\nProjeção: Ana Souza\n"
+                                        + "Transmissão: a definir")
+                        : null);
         return new PaginaDaEscala(
                 mes,
                 true,
@@ -82,10 +88,18 @@ final class PaginasDeExemplo {
                 ajustavel,
                 List.of("Projeção", "Transmissão"),
                 List.of(linha),
-                List.of(new AlertaDaEscala(
-                        "Transmissão, 01/11 · Dom · 18h00 · Culto de domingo",
-                        "Ninguém habilitado em Transmissão marcou Pode.",
-                        "Regra: DISPONIBILIDADE")),
+                publicada
+                        ? List.of(new AlertaDaEscala(
+                                "Bruno Lima desistiu de Transmissão, 01/11 · Dom · 18h00 · Culto de domingo",
+                                "A vaga está vazia desde 28/10 às 14h32. Escolha quem entra no lugar: o ajuste"
+                                        + " confere as regras.",
+                                null,
+                                "arrow-left-right",
+                                8L))
+                        : List.of(new AlertaDaEscala(
+                                "Transmissão, 01/11 · Dom · 18h00 · Culto de domingo",
+                                "Ninguém habilitado em Transmissão marcou Pode.",
+                                "Regra: DISPONIBILIDADE")),
                 new ResumoDaEscala(2, 1, 1, 1, 1, List.of(new CargaDaPessoa("Ana Souza", "AS", 1))));
     }
 }
